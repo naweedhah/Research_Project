@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Data and model artifacts: never commit child-level records
+data/*
+!data/README.md
+*.csv
+*.xlsx
+*.joblib
+*.pkl
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+.env
