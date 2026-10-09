@@ -27,3 +27,9 @@ data/*
 
 # Frontend
 node_modules/
+
+# TFT training checkpoints
+*.ckpt
+
+# Step 17 generated training logs
+components/c4_spatiotemporal_forecasting/Forecasting_Research/outputs/logs/step17_tft/
