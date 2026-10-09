@@ -1,0 +1,137 @@
+{
+  "step": 20,
+  "title": "Final Forecasting Strategy Freeze",
+  "status": "FROZEN",
+  "freeze_timestamp": "2026-10-09T18:42:44+05:30",
+  "selection_basis": "Step 17 untouched 2024 external validation.",
+  "selection_rule": "Lowest 2024 external-validation MAE among the primary candidate models; RMSE is used only as a tie-breaker.",
+  "point_forecast_strategy": {
+    "H1": {
+      "horizon_months": 1,
+      "model": "Tuned Random Forest",
+      "base_model": "Random Forest",
+      "config_id": "RF_B",
+      "parameters": {
+        "Config_ID": "RF_B",
+        "n_estimators": 400,
+        "max_depth": 20,
+        "min_samples_split": 4,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt",
+        "bootstrap": true
+      },
+      "validation_2024": {
+        "rows": 300,
+        "mae": 10.886158790325489,
+        "rmse": 16.393071356144105,
+        "wape_percentage": 8.393768986063655,
+        "smape_percentage": 9.842406413082172,
+        "r2": 0.9426137698818636
+      }
+    },
+    "H3": {
+      "horizon_months": 3,
+      "model": "Tuned Random Forest",
+      "base_model": "Random Forest",
+      "config_id": "RF_BASE",
+      "parameters": {
+        "Config_ID": "RF_BASE",
+        "n_estimators": 300,
+        "max_depth": null,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt",
+        "bootstrap": true
+      },
+      "validation_2024": {
+        "rows": 300,
+        "mae": 10.68421111111111,
+        "rmse": 15.868228474720356,
+        "wape_percentage": 8.23805729755663,
+        "smape_percentage": 9.920760168786028,
+        "r2": 0.9462295183385624
+      }
+    },
+    "H6": {
+      "horizon_months": 6,
+      "model": "Tuned Random Forest",
+      "base_model": "Random Forest",
+      "config_id": "RF_BASE",
+      "parameters": {
+        "Config_ID": "RF_BASE",
+        "n_estimators": 300,
+        "max_depth": null,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt",
+        "bootstrap": true
+      },
+      "validation_2024": {
+        "rows": 300,
+        "mae": 11.201477777777775,
+        "rmse": 16.273494729273846,
+        "wape_percentage": 8.636895582742195,
+        "smape_percentage": 10.448370057526663,
+        "r2": 0.9434479057933308
+      }
+    }
+  },
+  "uncertainty_strategy": {
+    "enabled": true,
+    "model": "Tuned NGBoost",
+    "role": "Supplementary uncertainty model only; it is not the primary point-forecast model.",
+    "horizons": {
+      "H1": {
+        "config_id": "NGB_A",
+        "parameters": {
+          "Config_ID": "NGB_A",
+          "n_estimators": 200,
+          "learning_rate": 0.03,
+          "tree_depth": 2,
+          "min_samples_leaf": 10
+        },
+        "nominal_coverage_percentage": 95.0,
+        "observed_coverage_percentage": 95.0,
+        "mean_interval_width": 60.65717367952982,
+        "negative_lower_bounds": 0,
+        "calibration_note": "Observed coverage is close to the nominal 95%; retain as supplementary uncertainty information."
+      },
+      "H3": {
+        "config_id": "NGB_A",
+        "parameters": {
+          "Config_ID": "NGB_A",
+          "n_estimators": 200,
+          "learning_rate": 0.03,
+          "tree_depth": 2,
+          "min_samples_leaf": 10
+        },
+        "nominal_coverage_percentage": 95.0,
+        "observed_coverage_percentage": 95.66666666666669,
+        "mean_interval_width": 65.86911529708574,
+        "negative_lower_bounds": 11,
+        "calibration_note": "Observed coverage is close to the nominal 95%; retain as supplementary uncertainty information."
+      },
+      "H6": {
+        "config_id": "NGB_B",
+        "parameters": {
+          "Config_ID": "NGB_B",
+          "n_estimators": 400,
+          "learning_rate": 0.02,
+          "tree_depth": 3,
+          "min_samples_leaf": 20
+        },
+        "nominal_coverage_percentage": 95.0,
+        "observed_coverage_percentage": 83.66666666666667,
+        "mean_interval_width": 47.29613348793076,
+        "negative_lower_bounds": 0,
+        "calibration_note": "Observed coverage is below 90%; treat the 95% interval as under-calibrated supplementary uncertainty information."
+      }
+    }
+  },
+  "final_test_policy": {
+    "year": 2025,
+    "used_for_tuning": false,
+    "used_for_model_selection": false,
+    "rule": "Do not change the frozen model family or hyperparameters after viewing 2025 results."
+  }
+}
