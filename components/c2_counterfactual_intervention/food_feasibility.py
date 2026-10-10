@@ -1,5 +1,6 @@
 """Conservative food feasibility: unknown mandatory evidence remains unresolved."""
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 from .food_resources import Evidence, FoodAlternative, FoodPlanningContext
@@ -17,6 +18,9 @@ class FoodAssessment:
 def _evidence_ok(evidence: Evidence | None, mode: str, label: str, unresolved: list[str]) -> bool:
     if evidence is None:
         unresolved.append(f"{label}: evidence missing")
+        return False
+    if evidence.observed_on > date.today():
+        unresolved.append(f"{label}: observation date is in the future")
         return False
     if mode == "real" and evidence.kind == "synthetic_test":
         unresolved.append(f"{label}: synthetic test evidence cannot verify real planning")
@@ -41,6 +45,7 @@ def assess_food_alternative(alternative: FoodAlternative, planning: FoodPlanning
         elif value is None:
             unresolved.append(f"{name}: unknown")
     if alternative.programme_required:
+        _evidence_ok(alternative.programme_evidence, mode, "programme eligibility", unresolved)
         if alternative.programme_eligible is False:
             rejected.append("programme_eligible: false")
         elif alternative.programme_eligible is None:
