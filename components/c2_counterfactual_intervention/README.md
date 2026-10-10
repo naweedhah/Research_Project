@@ -94,6 +94,7 @@ Run from the repository root:
 ```powershell
 $env:PYTHONPATH = ".;backend"
 python -m components.c2_counterfactual_intervention.evaluation
+python -m components.c2_counterfactual_intervention.evaluation --summary
 python -m pytest components/c2_counterfactual_intervention/tests -q
 ```
 
@@ -176,3 +177,59 @@ and category contract, authenticated food-price and availability sources, an
 authorized household budget, and expert-reviewed age-specific feeding practice,
 food-group, safety, and referral definitions. This implementation does not
 prescribe supplements or clinical treatment.
+
+## Phase 5 validation and handoff
+
+The optional C1 v2 contract now represents type and severity separately. The
+baseline response exposes `condition_category` (the type label in v2) and
+`condition_severity`; cards contain no candidate labels or probabilities. C1
+must supply all label definitions, a severity order, and permitted type
+transitions. A candidate cannot worsen severity, change type outside that
+policy, or pass without approved progress. Unsupported candidate output stays
+unresolved. See [C1_INTEGRATION.md](C1_INTEGRATION.md) for the adapter details,
+including a required joint-label mapping for real DiCE. The v1 category path
+remains for existing software tests. C2 has no real C1 model or clinical
+validation; its synthetic sklearn fixture is trained only on an artificial
+30-point design grid to exercise DiCE, not on malnutrition records.
+
+`prediction_policy.py` applies the same final acceptance test to bounded search,
+DiCE and FACE-inspired candidates. `contracts.py` defines the versioned v1/v2
+metadata and internal prediction type. `food_resources.py` defines supplied
+food, price, quantity, budget, practice, evidence, and referral inputs;
+`food_feasibility.py` checks them conservatively. A future-dated observation,
+missing price or availability evidence, missing programme eligibility evidence,
+or unknown suitability cannot produce a feasible food card. Price units must
+match proposed quantity units exactly. No automatic conversion or budget-period
+conversion is made. The caller must authenticate any source claiming
+`verified_source` or `authorized_input`; a string in an API request is not
+independent verification. Without `food_planning`, cards describe only the
+model-tested feeding-feature change and make no food, cost, or availability
+claim. Every card requires professional review.
+
+From the repository root, run the six **synthetic-only** demonstrations:
+
+```powershell
+$env:PYTHONPATH = ".;backend"
+python -m components.c2_counterfactual_intervention.demonstrations
+```
+
+They cover a card, unaffordable and unavailable rejections, unknown clinical
+suitability, no model-supported candidate, and a real-mode request with no
+registered C1 model. The fixture LKR amounts and practice are invented software
+inputs, never observed prices or feeding guidance.
+
+Run the expanded research comparison with:
+
+```powershell
+python -m components.c2_counterfactual_intervention.evaluation
+```
+
+It uses 16 fixed constraint scenarios plus the remaining 29 points of the
+complete 30-point feeding-feature grid: **45 cases × 3 methods**. DiCE uses
+seed 17 and the same frozen synthetic sklearn predictor across methods. The
+reported counts and denominators cover validity, feasibility, coverage,
+proximity, sparsity, diversity, runtime, rejected/unresolved candidates and
+empty results. FACE prunes infeasible graph paths before emitting candidates,
+so its generation denominator differs. Runtime is measured per run and varies
+by machine. These comparisons are software checks, not clinical validation or
+evidence of a universally superior algorithm.
