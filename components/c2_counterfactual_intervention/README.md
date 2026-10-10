@@ -8,7 +8,7 @@ This research prototype compares bounded search, official DiCE, and a FACE-inspi
 
 ## Input contract and future C1 mapping
 
-The request contains `child_id`, `child`, `context`, `max_changes` (1 or 2), `max_cards` (1–20), and an optional predictor ID (`synthetic_test_v1` or `synthetic_sklearn_grid_v1`). Extra fields are rejected. The following are **test encodings**, not clinical cutoffs or recommendations:
+The request requires `mode: "test"` or `"real"` and contains `child_id`, `child`, `context`, `max_changes` (1 or 2), `max_cards` (1–20), an optional predictor ID in test mode, and a required predictor ID/version in real mode. Extra fields are rejected. **Omitting `mode` now produces HTTP 422:** this intentional API contract change prevents implicit synthetic execution. The following are **test encodings**, not clinical cutoffs or recommendations:
 
 | Field | Type and accepted values | Policy |
 |---|---|---|
@@ -47,6 +47,7 @@ Open `http://127.0.0.1:8000/docs`. `GET /interventions/status` reports a functio
 ```json
 {
   "child_id": "SYNTHETIC-001",
+  "mode": "test",
   "child": {"age_months": 24, "sex": "female", "birth_weight_kg": 2.8, "historical_exclusive_breastfeeding": true, "household_income_band": "low", "meals_per_day": 3, "dietary_diversity": 3, "supplement_use": false},
   "context": {
     "budget_units": 10,
@@ -76,11 +77,11 @@ The request accepts `method: "bounded_search"` (default), `"dice"`, or `"face_gr
 
 ### DiCE
 
-`dice_method.py` uses the official `dice-ml` 0.12 `Dice(..., method="random")` model-agnostic explainer with a deterministic seed of 17 and 20 requested counterfactuals. It restricts `features_to_vary` to meal frequency and dietary diversity and `permitted_range` to the current value through at most one increment. Nonintegral outputs are discarded; candidates are deduplicated and then independently revalidated by the shared pipeline. A no-counterfactual response returns no candidates, never a fabricated fallback. Its classifier is a separate `SyntheticSklearnPredictor` trained with `DecisionTreeClassifier(random_state=17)` on the complete **artificial design grid** of 30 feature pairs. Training labels use the same arbitrary threshold as the Phase 1 test predictor; the adapter verifies exact agreement on that grid. No real child records or model artifacts are used. When selecting DiCE, the sklearn adapter is required. Other methods can also use this adapter through `predictor: "synthetic_sklearn_grid_v1"` for equal comparison.
+`dice_method.py` uses the official `dice-ml` 0.12 `Dice(..., method="random")` model-agnostic explainer with a deterministic seed of 17 and 20 requested counterfactuals. It restricts `features_to_vary` to meal frequency and dietary diversity and `permitted_range` to the current value through at most one increment. Nonintegral outputs are discarded; candidates are deduplicated and then independently revalidated by the shared pipeline. A no-counterfactual response returns no candidates, never a fabricated fallback. Its test classifier is a separate `SyntheticSklearnPredictor` trained with `DecisionTreeClassifier(random_state=17)` on the complete **artificial design grid** of 30 feature pairs. Training labels use the same arbitrary threshold as the Phase 1 test predictor; the adapter verifies exact agreement on that grid. No real child records or model artifacts are used. DiCE requires a `DiceCompatiblePredictor` supplying the exact generation model, reference dataframe, query mapping and target encoding. Baseline and generated-candidate predictions are checked against the final predictor; disagreement fails safely. Other methods can use the synthetic sklearn adapter through `predictor: "synthetic_sklearn_grid_v1"` for equal comparison.
 
 ### FACE-inspired graph method
 
-`face_graph.py` implements an adaptation of the graph and shortest-path ideas in Poyiadzi et al. Its explicit reference dataset is the same 30-point synthetic design grid (`meals_per_day` in 1–5, `dietary_diversity` in 0–5). Each point is a graph node, and a directed edge exists only for a +1 change in exactly one permitted feature (L1 distance 1). The graph has no access, income, age, sex, birth, or historical variables to alter. Edge cost is `1 + 1/(1 + min(degree(u), degree(v)))`, where degree is the number of adjacent reference points. This penalizes sparsely supported grid edges but **is not an empirical density estimate**. Dijkstra search finds minimum-cost paths of at most `max_changes` edges. Each step is checked against the feature policy and feasibility conditions; cumulative changes and budget are also checked. The endpoint must be supported by the selected predictor, and the shared pipeline checks it again. An absent source, disconnected graph, infeasible route, or unreachable target yields no path and no card.
+`face_graph.py` implements an adaptation of the graph and shortest-path ideas in Poyiadzi et al. Its explicit reference dataset is the same 30-point synthetic design grid (`meals_per_day` in 1–5, `dietary_diversity` in 0–5). Each point is a graph node, and a directed edge exists only for a +1 change in exactly one permitted feature (L1 distance 1). The graph has no access, income, age, sex, birth, or historical variables to alter. Edge cost is `1 + 1/(1 + min(degree(u), degree(v)))`, where degree is the number of adjacent reference points. This penalizes sparsely supported grid edges but **is not an empirical density estimate**. Bounded Dijkstra search tracks `(node, steps_used)` so a shorter-cost path that exhausts the step budget cannot suppress one that still has steps available. Each step is checked against the feature policy and feasibility conditions; cumulative changes and budget are also checked. The endpoint must be supported by the selected predictor, and the shared pipeline checks it again. An absent source, disconnected graph, infeasible route, or unreachable target yields no path and no card.
 
 This is **FACE-inspired**, not an exact reproduction: it uses a tiny categorical/integer design grid, directed one-step edges, a simple degree proxy instead of KDE or the paper's continuous density-weighted metric, and no calibrated prediction-confidence or learned density threshold. Its output cannot establish real-world path feasibility.
 
@@ -96,7 +97,7 @@ python -m components.c2_counterfactual_intervention.evaluation
 python -m pytest components/c2_counterfactual_intervention/tests -q
 ```
 
-The evaluation uses one frozen sklearn test predictor and the same four synthetic baseline inputs for all methods. Scenarios include all checks true, unavailable meal change, unknown diversity suitability, and no model-supported target within two steps. Training occurs before timing. All mandatory conditions are explicit synthetic assertions. The printed JSON contains actual measurements, not stored benchmark claims. Wall-clock runtimes vary by machine and run. An empty denominator is represented as `null`, not zero.
+The evaluation uses one frozen sklearn test predictor and the same **16 predeclared synthetic cases** for all methods. Cases cover low and moderate values, one- and two-feature paths, no attainable target, budgets, unavailable changes, unknown suitability and eligibility, conflicting checks, ceilings, and no permitted changes. Training occurs before timing. All mandatory conditions are explicit synthetic assertions. The printed JSON contains actual measurements, not stored benchmark claims. Wall-clock runtimes vary by machine and run. An empty denominator is represented as `null`, not zero.
 
 For generated candidate set `G`, let `T` contain members that pass transition policy and reach the intended **test-model** category. Let `F` contain members of `T` that pass feasibility. Let `C` be returned cards and `x` the baseline. The metrics are:
 
@@ -108,5 +109,15 @@ For generated candidate set `G`, let `T` contain members that pass transition po
 - **Rejected/unresolved:** counts of generated candidates marked with each status by the shared pipeline. Graph-pruned paths are not counted as rejected candidates.
 - **Runtime:** elapsed milliseconds for generation, validation, feasibility, ranking, and card construction, excluding test-model training.
 - **No solution:** true when no card is returned for a baseline requiring change.
+- **Coverage:** number of eligible baseline cases with at least one card divided by the number of eligible baseline cases. **No-solution rate** uses the complementary numerator. The summary includes both counts.
+- **Missed bounded solution:** a method has no card on a case where exhaustive bounded search has at least one; this checks search misses only within the tiny current action space.
+
+The per-method summary reports sample size, all numerators and denominators, generated/rejected/unresolved counts, card-weighted proximity and sparsity, case-averaged diversity with its case count, and mean runtime. FACE filters infeasible graph paths before emitting candidates, so its generated-candidate and feasibility denominators differ from the other methods. Equal numerical outcomes on these synthetic cases are not evidence that the methods are generally equivalent.
+
+## Phase 3 execution and C1 readiness
+
+Synthetic predictors run **only** when a request explicitly sets `mode: "test"`. Real mode requires a registered predictor with a `c2-predictor-v1` contract and matching model ID/version; a missing real predictor returns HTTP 503. The API cannot silently substitute a synthetic model. `GET /interventions/status` separately reports test-engine readiness, real model registration, verified C1 integration, and clinical readiness. Registration alone does not mark C1 integration verified. Clinical readiness is currently false.
+
+The versioned interface, adapter registration point, feature mapping template, artifact and reference-data requirements, and expert review checklist are in [C1_INTEGRATION.md](C1_INTEGRATION.md). C1 labels remain unconfirmed; `higher_concern` and `lower_concern` are **test labels only**. The engine compares each predictor against its own contract's desired target. Real DiCE requires a compatible model/reference adapter; real graph search requires versioned reference points. Neither method may use synthetic reference data in real mode.
 
 These are tiny synthetic software experiments, not evidence of clinical effectiveness, safety, or population generalization. A real C1 interface needs frozen target semantics, feature encoding and preprocessing, a versioned model, and a compatible prediction adapter. Real reference records and professionally reviewed transition and feasibility rules are prerequisites for meaningful research evaluation on actual cases.
