@@ -1,6 +1,7 @@
 """FACE-inspired directed reference graph, not an exact FACE reproduction."""
 from dataclasses import dataclass
 from heapq import heappop, heappush
+from typing import Callable
 
 from .feature_policy import ACTIONABLE, validate_changes
 from .feasibility import check_feasibility
@@ -44,43 +45,61 @@ def _changes(start: Point, end: Point) -> tuple[Change, ...]:
                  for i, feature in enumerate(ACTIONABLE) if start[i] != end[i])
 
 
+def bounded_reachable_paths(graph: dict[Point, tuple[tuple[Point, float], ...]], start: Point,
+                            max_steps: int, edge_allowed: Callable[[tuple[Point, ...], Point], bool]
+                            ) -> list[tuple[float, tuple[Point, ...]]]:
+    """Dijkstra on (point, steps), retaining paths with different remaining budgets."""
+    if start not in graph:
+        return []
+    queue: list[tuple[float, tuple[Point, ...]]] = [(0.0, (start,))]
+    best = {(start, 0): 0.0}
+    reached = []
+    while queue:
+        distance, path = heappop(queue)
+        point = path[-1]
+        steps = len(path) - 1
+        if distance > best.get((point, steps), float("inf")):
+            continue
+        reached.append((distance, path))
+        if steps >= max_steps:
+            continue
+        for neighbor, weight in graph[point]:
+            if weight <= 0:
+                raise ValueError("graph edge weights must be positive")
+            if not edge_allowed(path, neighbor):
+                continue
+            new_distance = distance + weight
+            state = (neighbor, steps + 1)
+            if new_distance < best.get(state, float("inf")):
+                best[state] = new_distance
+                heappush(queue, (new_distance, path + (neighbor,)))
+    return reached
+
+
 def generate_face_paths(child: ChildFeatures, context: FeasibilityContext,
                         predictor: Predictor, max_changes: int,
                         reference: tuple[Point, ...] | None = None) -> list[GraphCandidate]:
     reference = synthetic_reference_points() if reference is None else reference
     graph = build_reference_graph(reference)
     start = (child.meals_per_day, child.dietary_diversity)
-    if start not in graph:
-        return []
-    queue: list[tuple[float, tuple[Point, ...]]] = [(0.0, (start,))]
-    best = {start: 0.0}
-    found: list[GraphCandidate] = []
-    while queue:
-        distance, path = heappop(queue)
+    def edge_allowed(path: tuple[Point, ...], neighbor: Point) -> bool:
         point = path[-1]
-        if distance > best.get(point, float("inf")):
-            continue
+        step = _changes(point, neighbor)
+        current = child.model_validate({**child.model_dump(), **dict(zip(ACTIONABLE, point))})
+        cumulative = _changes(start, neighbor)
+        return (not validate_changes(current, step) and not validate_changes(child, cumulative)
+                and check_feasibility(step, context)[0] == "feasible"
+                and check_feasibility(cumulative, context)[0] == "feasible")
+
+    found: dict[Point, GraphCandidate] = {}
+    for distance, path in bounded_reachable_paths(graph, start, max_changes, edge_allowed):
+        point = path[-1]
         if point != start:
             candidate = child.model_validate({**child.model_dump(), **dict(zip(ACTIONABLE, point))})
-            if predictor.predict_category(candidate) == "lower_concern":
-                found.append(GraphCandidate(_changes(start, point), path, distance))
-        if len(path) - 1 >= max_changes:
-            continue
-        for neighbor, weight in graph[point]:
-            step = _changes(point, neighbor)
-            current = child.model_validate({**child.model_dump(), **dict(zip(ACTIONABLE, point))})
-            cumulative = _changes(start, neighbor)
-            if validate_changes(current, step) or validate_changes(child, cumulative):
-                continue
-            if check_feasibility(step, context)[0] != "feasible":
-                continue
-            if check_feasibility(cumulative, context)[0] != "feasible":
-                continue
-            new_distance = distance + weight
-            if new_distance < best.get(neighbor, float("inf")):
-                best[neighbor] = new_distance
-                heappush(queue, (new_distance, path + (neighbor,)))
-    return sorted(found, key=lambda c: (c.path_cost, c.path))
+            if predictor.predict_category(candidate) == predictor.contract.desired_category:
+                if point not in found or distance < found[point].path_cost:
+                    found[point] = GraphCandidate(_changes(start, point), path, distance)
+    return sorted(found.values(), key=lambda c: (c.path_cost, c.path))
 
 
 def generate_face_candidates(child: ChildFeatures, context: FeasibilityContext,
