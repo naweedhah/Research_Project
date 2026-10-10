@@ -2,6 +2,7 @@
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
+from .food_resources import FoodPlanningContext
 
 
 Category = Literal["higher_concern", "lower_concern"]
@@ -47,6 +48,7 @@ class RecommendationRequest(BaseModel):
     predictor: str | None = None
     predictor_version: str | None = None
     method: Method = "bounded_search"
+    food_planning: FoodPlanningContext | None = None
 
     @model_validator(mode="after")
     def compatible_predictor(self):
@@ -75,6 +77,7 @@ class CandidateInfo(BaseModel):
     changes: list[Change]
     status: Literal["rejected", "unresolved"]
     reasons: list[str]
+    alternative_id: str | None = None
 
 
 class InterventionCard(BaseModel):
@@ -84,6 +87,15 @@ class InterventionCard(BaseModel):
     feasibility_status: Literal["feasible"] = "feasible"
     feasibility_reasons: list[str]
     professional_review_required: bool = True
+    title: str | None = None
+    reason: str | None = None
+    food_options: list[str] | None = None
+    required_resources: list[str] | None = None
+    incremental_cost_lkr: str | None = None
+    cost_period: str | None = None
+    affordability: str | None = None
+    availability: str | None = None
+    alternative_id: str | None = None
 
 
 class RecommendationResponse(BaseModel):
@@ -96,3 +108,5 @@ class RecommendationResponse(BaseModel):
     professional_review_required: bool = True
     method: Method = "bounded_search"
     mode: Mode
+    professional_referral_recommended: bool = False
+    referral_message: str | None = None

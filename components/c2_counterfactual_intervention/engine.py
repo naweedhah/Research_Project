@@ -5,6 +5,7 @@ from .dice_method import generate_dice_candidates
 from .face_graph import generate_face_candidates
 from .feature_policy import validate_changes
 from .feasibility import check_feasibility
+from .food_feasibility import assess_food_alternative
 from .predictor import DiceCompatiblePredictor, Predictor, SyntheticSklearnPredictor, SyntheticTestPredictor
 from .ranking import select_diverse
 from .schemas import CandidateInfo, InterventionCard, RecommendationRequest, RecommendationResponse
@@ -106,21 +107,67 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
             other.append(CandidateInfo(changes=list(changes), status=status, reasons=reasons))
             continue
         accepted.append((changes, True, reasons))
-    selected = select_diverse(accepted, request.max_cards)
-    cards = [InterventionCard(rank=i, changes=list(changes),
-                              explanation="The predictor changes category for this proposed input; this does not establish a treatment effect.",
-                              feasibility_reasons=reasons)
-             for i, (changes, _, reasons) in enumerate(selected, 1)]
+    if request.food_planning is None:
+        selected = select_diverse(accepted, request.max_cards)
+        cards = [InterventionCard(rank=i, changes=list(changes),
+                                  explanation="The predictor changes category for this proposed input; this does not establish a treatment effect.",
+                                  feasibility_reasons=reasons)
+                 for i, (changes, _, reasons) in enumerate(selected, 1)]
+    else:
+        # Supplied proposals must match an independently generated, predictor-tested change.
+        planning = request.food_planning
+        accepted_by_change = {
+            frozenset((c.feature, c.from_value, c.to_value) for c in changes): (changes, reasons)
+            for changes, _, reasons in accepted
+        }
+        feasible_alternatives = []
+        for alternative in planning.alternatives:
+            key = frozenset((c.feature, c.from_value, c.to_value) for c in alternative.changes)
+            matched = accepted_by_change.get(key)
+            if matched is None:
+                other.append(CandidateInfo(changes=[c.model_dump() for c in alternative.changes], status="rejected",
+                                           reasons=["proposal has no model-supported, baseline-feasible counterfactual"],
+                                           alternative_id=alternative.alternative_id))
+                continue
+            assessment = assess_food_alternative(alternative, planning, request.mode)
+            if assessment.status != "feasible":
+                other.append(CandidateInfo(changes=[c.model_dump() for c in alternative.changes], status=assessment.status,
+                                           reasons=list(assessment.reasons),
+                                           alternative_id=alternative.alternative_id))
+                continue
+            feasible_alternatives.append((alternative, matched, assessment))
+        feasible_alternatives.sort(key=lambda item: (
+            len(item[1][0]), item[2].cost_lkr, len(item[0].foods), item[0].alternative_id))
+        catalog = {food.food_id: food for food in planning.catalog}
+        cards = []
+        for i, (alternative, (changes, base_reasons), assessment) in enumerate(
+                feasible_alternatives[:request.max_cards], 1):
+            foods = [catalog[quantity.food_id].name for quantity in alternative.foods]
+            resources = [f"{quantity.quantity} {quantity.unit} {catalog[quantity.food_id].name}"
+                         for quantity in alternative.foods]
+            cards.append(InterventionCard(
+                rank=i, changes=list(changes), title=alternative.title, reason=alternative.reason,
+                explanation="This feeding proposal matches a favorable model category change; it does not establish a treatment effect or guarantee recovery.",
+                feasibility_reasons=base_reasons + ["supplied food feasibility checks passed"],
+                food_options=foods, required_resources=resources,
+                incremental_cost_lkr=str(assessment.cost_lkr), cost_period=alternative.period,
+                affordability=assessment.affordability, availability=assessment.availability,
+                alternative_id=alternative.alternative_id))
     empty_message = ("No feasible graph path found in synthetic reference data" if request.method == "face_graph"
                      else "No feasible favorable candidate found under supplied constraints")
     provenance = (f"{predictor.contract.model_id}@{predictor.contract.model_version}: "
                   f"{request.mode} model; no clinical validation")
+    referral = request.food_planning.referral_policy if request.food_planning else None
+    referral_recommended = bool(referral and baseline in referral.trigger_categories and
+                                (request.mode == "test" or referral.evidence.kind != "synthetic_test"))
     response = RecommendationResponse(child_id=request.child_id, condition_category=baseline,
                                       cards=cards, rejected_or_unresolved=other,
                                       message="Test-only candidates for professional review" if cards else
                                       empty_message,
                                       method=request.method,
-                                      mode=request.mode, provenance=provenance)
+                                      mode=request.mode, provenance=provenance,
+                                      professional_referral_recommended=referral_recommended,
+                                      referral_message=referral.message if referral_recommended else None)
     return response, generated
 
 
