@@ -74,6 +74,7 @@ class FoodAlternative(BaseModel):
     clinically_suitable: StrictBool | None = None
     programme_eligible: StrictBool | None = None
     programme_required: StrictBool = False
+    programme_evidence: Evidence | None = None
     caregiver_practical: StrictBool | None = None
 
     @model_validator(mode="after")
