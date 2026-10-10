@@ -1,4 +1,5 @@
 ﻿"""Reproducible software-method comparison on synthetic design cases only."""
+import argparse
 import json
 from statistics import mean
 from time import perf_counter
@@ -9,8 +10,8 @@ from .feasibility import check_feasibility
 from .predictor import SyntheticSklearnPredictor
 from .schemas import RecommendationRequest
 
-# Predeclared design cases; not sampled or tuned after seeing method results.
-SYNTHETIC_CASES = (
+# Fixed scenario cases plus a complete, deterministic 30-point feature grid.
+SCENARIO_CASES = (
     (3, 3, "all"), (2, 4, "availability_constraint"), (4, 2, "unknown_suitability"),
     (1, 1, "no_target"), (2, 3, "two_feature_needed"), (3, 2, "one_feature_cap"),
     (4, 1, "limited_budget"), (3, 3, "unknown_eligibility"),
@@ -19,6 +20,10 @@ SYNTHETIC_CASES = (
     (4, 2, "practicality_constraint"), (1, 5, "ceiling_one_feature"),
     (5, 1, "ceiling_other_feature"), (3, 3, "unknown_availability"),
 )
+GRID_CASES = tuple((meals, diversity, "all") for meals in range(1, 6)
+                   for diversity in range(0, 6)
+                   if (meals, diversity, "all") not in SCENARIO_CASES)
+SYNTHETIC_CASES = SCENARIO_CASES + GRID_CASES
 METHODS = ("bounded_search", "dice", "face_graph")
 CHECKS = ("available", "practical", "age_suitable", "eligible", "clinically_suitable", "transition_justified")
 
@@ -154,16 +159,24 @@ def evaluate() -> dict:
             "unresolved": sum(case["unresolved"] for case in rows),
             "runtime_mean_ms": mean(case["runtime_ms"] for case in rows),
         })
-    bounded_solved = {case["scenario"] for case in cases
+    bounded_solved = {case["case"] for case in cases
                       if case["method"] == "bounded_search" and case["cards"]}
     for summary in summaries:
         summary["missed_bounded_solution_cases"] = sum(
-            case["scenario"] in bounded_solved and not case["cards"] for case in cases
+            case["case"] in bounded_solved and not case["cards"] for case in cases
             if case["method"] == summary["method"])
     return {"synthetic_only": True, "predictor": predictor.contract.model_id,
             "predictor_version": predictor.contract.model_version,
+            "dice_seed": 17, "grid_points": 30,
+            "scenario_case_count": len(SCENARIO_CASES), "grid_case_count": len(GRID_CASES),
             "case_count": len(SYNTHETIC_CASES), "cases": cases, "summary": summaries}
 
 
 if __name__ == "__main__":
-    print(json.dumps(evaluate(), indent=2))
+    parser = argparse.ArgumentParser(description="Synthetic-only C2 method comparison")
+    parser.add_argument("--summary", action="store_true", help="omit per-case rows")
+    args = parser.parse_args()
+    report = evaluate()
+    if args.summary:
+        report.pop("cases")
+    print(json.dumps(report, indent=2))
