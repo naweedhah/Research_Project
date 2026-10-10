@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_
 Category = Literal["higher_concern", "lower_concern"]
 Feature = Literal["meals_per_day", "dietary_diversity"]
 Method = Literal["bounded_search", "dice", "face_graph"]
+Mode = Literal["test", "real"]
 
 
 class ChildFeatures(BaseModel):
@@ -38,17 +39,29 @@ class FeasibilityContext(BaseModel):
 class RecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     child_id: str = Field(min_length=1, max_length=100)
+    mode: Mode
     child: ChildFeatures
     context: FeasibilityContext
     max_changes: Literal[1, 2] = 2
     max_cards: int = Field(default=5, ge=1, le=20)
-    predictor: Literal["synthetic_test_v1", "synthetic_sklearn_grid_v1"] | None = None
+    predictor: str | None = None
+    predictor_version: str | None = None
     method: Method = "bounded_search"
 
     @model_validator(mode="after")
     def compatible_predictor(self):
-        if self.method == "dice" and self.predictor == "synthetic_test_v1":
-            raise ValueError("DiCE requires the synthetic sklearn adapter")
+        test_ids = {"synthetic_test_v1", "synthetic_sklearn_grid_v1"}
+        if self.mode == "test":
+            if self.predictor is not None and self.predictor not in test_ids:
+                raise ValueError("test mode accepts only registered synthetic predictors")
+            if self.predictor_version not in (None, "1"):
+                raise ValueError("synthetic predictor version must be 1")
+            if self.method == "dice" and self.predictor == "synthetic_test_v1":
+                raise ValueError("DiCE requires the synthetic sklearn adapter")
+        elif not self.predictor or not self.predictor_version:
+            raise ValueError("real mode requires predictor ID and version")
+        elif self.predictor in test_ids:
+            raise ValueError("synthetic predictor cannot be selected in real mode")
         return self
 
 
@@ -75,10 +88,11 @@ class InterventionCard(BaseModel):
 
 class RecommendationResponse(BaseModel):
     child_id: str
-    condition_category: Category
+    condition_category: str
     cards: list[InterventionCard]
     rejected_or_unresolved: list[CandidateInfo]
     message: str
     provenance: str = "synthetic_test_v1: deterministic test-only predictor; no clinical validation"
     professional_review_required: bool = True
     method: Method = "bounded_search"
+    mode: Mode

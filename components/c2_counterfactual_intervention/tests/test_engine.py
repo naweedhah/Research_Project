@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.main import app
 from components.c2_counterfactual_intervention.candidate_generation import generate_candidates
+from components.c2_counterfactual_intervention.contracts import synthetic_contract
 from components.c2_counterfactual_intervention.engine import recommend
 from components.c2_counterfactual_intervention.feature_policy import ACTIONABLE, validate_changes
 from components.c2_counterfactual_intervention.feasibility import check_feasibility
@@ -20,6 +21,7 @@ CHECKS = ("available", "practical", "age_suitable", "eligible", "clinically_suit
 def payload():
     return {
         "child_id": "SYNTHETIC-001",
+        "mode": "test",
         "child": {"age_months": 24, "sex": "female", "birth_weight_kg": 2.8,
                   "historical_exclusive_breastfeeding": True, "household_income_band": "low",
                   "meals_per_day": 3, "dietary_diversity": 3, "supplement_use": False},
@@ -69,6 +71,7 @@ def test_duplicate_change_rejected():
 def test_predictor_adapter_and_repeatability():
     class RecordingPredictor:
         model_id = "recording-test"
+        contract = synthetic_contract(model_id)
         def __init__(self):
             self.calls = []
         def predict_category(self, child):
@@ -87,6 +90,7 @@ def test_predictor_adapter_and_repeatability():
 def test_no_fabricated_improvement():
     class ConstantPredictor:
         model_id = "constant-test"
+        contract = synthetic_contract(model_id)
         def predict_category(self, child):
             return "higher_concern"
     result = recommend(RecommendationRequest.model_validate(payload()), ConstantPredictor())
@@ -182,6 +186,7 @@ def test_api_unresolved_and_empty_smoke():
     lambda p: p["context"]["available"].update(supplement_access=True),
     lambda p: p.update(max_changes=3),
     lambda p: p["child"].update(meals_per_day=True),
+    lambda p: p.pop("mode"),
 ])
 def test_api_validation_errors(mutation):
     value = payload()

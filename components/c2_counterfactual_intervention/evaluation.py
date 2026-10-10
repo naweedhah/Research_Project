@@ -9,8 +9,16 @@ from .feasibility import check_feasibility
 from .predictor import SyntheticSklearnPredictor
 from .schemas import RecommendationRequest
 
-SYNTHETIC_CASES = ((3, 3, "all"), (2, 4, "availability_constraint"),
-                   (4, 2, "unknown_suitability"), (1, 1, "no_target"))
+# Predeclared design cases; not sampled or tuned after seeing method results.
+SYNTHETIC_CASES = (
+    (3, 3, "all"), (2, 4, "availability_constraint"), (4, 2, "unknown_suitability"),
+    (1, 1, "no_target"), (2, 3, "two_feature_needed"), (3, 2, "one_feature_cap"),
+    (4, 1, "limited_budget"), (3, 3, "unknown_eligibility"),
+    (3, 3, "programme_eligibility_unknown"), (3, 3, "conflicting_checks"),
+    (3, 3, "no_permitted_changes"), (2, 4, "tight_budget"),
+    (4, 2, "practicality_constraint"), (1, 5, "ceiling_one_feature"),
+    (5, 1, "ceiling_other_feature"), (3, 3, "unknown_availability"),
+)
 METHODS = ("bounded_search", "dice", "face_graph")
 CHECKS = ("available", "practical", "age_suitable", "eligible", "clinically_suitable", "transition_justified")
 
@@ -18,18 +26,42 @@ CHECKS = ("available", "practical", "age_suitable", "eligible", "clinically_suit
 def synthetic_request(meals: int, diversity: int, method: str,
                       scenario: str = "all") -> RecommendationRequest:
     raw = {
-        "child_id": f"SYNTHETIC-{meals}-{diversity}", "method": method,
-        "predictor": "synthetic_sklearn_grid_v1", "max_cards": 20,
+        "child_id": f"SYNTHETIC-{meals}-{diversity}-{scenario}", "mode": "test",
+        "method": method, "predictor": "synthetic_sklearn_grid_v1", "predictor_version": "1",
+        "max_cards": 20,
         "child": {"age_months": 24, "sex": "female", "household_income_band": "unknown",
                   "meals_per_day": meals, "dietary_diversity": diversity},
-        "context": {"budget_units": 10, **{name: {"meals_per_day": True, "dietary_diversity": True}
-                                         for name in CHECKS}},
+        "context": {"budget_units": 10, "supplement_access": None,
+                    "supplement_programme_eligible": None, "supplement_clinically_suitable": None,
+                    **{name: {"meals_per_day": True, "dietary_diversity": True}
+                       for name in CHECKS}},
     }
+    context = raw["context"]
     if scenario == "availability_constraint":
-        raw["context"]["available"]["meals_per_day"] = False
+        context["available"]["meals_per_day"] = False
     elif scenario == "unknown_suitability":
-        raw["context"]["clinically_suitable"]["dietary_diversity"] = None
-    elif scenario not in ("all", "no_target"):
+        context["clinically_suitable"]["dietary_diversity"] = None
+    elif scenario == "one_feature_cap":
+        raw["max_changes"] = 1
+    elif scenario == "limited_budget":
+        context["budget_units"] = 2
+    elif scenario == "unknown_eligibility":
+        context["eligible"] = {feature: None for feature in context["eligible"]}
+    elif scenario == "programme_eligibility_unknown":
+        context["supplement_access"] = True
+        context["supplement_programme_eligible"] = None
+    elif scenario == "conflicting_checks":
+        context["available"]["meals_per_day"] = False
+        context["eligible"]["meals_per_day"] = None
+    elif scenario == "no_permitted_changes":
+        context["transition_justified"] = {feature: False for feature in context["transition_justified"]}
+    elif scenario == "tight_budget":
+        context["budget_units"] = 2
+    elif scenario == "practicality_constraint":
+        context["practical"]["meals_per_day"] = False
+    elif scenario == "unknown_availability":
+        context["available"] = {feature: None for feature in context["available"]}
+    elif scenario not in ("all", "no_target", "two_feature_needed", "ceiling_one_feature", "ceiling_other_feature"):
         raise ValueError(f"unknown synthetic scenario: {scenario}")
     return RecommendationRequest.model_validate(raw)
 
@@ -55,8 +87,12 @@ def _diversity(cards, request) -> float | None:
     return mean(distances)
 
 
+def _ratio(numerator: int, denominator: int) -> float | None:
+    return numerator / denominator if denominator else None
+
+
 def evaluate() -> dict:
-    predictor = SyntheticSklearnPredictor()  # one frozen compatible model for all methods
+    predictor = SyntheticSklearnPredictor()  # same frozen model object for all methods
     cases = []
     for meals, diversity, scenario in SYNTHETIC_CASES:
         for method in METHODS:
@@ -65,6 +101,7 @@ def evaluate() -> dict:
             response, generated = run_pipeline(request, predictor)
             runtime_ms = (perf_counter() - start) * 1000
             baseline = predictor.predict_category(request.child)
+            target = predictor.contract.desired_category
             valid_target = 0
             feasible_target = 0
             for changes in generated:
@@ -72,24 +109,60 @@ def evaluate() -> dict:
                     continue
                 child = request.child.model_validate({**request.child.model_dump(),
                                                       **{c.feature: c.to_value for c in changes}})
-                if baseline != "higher_concern" or predictor.predict_category(child) != "lower_concern":
+                if baseline == target or predictor.predict_category(child) != target:
                     continue
                 valid_target += 1
                 feasible_target += check_feasibility(changes, request.context)[0] == "feasible"
             cards = response.cards
             cases.append({
                 "case": request.child_id, "scenario": scenario, "method": method,
-                "generated": len(generated),
-                "cards": len(cards), "candidate_validity": valid_target / len(generated) if generated else None,
-                "feasibility_pass_rate": feasible_target / valid_target if valid_target else None,
+                "eligible_baseline": baseline != target,
+                "generated": len(generated), "valid_target": valid_target,
+                "feasible_target": feasible_target, "cards": len(cards),
+                "candidate_validity": _ratio(valid_target, len(generated)),
+                "feasibility_pass_rate": _ratio(feasible_target, valid_target),
                 "proximity": mean(_proximity(c.changes) for c in cards) if cards else None,
                 "sparsity": mean(len(c.changes) for c in cards) if cards else None,
                 "diversity": _diversity(cards, request),
                 "rejected": sum(c.status == "rejected" for c in response.rejected_or_unresolved),
                 "unresolved": sum(c.status == "unresolved" for c in response.rejected_or_unresolved),
-                "no_solution": not cards, "runtime_ms": round(runtime_ms, 3),
+                "no_solution": baseline != target and not cards,
+                "runtime_ms": round(runtime_ms, 3),
             })
-    return {"synthetic_only": True, "predictor": predictor.model_id, "cases": cases}
+    summaries = []
+    for method in METHODS:
+        rows = [case for case in cases if case["method"] == method]
+        generated = sum(case["generated"] for case in rows)
+        valid = sum(case["valid_target"] for case in rows)
+        feasible = sum(case["feasible_target"] for case in rows)
+        card_count = sum(case["cards"] for case in rows)
+        eligible = sum(case["eligible_baseline"] for case in rows)
+        solved = sum(case["eligible_baseline"] and case["cards"] > 0 for case in rows)
+        diversities = [case["diversity"] for case in rows if case["diversity"] is not None]
+        summaries.append({
+            "method": method, "cases": len(rows), "eligible_cases": eligible,
+            "generated": generated, "valid_target": valid, "feasible_target": feasible,
+            "cards": card_count, "candidate_validity": _ratio(valid, generated),
+            "feasibility_pass_rate": _ratio(feasible, valid),
+            "proximity": _ratio(sum(case["proximity"] * case["cards"] for case in rows if case["cards"]), card_count),
+            "sparsity": _ratio(sum(case["sparsity"] * case["cards"] for case in rows if case["cards"]), card_count),
+            "diversity": mean(diversities) if diversities else None,
+            "diversity_case_count": len(diversities), "solved_cases": solved,
+            "coverage": _ratio(solved, eligible), "no_solution_cases": eligible - solved,
+            "no_solution_rate": _ratio(eligible - solved, eligible),
+            "rejected": sum(case["rejected"] for case in rows),
+            "unresolved": sum(case["unresolved"] for case in rows),
+            "runtime_mean_ms": mean(case["runtime_ms"] for case in rows),
+        })
+    bounded_solved = {case["scenario"] for case in cases
+                      if case["method"] == "bounded_search" and case["cards"]}
+    for summary in summaries:
+        summary["missed_bounded_solution_cases"] = sum(
+            case["scenario"] in bounded_solved and not case["cards"] for case in cases
+            if case["method"] == summary["method"])
+    return {"synthetic_only": True, "predictor": predictor.contract.model_id,
+            "predictor_version": predictor.contract.model_version,
+            "case_count": len(SYNTHETIC_CASES), "cases": cases, "summary": summaries}
 
 
 if __name__ == "__main__":
