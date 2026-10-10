@@ -101,6 +101,7 @@ class InterventionCard(BaseModel):
 class RecommendationResponse(BaseModel):
     child_id: str
     condition_category: str
+    condition_severity: str | None = None
     cards: list[InterventionCard]
     rejected_or_unresolved: list[CandidateInfo]
     message: str

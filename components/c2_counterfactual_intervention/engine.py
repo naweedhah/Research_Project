@@ -7,6 +7,7 @@ from .feature_policy import validate_changes
 from .feasibility import check_feasibility
 from .food_feasibility import assess_food_alternative
 from .predictor import DiceCompatiblePredictor, Predictor, SyntheticSklearnPredictor, SyntheticTestPredictor
+from .prediction_policy import acceptance_reason, checked_prediction
 from .ranking import select_diverse
 from .schemas import CandidateInfo, InterventionCard, RecommendationRequest, RecommendationResponse
 
@@ -48,8 +49,14 @@ def resolve_predictor(request: RecommendationRequest, predictor: Predictor | Non
         }[feature.dtype]
         if not valid_type:
             raise PredictorCompatibilityError(f"feature type/category mismatch: {feature.source_field}")
-    if request.method == "dice" and not isinstance(predictor, DiceCompatiblePredictor):
-        raise PredictorCompatibilityError("DiCE requires a compatible model and reference-data adapter")
+    if request.method == "dice":
+        if not isinstance(predictor, DiceCompatiblePredictor) and contract.output_mode == "category":
+            raise PredictorCompatibilityError("DiCE requires a compatible model and reference-data adapter")
+        if contract.output_mode == "type_severity" and not all(
+                hasattr(predictor, name) for name in
+                ("dice_model", "dice_outcome_name", "dice_target_label", "dice_reference_data",
+                 "dice_query", "dice_prediction")):
+            raise PredictorCompatibilityError("two-output DiCE requires a joint-label adapter")
     if request.mode == "real" and request.method == "face_graph":
         if not contract.reference_data_id or not callable(getattr(predictor, "reference_points", None)):
             raise PredictorCompatibilityError("real graph search requires versioned reference data")
@@ -57,10 +64,8 @@ def resolve_predictor(request: RecommendationRequest, predictor: Predictor | Non
 
 
 def checked_category(predictor: Predictor, child) -> str:
-    category = predictor.predict_category(child)
-    if category not in {target.code for target in predictor.contract.targets}:
-        raise PredictorCompatibilityError("predictor returned an undeclared category")
-    return category
+    """Legacy test helper; dual-output callers use checked_prediction instead."""
+    return checked_prediction(predictor, child).type_label
 
 
 def generate_method_candidates(request: RecommendationRequest, predictor: Predictor) -> list:
@@ -70,6 +75,8 @@ def generate_method_candidates(request: RecommendationRequest, predictor: Predic
         generated = generate_dice_candidates(request.child, predictor, request.max_changes)
     elif request.method == "face_graph":
         reference = predictor.reference_points() if request.mode == "real" else None
+        if request.mode == "real" and reference is None:
+            raise PredictorCompatibilityError("real graph reference data unavailable")
         generated = generate_face_candidates(request.child, request.context, predictor, request.max_changes,
                                              reference=reference)
     else:
@@ -77,7 +84,7 @@ def generate_method_candidates(request: RecommendationRequest, predictor: Predic
     unique = []
     seen = set()
     for changes in generated:
-        key = tuple(sorted((change.feature, change.to_value) for change in changes))
+        key = tuple(sorted((change.feature, change.from_value, change.to_value) for change in changes))
         if key not in seen:
             seen.add(key)
             unique.append(changes)
@@ -86,8 +93,7 @@ def generate_method_candidates(request: RecommendationRequest, predictor: Predic
 
 def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = None) -> tuple[RecommendationResponse, list]:
     predictor = resolve_predictor(request, predictor)
-    baseline = checked_category(predictor, request.child)
-    target = predictor.contract.desired_category
+    baseline = checked_prediction(predictor, request.child)
     accepted = []
     other: list[CandidateInfo] = []
     generated = generate_method_candidates(request, predictor)
@@ -97,10 +103,16 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
             other.append(CandidateInfo(changes=list(changes), status="rejected", reasons=invalid))
             continue
         candidate = request.child.model_validate({**request.child.model_dump(), **{c.feature: c.to_value for c in changes}})
-        predicted = checked_category(predictor, candidate)
-        if baseline == target or predicted != target:
+        try:
+            predicted = checked_prediction(predictor, candidate)
+        except PredictorCompatibilityError as exc:
+            other.append(CandidateInfo(changes=list(changes), status="unresolved",
+                                       reasons=[str(exc)]))
+            continue
+        reason = acceptance_reason(baseline, predicted, predictor.contract)
+        if reason:
             other.append(CandidateInfo(changes=list(changes), status="rejected",
-                                       reasons=["no favorable category change in predictor"]))
+                                       reasons=[reason]))
             continue
         status, reasons = check_feasibility(changes, request.context)
         if status != "feasible":
@@ -109,8 +121,11 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
         accepted.append((changes, True, reasons))
     if request.food_planning is None:
         selected = select_diverse(accepted, request.max_cards)
+        explanation = ("The predictor changes category for this proposed input; this does not establish a treatment effect."
+                       if predictor.contract.output_mode == "category" else
+                       "The predictor outputs satisfy the supplied type and severity policy; this does not establish a treatment effect.")
         cards = [InterventionCard(rank=i, changes=list(changes),
-                                  explanation="The predictor changes category for this proposed input; this does not establish a treatment effect.",
+                                  explanation=explanation,
                                   feasibility_reasons=reasons)
                  for i, (changes, _, reasons) in enumerate(selected, 1)]
     else:
@@ -147,7 +162,9 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
                          for quantity in alternative.foods]
             cards.append(InterventionCard(
                 rank=i, changes=list(changes), title=alternative.title, reason=alternative.reason,
-                explanation="This feeding proposal matches a favorable model category change; it does not establish a treatment effect or guarantee recovery.",
+                explanation=("This feeding proposal matches a favorable model category change; it does not establish a treatment effect or guarantee recovery."
+                             if predictor.contract.output_mode == "category" else
+                             "This feeding proposal satisfies the supplied type and severity policy; it does not establish a treatment effect or guarantee recovery."),
                 feasibility_reasons=base_reasons + ["supplied food feasibility checks passed"],
                 food_options=foods, required_resources=resources,
                 incremental_cost_lkr=str(assessment.cost_lkr), cost_period=alternative.period,
@@ -158,11 +175,13 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
     provenance = (f"{predictor.contract.model_id}@{predictor.contract.model_version}: "
                   f"{request.mode} model; no clinical validation")
     referral = request.food_planning.referral_policy if request.food_planning else None
-    referral_recommended = bool(referral and baseline in referral.trigger_categories and
+    referral_recommended = bool(referral and baseline.type_label in referral.trigger_categories and
                                 (request.mode == "test" or referral.evidence.kind != "synthetic_test"))
-    response = RecommendationResponse(child_id=request.child_id, condition_category=baseline,
+    response = RecommendationResponse(child_id=request.child_id, condition_category=baseline.type_label,
+                                      condition_severity=baseline.severity_label,
                                       cards=cards, rejected_or_unresolved=other,
-                                      message="Test-only candidates for professional review" if cards else
+                                      message=("Test-only candidates for professional review" if request.mode == "test"
+                                               else "Candidates for professional review") if cards else
                                       empty_message,
                                       method=request.method,
                                       mode=request.mode, provenance=provenance,

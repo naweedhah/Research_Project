@@ -3,9 +3,11 @@ from dataclasses import dataclass
 from heapq import heappop, heappush
 from typing import Callable
 
+from .contracts import PredictorCompatibilityError
 from .feature_policy import ACTIONABLE, validate_changes
 from .feasibility import check_feasibility
 from .predictor import Predictor
+from .prediction_policy import acceptance_reason, checked_prediction
 from .schemas import Change, ChildFeatures, FeasibilityContext
 from .synthetic_data import synthetic_reference_points
 
@@ -79,7 +81,10 @@ def bounded_reachable_paths(graph: dict[Point, tuple[tuple[Point, float], ...]],
 def generate_face_paths(child: ChildFeatures, context: FeasibilityContext,
                         predictor: Predictor, max_changes: int,
                         reference: tuple[Point, ...] | None = None) -> list[GraphCandidate]:
-    reference = synthetic_reference_points() if reference is None else reference
+    if reference is None:
+        if predictor.contract.mode == "real":
+            raise PredictorCompatibilityError("real graph reference data unavailable")
+        reference = synthetic_reference_points()
     graph = build_reference_graph(reference)
     start = (child.meals_per_day, child.dietary_diversity)
     def edge_allowed(path: tuple[Point, ...], neighbor: Point) -> bool:
@@ -92,11 +97,16 @@ def generate_face_paths(child: ChildFeatures, context: FeasibilityContext,
                 and check_feasibility(cumulative, context)[0] == "feasible")
 
     found: dict[Point, GraphCandidate] = {}
+    baseline = checked_prediction(predictor, child)
     for distance, path in bounded_reachable_paths(graph, start, max_changes, edge_allowed):
         point = path[-1]
         if point != start:
             candidate = child.model_validate({**child.model_dump(), **dict(zip(ACTIONABLE, point))})
-            if predictor.predict_category(candidate) == predictor.contract.desired_category:
+            try:
+                prediction = checked_prediction(predictor, candidate)
+            except ValueError:
+                continue
+            if acceptance_reason(baseline, prediction, predictor.contract) is None:
                 if point not in found or distance < found[point].path_cost:
                     found[point] = GraphCandidate(_changes(start, point), path, distance)
     return sorted(found.values(), key=lambda c: (c.path_cost, c.path))

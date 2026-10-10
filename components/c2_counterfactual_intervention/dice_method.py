@@ -1,7 +1,8 @@
 """Official DiCE model-agnostic random explainer; no bounded-search fallback."""
-from .contracts import PredictorCompatibilityError
+from .contracts import ModelPrediction, PredictorCompatibilityError
 from .feature_policy import ACTIONABLE
 from .predictor import DiceCompatiblePredictor
+from .prediction_policy import acceptance_reason, checked_prediction
 from .schemas import Change, ChildFeatures
 
 
@@ -13,8 +14,21 @@ def generate_dice_candidates(child: ChildFeatures, predictor: DiceCompatiblePred
     from contextlib import redirect_stderr, redirect_stdout
     from raiutils.exceptions import UserConfigValidationException
 
-    if not isinstance(predictor, DiceCompatiblePredictor):
+    if predictor.contract.output_mode == "category" and not isinstance(predictor, DiceCompatiblePredictor):
         raise PredictorCompatibilityError("DiCE adapter is incomplete")
+    def model_output(label):
+        if predictor.contract.output_mode == "category":
+            return ModelPrediction(type_label=predictor.dice_category(label))
+        try:
+            prediction = ModelPrediction.model_validate(predictor.dice_prediction(label))
+        except (TypeError, ValueError) as exc:
+            raise PredictorCompatibilityError("DiCE joint label mapping is invalid") from exc
+        if (prediction.type_label not in {item.code for item in predictor.contract.type_targets} or
+                prediction.severity_label not in {item.code for item in predictor.contract.severity_targets}):
+            raise PredictorCompatibilityError("DiCE joint label mapping is undeclared")
+        return prediction
+
+    baseline = checked_prediction(predictor, child)
     frame = predictor.dice_reference_data()
     outcome = predictor.dice_outcome_name
     features = [column for column in frame.columns if column != outcome]
@@ -27,9 +41,16 @@ def generate_dice_candidates(child: ChildFeatures, predictor: DiceCompatiblePred
         raise PredictorCompatibilityError("DiCE query features differ from reference data")
     query = pd.DataFrame([row], columns=features)
     model_prediction = predictor.dice_model.predict(query)[0]
-    if (predictor.dice_category(model_prediction) != predictor.predict_category(child)
-            or predictor.dice_category(predictor.dice_target_label) != predictor.contract.desired_category):
+    direct_baseline = model_output(model_prediction)
+    target_output = model_output(predictor.dice_target_label)
+    if ((direct_baseline.type_label, direct_baseline.severity_label) !=
+            (baseline.type_label, baseline.severity_label)):
         raise PredictorCompatibilityError("DiCE generation and validation predictors disagree")
+    if acceptance_reason(baseline, target_output, predictor.contract) is not None:
+        if (baseline.type_label, baseline.severity_label) == (target_output.type_label,
+                                                              target_output.severity_label):
+            return []
+        raise PredictorCompatibilityError("DiCE target is not acceptable under the prediction policy")
     data = dice_ml.Data(dataframe=frame, continuous_features=list(ACTIONABLE), outcome_name=outcome)
     model = dice_ml.Model(model=predictor.dice_model, backend="sklearn", model_type="classifier")
     explainer = dice_ml.Dice(data, model, method="random")
@@ -56,8 +77,9 @@ def generate_dice_candidates(child: ChildFeatures, predictor: DiceCompatiblePred
                         for f in ACTIONABLE if row[f] != getattr(child, f))
         candidate = child.model_validate({**child.model_dump(), **{c.feature: c.to_value for c in changes}})
         candidate_query = pd.DataFrame([predictor.dice_query(candidate)], columns=features)
-        direct = predictor.dice_category(predictor.dice_model.predict(candidate_query)[0])
-        if direct != predictor.predict_category(candidate):
+        direct = model_output(predictor.dice_model.predict(candidate_query)[0])
+        accepted = checked_prediction(predictor, candidate)
+        if (direct.type_label, direct.severity_label) != (accepted.type_label, accepted.severity_label):
             raise PredictorCompatibilityError("DiCE generation and validation predictors disagree")
         key = tuple((c.feature, c.to_value) for c in changes)
         if key and len(changes) <= max_changes and key not in seen:
