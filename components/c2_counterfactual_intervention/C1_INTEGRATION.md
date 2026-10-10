@@ -56,3 +56,42 @@ The project context lists age, sex, height, weight, status, and area/year in his
 6. Test baseline and candidate predictions against the frozen C1 adapter; fail on category or version mismatch.
 7. Obtain domain-expert review of allowed transitions, local feasibility/eligibility rules, intervention wording, and professional review workflow.
 8. Evaluate on held-out real data under the project’s privacy and research protocol. Synthetic software tests alone cannot support clinical-effectiveness claims.
+
+## Phase 5 two-output handoff (`c2-predictor-v2`)
+
+C1's planned output has **two distinct labels**: malnutrition type and severity.
+For this interface, C1 supplies `predict_outcomes(child) -> ModelPrediction` and
+a `PredictorContract` with `output_mode="type_severity"`,
+`interface_version="c2-predictor-v2"`, separately defined `type_targets` and
+`severity_targets`, an exact `severity_order` from least to most severe, and
+explicit `accepted_type_transitions`. These definitions must be approved by C1
+and domain reviewers; C2 does not assign clinical meaning to any code. The old
+single-category v1 path remains for compatibility and synthetic testing; it
+must not be presented as a validated mapping of type and severity.
+
+`ModelPrediction` has `type_label`, `severity_label`, and optional per-output
+probability maps for internal evaluation. A missing or undeclared baseline
+label makes the adapter incompatible. Missing or unsupported candidate output
+is unresolved. Candidate severity must not move to a higher index in C1's
+declared order. A type change must be in the declared allowed-transition set.
+At least one output must make approved progress; a candidate with no change is
+rejected. Probabilities are never part of intervention cards, and no
+probability difference is interpreted as clinical benefit.
+
+For DiCE, C1 must additionally provide an adapter whose classifier predicts a
+**joint type/severity label**, with `dice_prediction(label)` mapping each joint
+class back to both C1 outputs, `dice_target_label` denoting an approved target,
+and matching reference data and query preprocessing. Generation-model labels
+are checked against `predict_outcomes` at baseline and every emitted candidate;
+the shared pipeline applies non-worsening policy again. If a valid joint-label
+classifier or verified reference set is unavailable, use bounded search or the
+graph method only when their own prerequisites are satisfied. The graph method
+requires explicit C1 reference points and never falls back to the synthetic
+grid in real mode. All three methods use the same final policy gate.
+
+**Still required from C1:** exact input feature list and encodings, both output
+label definitions, a reviewed severity order and allowable type transitions,
+model artifact hash and loading code, missing-output rules, calibrated
+probabilities if supplied, and versioned reference data where needed. A
+qualified reviewer must approve feeding transitions, safety/eligibility rules,
+food evidence sources, intervention wording, and referral policy separately.
