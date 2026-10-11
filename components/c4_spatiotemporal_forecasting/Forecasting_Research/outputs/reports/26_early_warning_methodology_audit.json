@@ -1,0 +1,35 @@
+{
+    "step": 26,
+    "purpose": "Horizon-specific district early-warning alert generation",
+    "input": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\25_triposha_resource_demand_estimates.csv",
+    "forecast_horizons": {
+        "H1": "1-month-ahead warning",
+        "H3": "3-month-ahead warning",
+        "H6": "6-month-ahead warning"
+    },
+    "alert_rule": {
+        "RED": "HIGH forecast risk AND Priority_Rank <= 5",
+        "ORANGE": "HIGH forecast risk OR Priority_Rank <= 5, excluding RED",
+        "YELLOW": "MEDIUM forecast risk",
+        "GREEN": "LOW forecast risk"
+    },
+    "important_interpretation": "Alert levels are research-defined operational planning indicators and are not official clinical or public-health warning standards.",
+    "horizon_handling": "H1, H3 and H6 alerts are generated separately. Predictions from different forecast origins are not mixed to create one alert.",
+    "alert_counts": {
+        "GREEN": 440,
+        "YELLOW": 280,
+        "ORANGE": 92,
+        "RED": 88
+    },
+    "methodology_protection": [
+        "Step 23 predictions retained unchanged",
+        "Step 23 risk levels retained unchanged",
+        "Step 23 priority retained unchanged",
+        "Step 25 Triposha planning estimates retained unchanged",
+        "No forecasting model training",
+        "No hyperparameter tuning",
+        "No model selection",
+        "No 2025 actual malnutrition outcomes used for alert generation",
+        "No cross-horizon mixing for a single alert"
+    ]
+}
