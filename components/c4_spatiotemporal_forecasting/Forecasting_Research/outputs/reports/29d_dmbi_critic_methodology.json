@@ -1,0 +1,48 @@
+{
+  "step": "29D",
+  "name": "DMBI CRITIC Objective Weight Development",
+  "development_period": "2024 only",
+  "input_file": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\29c_2024_dmbi_criteria_development.csv",
+  "criteria": [
+    {
+      "name": "C1_Forecasted_Malnutrition_Cases",
+      "label": "Forecasted Malnutrition Cases",
+      "direction": "benefit"
+    },
+    {
+      "name": "C2_Forecasted_Cases_per_1000_U5",
+      "label": "Forecasted Cases per 1,000 Under-5",
+      "direction": "benefit"
+    },
+    {
+      "name": "C3_Forecasted_YoY_Burden_Growth_Percent",
+      "label": "Forecasted Year-on-Year Burden Growth (%)",
+      "direction": "benefit"
+    }
+  ],
+  "normalization": {
+    "method": "Min-max normalization to [0,1]",
+    "scope": "Within each Forecast_Target_Date x Horizon_Months decision matrix of 25 districts",
+    "constant_group_rule": "If a criterion is constant within one decision matrix, all districts receive normalized value 0.5 for that criterion."
+  },
+  "critic": {
+    "contrast": "Population standard deviation of normalized criterion",
+    "correlation": "Pearson correlation",
+    "conflict": "Sum_k(1 - correlation_jk)",
+    "information_content": "contrast_j * conflict_j",
+    "weight": "information_j / sum(information)"
+  },
+  "operational_weight_design": "One common CRITIC weight vector is estimated from all normalized 2024 month/horizon decision matrices and frozen for H1/H3/H6.",
+  "horizon_specific_weights": "Calculated for diagnostic comparison only and not used operationally.",
+  "manual_weights_used": false,
+  "2025_loaded": false,
+  "future_2026_2030_loaded": false,
+  "actual_outcome_used_for_weighting": false,
+  "frozen_weights": {
+    "C1_Forecasted_Malnutrition_Cases": 0.39220583278546484,
+    "C2_Forecasted_Cases_per_1000_U5": 0.25921569031944053,
+    "C3_Forecasted_YoY_Burden_Growth_Percent": 0.3485784768950947
+  },
+  "next_step": "Step 29E: apply the frozen 2024 CRITIC weights in TOPSIS to 2025 retrospective validation criteria.",
+  "interpretation": "CRITIC weights measure objective information contrast and conflict among the three DMBI planning criteria. They are not causal-effect weights and are not clinical importance scores."
+}
