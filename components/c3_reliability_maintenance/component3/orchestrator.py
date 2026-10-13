@@ -22,6 +22,7 @@ from component3.decide.policy import Decision, MaintenanceAction, decide
 from component3.interfaces import FeatureSchema
 from component3.monitor.monitor import MonitoringReport, run_monitoring
 from component3.registry.registry import ModelRegistry
+from component3.validate.rules import ValidationReport, Validator
 from component3.verify.verify import VerificationResult, verify_candidate
 
 DecisionFn = Callable[[MonitoringReport, ReliabilityReport, Thresholds, "int | None"], Decision]
@@ -36,6 +37,7 @@ class CycleReport:
     verification: VerificationResult | None
     promoted: bool
     context: ContextReport | None = None
+    validation: dict | None = None  # name -> ValidationReport for current / adapt / verify batches
 
 
 class C3Orchestrator:
@@ -46,12 +48,14 @@ class C3Orchestrator:
         thresholds: Thresholds | None = None,
         criteria: PromotionCriteria | None = None,
         decision_fn: DecisionFn = decide,
+        validator: Validator | None = None,
     ):
         self.registry = registry
         self.schema = schema
         self.thresholds = thresholds or Thresholds()
         self.criteria = criteria or PromotionCriteria()
         self.decision_fn = decision_fn
+        self.validator = validator
 
     def run_cycle(
         self,
@@ -93,6 +97,36 @@ class C3Orchestrator:
         verification: VerificationResult | None = None
         promoted = False
 
+        # Validation gate: invalid records are never used to repair or verify a model; a mostly invalid batch is
+        # escalated to a human instead of being used for maintenance.
+        validation = None
+        if self.validator is not None:
+            validation = {"current": self.validator.validate(current_data)}
+            if adapt_data is not None:
+                validation["adapt"] = self.validator.validate(adapt_data)
+            if verify_data is not None:
+                validation["verify"] = self.validator.validate(verify_data)
+            decision.evidence["validation"] = {k: v.summary() for k, v in validation.items()}
+            adapt_report = validation.get("adapt")
+            if (decision.action in (MaintenanceAction.RECALIBRATE, MaintenanceAction.RETRAIN) and adapt_report
+                    and adapt_report.invalid_fraction > self.validator.max_invalid_fraction):
+                decision = Decision(
+                    MaintenanceAction.HOLD,
+                    f"adaptation data failed validation ({adapt_report.invalid_fraction:.0%} invalid records); "
+                    f"fix data quality before {decision.action.value}",
+                    decision.evidence,
+                )
+            else:
+                if adapt_report is not None and adapt_report.invalid.any():
+                    keep = ~adapt_report.invalid
+                    adapt_data = adapt_data[keep].reset_index(drop=True)
+                    adapt_labels = np.asarray(adapt_labels)[keep] if adapt_labels is not None else None
+                verify_report = validation.get("verify")
+                if verify_report is not None and verify_report.invalid.any():
+                    keep = ~verify_report.invalid
+                    verify_data = verify_data[keep].reset_index(drop=True)
+                    verify_labels = np.asarray(verify_labels)[keep] if verify_labels is not None else None
+
         if decision.action == MaintenanceAction.RECALIBRATE:
             if adapt_data is None or adapt_labels is None:
                 raise ValueError("RECALIBRATE decision requires adapt_data and adapt_labels")
@@ -132,4 +166,5 @@ class C3Orchestrator:
             verification=verification,
             promoted=promoted,
             context=context,
+            validation=validation,
         )
