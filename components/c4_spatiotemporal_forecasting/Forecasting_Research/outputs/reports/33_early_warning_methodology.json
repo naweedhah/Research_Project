@@ -1,0 +1,32 @@
+{
+  "step": 33,
+  "name": "Final Automatic Malnutrition Early Warning Engine",
+  "input": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\32b_future_triposha_packet_planning_demand.csv",
+  "current_month_logic": "The system runtime calendar month is automatically used as the common forecast origin.",
+  "horizons": {
+    "H1": "origin + 1 month",
+    "H3": "origin + 3 months",
+    "H6": "origin + 6 months"
+  },
+  "warning_trigger": "Existing DMBI Priority_Level is HIGH or CRITICAL.",
+  "medium_logic": "MEDIUM is watch only and does not trigger an active warning.",
+  "low_logic": "LOW does not trigger a warning.",
+  "combined_notification_logic": "One combined notification record is created per district. The record contains H1, H3 and H6 status. Overall_Severity is the highest severity among H1/H3/H6.",
+  "nearest_warning_logic": "Nearest_Warning_Horizon is the smallest horizon among active HIGH/CRITICAL horizon warnings.",
+  "ngboost_role": "Provides uncertainty/confidence information only.",
+  "triposha_role": "Provides resource-planning demand information.",
+  "new_ml_model_trained": false,
+  "forecast_recalculated": false,
+  "dmbi_recalculated": false,
+  "interpretation": "Research-based operational planning early warning. Priority levels are not clinical emergency diagnoses.",
+  "current_run": {
+    "forecast_origin": "2026-10-01",
+    "H1_target": "2026-11-01",
+    "H3_target": "2027-01-01",
+    "H6_target": "2027-04-01",
+    "raw_warning_rows": 39,
+    "unique_warning_districts": 18,
+    "critical_districts": 13,
+    "high_districts": 5
+  }
+}
