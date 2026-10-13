@@ -20,6 +20,7 @@ from component3.config import PromotionCriteria, Thresholds
 from component3.context.signals import ContextReport
 from component3.decide.policy import Decision, MaintenanceAction, decide
 from component3.interfaces import FeatureSchema
+from component3.monitor.label_free import label_free_warning
 from component3.monitor.monitor import MonitoringReport, run_monitoring
 from component3.registry.registry import ModelRegistry
 from component3.validate.rules import ValidationReport, Validator
@@ -91,6 +92,18 @@ class C3Orchestrator:
         reliability = assess_reliability(active, current_data, current_labels, self.thresholds, current_groups)
         n_labeled = None if current_labels is None else len(current_labels)
         decision = self.decision_fn(monitoring, reliability, self.thresholds, n_labeled)
+        classes = active.metadata.classes
+        if len(reference_data) and len(current_data) and len(classes) >= 2:
+            warning = label_free_warning(
+                active.predict_proba(reference_data), active.predict_proba(current_data),
+                reference_predictions, current_predictions, classes[-1], monitoring.prediction_flagged,
+                context.heightened if context is not None else False)
+            decision.evidence["label_free_warning"] = warning
+            if reliability.status == "pending_labels" and decision.action == MaintenanceAction.HOLD:
+                decision = Decision(decision.action,
+                                    f"{decision.reason}; label-free urgency {warning['urgency']} (flagged share "
+                                    f"{warning['flagged_rate_reference']:.0%} -> {warning['flagged_rate_current']:.0%})",
+                                    decision.evidence)
         if context is not None:
             decision.evidence["context"] = context.as_evidence()
             if monitoring.any_flagged and context.signals:
