@@ -63,4 +63,5 @@ class PromotionCriteria:
     max_ece: float = 0.1
     max_brier: float = 0.25
     max_regression: float = 0.02  # allowed drop vs active model on recall_macro, same verify split
+    max_worst_group_regression: float = 0.05  # allowed drop of the worst-off subgroup vs the active model
     minority_classes: tuple = ()

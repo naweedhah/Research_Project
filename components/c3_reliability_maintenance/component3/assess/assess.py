@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from component3.assess.metrics import classification_metrics
+from component3.assess.subgroups import subgroup_metrics
 from component3.config import Thresholds
 from component3.interfaces import ModelArtifact
 
@@ -38,6 +39,7 @@ def assess_reliability(
     X: pd.DataFrame,
     y: np.ndarray | None,
     thresholds: Thresholds,
+    groups=None,
 ) -> ReliabilityReport:
     if y is None:
         return ReliabilityReport(status="pending_labels", metrics=None, discrimination_ok=None, calibration_ok=None, minority_ok=None)
@@ -47,6 +49,8 @@ def assess_reliability(
     classes = np.array(model.metadata.classes) if model.metadata.classes else np.unique(y)
 
     metrics = classification_metrics(np.asarray(y), np.asarray(y_pred), np.asarray(y_proba), classes)
+    if groups is not None:
+        metrics["subgroups"] = subgroup_metrics(y, y_pred, groups, classes)
 
     discrimination_ok = metrics["recall_macro"] >= thresholds.reliability_tau
     calibration_ok = metrics["ece"] <= thresholds.calibration_tau

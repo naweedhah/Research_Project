@@ -49,6 +49,7 @@ class C3Orchestrator:
         criteria: PromotionCriteria | None = None,
         decision_fn: DecisionFn = decide,
         validator: Validator | None = None,
+        group_fn=None,
     ):
         self.registry = registry
         self.schema = schema
@@ -56,6 +57,7 @@ class C3Orchestrator:
         self.criteria = criteria or PromotionCriteria()
         self.decision_fn = decision_fn
         self.validator = validator
+        self.group_fn = group_fn  # e.g. assess.subgroups.sex_age_groups(); enables subgroup checks
 
     def run_cycle(
         self,
@@ -85,7 +87,8 @@ class C3Orchestrator:
         monitoring = run_monitoring(
             reference_data, current_data, self.schema, monitor_thresholds, reference_predictions, current_predictions
         )
-        reliability = assess_reliability(active, current_data, current_labels, self.thresholds)
+        current_groups = self.group_fn(current_data) if self.group_fn is not None else None
+        reliability = assess_reliability(active, current_data, current_labels, self.thresholds, current_groups)
         n_labeled = None if current_labels is None else len(current_labels)
         decision = self.decision_fn(monitoring, reliability, self.thresholds, n_labeled)
         if context is not None:
@@ -151,7 +154,9 @@ class C3Orchestrator:
         if candidate is not None:
             if verify_data is None or verify_labels is None:
                 raise ValueError("a candidate was generated but no verify_data/verify_labels were supplied")
-            verification = verify_candidate(candidate, verify_data, verify_labels, self.criteria, active_model=active)
+            verify_groups = self.group_fn(verify_data) if self.group_fn is not None else None
+            verification = verify_candidate(candidate, verify_data, verify_labels, self.criteria, active_model=active,
+                                            groups=verify_groups)
             if verification.passed:
                 self.registry.promote(candidate, verification)
                 promoted = True

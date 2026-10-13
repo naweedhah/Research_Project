@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from component3.assess.metrics import classification_metrics
+from component3.assess.subgroups import subgroup_metrics
 from component3.config import PromotionCriteria
 from component3.interfaces import ModelArtifact
 
@@ -30,6 +31,7 @@ def verify_candidate(
     y_verify: np.ndarray,
     criteria: PromotionCriteria,
     active_model: ModelArtifact | None = None,
+    groups=None,
 ) -> VerificationResult:
     classes = np.array(candidate.metadata.classes) if candidate.metadata.classes else np.unique(y_verify)
     y_arr = np.asarray(y_verify)
@@ -64,6 +66,15 @@ def verify_candidate(
         regression = active_metrics["recall_macro"] - cand_metrics["recall_macro"]
         if regression > criteria.max_regression:
             failures.append(f"regression_vs_active={regression:.3f}>{criteria.max_regression}")
+        if groups is not None:
+            cand_groups = subgroup_metrics(y_arr, cand_pred, groups, classes)
+            active_groups = subgroup_metrics(y_arr, active_pred, groups, classes)
+            cand_metrics["subgroups"], active_metrics["subgroups"] = cand_groups, active_groups
+            if cand_groups["worst_group"] is not None and active_groups["worst_group"] is not None:
+                drop = active_groups["worst_bal_acc"] - cand_groups["worst_bal_acc"]
+                if drop > criteria.max_worst_group_regression:
+                    failures.append(f"worst_group_regression={drop:.3f}>{criteria.max_worst_group_regression} "
+                                    f"({cand_groups['worst_group']})")
 
     return VerificationResult(
         passed=len(failures) == 0,
