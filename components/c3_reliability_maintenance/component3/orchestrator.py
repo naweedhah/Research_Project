@@ -39,6 +39,8 @@ class CycleReport:
     promoted: bool
     context: ContextReport | None = None
     validation: dict | None = None  # name -> ValidationReport for current / adapt / verify batches
+    shadow: dict | None = None      # candidate vs active on the same current children
+    pending_approval: bool = False
 
 
 class C3Orchestrator:
@@ -51,6 +53,7 @@ class C3Orchestrator:
         decision_fn: DecisionFn = decide,
         validator: Validator | None = None,
         group_fn=None,
+        require_approval: bool = False,
     ):
         self.registry = registry
         self.schema = schema
@@ -59,6 +62,7 @@ class C3Orchestrator:
         self.decision_fn = decision_fn
         self.validator = validator
         self.group_fn = group_fn  # e.g. assess.subgroups.sex_age_groups(); enables subgroup checks
+        self.require_approval = require_approval  # verified candidates wait for a human instead of auto-deploying
 
     def run_cycle(
         self,
@@ -164,13 +168,26 @@ class C3Orchestrator:
                 self.thresholds.operating_sensitivity,
             )
 
+        shadow = None
+        pending_approval = False
         if candidate is not None:
+            # Shadow comparison: both models on the same current children, before anything is deployed.
+            if len(current_data):
+                a_pred, c_pred = np.asarray(active.predict(current_data)), np.asarray(candidate.predict(current_data))
+                positive = active.metadata.classes[-1] if active.metadata.classes else None
+                shadow = {"agreement": round(float(np.mean(a_pred == c_pred)), 3),
+                          "flagged_share_active": round(float(np.mean(a_pred == positive)), 3),
+                          "flagged_share_candidate": round(float(np.mean(c_pred == positive)), 3)}
+                decision.evidence["shadow"] = shadow
             if verify_data is None or verify_labels is None:
                 raise ValueError("a candidate was generated but no verify_data/verify_labels were supplied")
             verify_groups = self.group_fn(verify_data) if self.group_fn is not None else None
             verification = verify_candidate(candidate, verify_data, verify_labels, self.criteria, active_model=active,
                                             groups=verify_groups)
-            if verification.passed:
+            if verification.passed and self.require_approval:
+                self.registry.stage(candidate, verification)
+                pending_approval = True
+            elif verification.passed:
                 self.registry.promote(candidate, verification)
                 promoted = True
             else:
@@ -185,4 +202,24 @@ class C3Orchestrator:
             promoted=promoted,
             context=context,
             validation=validation,
+            shadow=shadow,
+            pending_approval=pending_approval,
         )
+
+    def post_deployment_check(self, X: pd.DataFrame, y: np.ndarray, tolerance: float = 0.03) -> dict:
+        """After a new model goes live, compare it with the previous one on the first new labelled batch and roll
+        back automatically if it is worse by more than `tolerance` balanced accuracy."""
+        from component3.assess.metrics import classification_metrics
+
+        active, previous = self.registry.active_model, self.registry.previous_model
+        if previous is None:
+            return {"checked": False, "reason": "no previous model to compare with"}
+        classes = np.array(active.metadata.classes) if active.metadata.classes else np.unique(y)
+        score = lambda m: classification_metrics(np.asarray(y), m.predict(X), m.predict_proba(X), classes)["recall_macro"]
+        new, old = score(active), score(previous)
+        rolled_back = old - new > tolerance
+        if rolled_back:
+            self.registry.rollback()
+        return {"checked": True, "active_version": active.version, "previous_version": previous.version,
+                "active_bal_acc": round(new, 3), "previous_bal_acc": round(old, 3), "rolled_back": rolled_back,
+                "now_active": self.registry.active_model.version}
