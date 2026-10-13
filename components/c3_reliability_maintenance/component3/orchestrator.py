@@ -17,6 +17,7 @@ from component3.adapt.recalibrate import generate_recalibrated_candidate
 from component3.adapt.retrain import generate_retrained_candidate
 from component3.assess.assess import ReliabilityReport, assess_reliability
 from component3.config import PromotionCriteria, Thresholds
+from component3.context.signals import ContextReport
 from component3.decide.policy import Decision, MaintenanceAction, decide
 from component3.interfaces import FeatureSchema
 from component3.monitor.monitor import MonitoringReport, run_monitoring
@@ -34,6 +35,7 @@ class CycleReport:
     candidate: CandidateModel | None
     verification: VerificationResult | None
     promoted: bool
+    context: ContextReport | None = None
 
 
 class C3Orchestrator:
@@ -62,20 +64,30 @@ class C3Orchestrator:
         verify_labels: np.ndarray | None = None,
         model_factory: Callable[[], object] | None = None,
         retrain_history: tuple[pd.DataFrame, np.ndarray] | None = None,
+        context: ContextReport | None = None,
     ) -> CycleReport:
         """`retrain_history` (optional): earlier labelled data to train on together with the new adaptation data
-        when retraining, as a rolling window would. Recalibration always uses the new adaptation data only."""
+        when retraining, as a rolling window would. Recalibration always uses the new adaptation data only.
+
+        `context` (optional): external signals (disasters, food prices, inflation). While an alert is active, drift
+        thresholds are tightened for this cycle and the signals are recorded as possible causes. Context never changes
+        the decision rules or triggers maintenance by itself."""
         active = self.registry.active_model
 
         reference_predictions = active.predict(reference_data) if len(reference_data) else None
         current_predictions = active.predict(current_data) if len(current_data) else None
 
+        monitor_thresholds = context.adjust(self.thresholds) if context is not None else self.thresholds
         monitoring = run_monitoring(
-            reference_data, current_data, self.schema, self.thresholds, reference_predictions, current_predictions
+            reference_data, current_data, self.schema, monitor_thresholds, reference_predictions, current_predictions
         )
         reliability = assess_reliability(active, current_data, current_labels, self.thresholds)
         n_labeled = None if current_labels is None else len(current_labels)
         decision = self.decision_fn(monitoring, reliability, self.thresholds, n_labeled)
+        if context is not None:
+            decision.evidence["context"] = context.as_evidence()
+            if monitoring.any_flagged and context.signals:
+                decision.evidence["possible_causes"] = context.possible_causes()
 
         candidate: CandidateModel | None = None
         verification: VerificationResult | None = None
@@ -119,4 +131,5 @@ class C3Orchestrator:
             candidate=candidate,
             verification=verification,
             promoted=promoted,
+            context=context,
         )

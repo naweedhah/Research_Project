@@ -1,3 +1,5 @@
 # Experiment outputs are aggregate numbers only (no child records), so they are tracked here even though the
 # repository root ignores *.csv. Child-level data must never be placed in this folder.
 !results/**/*.csv
+!tests/fixtures/*.csv
+!component3/context/data/*.csv

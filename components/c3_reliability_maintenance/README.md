@@ -18,10 +18,11 @@ component3/
 ├── verify/           # verification gate on untouched data; must not regress vs the active model
 ├── registry/         # promote, reject, rollback, full version history
 ├── orchestrator.py   # one full maintenance cycle
+├── context/          # external signals: disasters (GDACS), food prices (WFP/HDX), inflation (CCPI), World Bank background
 ├── data/             # loader for the real linked 2025 -> 2026 register data (not stored in the repo)
 ├── models/           # stand-in C1 model (calibrated gradient-boosted trees) until C1's final model is plugged in
 └── experiments/      # stress scenarios, strategies, comparison harness, real-data experiment runner
-tests/                # 46 unit tests
+tests/                # 55 unit tests (offline; real GDACS/WFP samples in tests/fixtures)
 results/c3_underweight/  # first experiment results (aggregate numbers and graphs only)
 ```
 
@@ -48,6 +49,26 @@ python -m component3.experiments.run_real --report-only        # rebuild REPORT.
 It runs 22 controlled shifts (missing data, measurement error, scale bias, population shifts, prevalence change,
 dropped fields) plus real unseen-PHM-area shifts, measures drift and actual harm, and compares five strategies:
 static, periodic retraining, always recalibrate, always retrain and C3's adaptive policy.
+
+## External context monitoring
+
+Disasters, food prices and inflation can change the child population before any new labels arrive. C3 reads them as
+**leading indicators**: an alert tightens drift detection for that cycle and the signals are attached to the cycle's
+evidence as possible causes. Context **never triggers maintenance by itself** (data changed ≠ model broken).
+
+| Source | What | Frequency | Signal |
+|---|---|---|---|
+| GDACS API | Floods, cyclones, droughts, earthquakes (Sri Lanka) | Near real-time | Orange/Red event → alert; Green within 250 km → watch (90-day lookback) |
+| WFP market prices (HDX) | Staple prices (rice, eggs, coconut, lentils…) in Ampara and Batticaloa | Monthly, published with delay | Month-on-month ≥ 10% or year-on-year ≥ 20% → alert; ≥ 5% → watch |
+| CCPI (`component3/context/data/ccpi_monthly.csv`) | National food and headline inflation | Monthly; update from the CBSL/DCS release | Food ≥ 10% → alert, ≥ 5% → watch; headline +3 points in 3 months → watch |
+| World Bank Indicators API | Yearly national inflation | Yearly | Background only |
+
+```bash
+python -m component3.context.check --start 2025-12-01 --end 2025-12-31 --offline   # Cyclone Ditwah / flood: ALERT
+python -m component3.context.check --background                                    # live sources, current month
+```
+
+Pass the report to a cycle with `orchestrator.run_cycle(..., context=build_context_report(start, end))`.
 
 ## First results (underweight, stand-in model) — see `results/c3_underweight/REPORT.md`
 
