@@ -1,0 +1,43 @@
+{
+  "forecast_origin": "2026-10-01",
+  "warning_count": 18,
+  "critical_count": 13,
+  "high_count": 5,
+  "latest_warnings": [
+    {
+      "district": "Anuradhapura",
+      "overall_severity": "CRITICAL",
+      "nearest_warning_horizon": 1,
+      "nearest_warning_month_display": "November 2026",
+      "message": "Critical future malnutrition planning risk detected for Anuradhapura."
+    },
+    {
+      "district": "Badulla",
+      "overall_severity": "CRITICAL",
+      "nearest_warning_horizon": 1,
+      "nearest_warning_month_display": "November 2026",
+      "message": "Critical future malnutrition planning risk detected for Badulla."
+    },
+    {
+      "district": "Batticaloa",
+      "overall_severity": "CRITICAL",
+      "nearest_warning_horizon": 1,
+      "nearest_warning_month_display": "November 2026",
+      "message": "Critical future malnutrition planning risk detected for Batticaloa."
+    },
+    {
+      "district": "Gampaha",
+      "overall_severity": "CRITICAL",
+      "nearest_warning_horizon": 1,
+      "nearest_warning_month_display": "November 2026",
+      "message": "Critical future malnutrition planning risk detected for Gampaha."
+    },
+    {
+      "district": "Kandy",
+      "overall_severity": "CRITICAL",
+      "nearest_warning_horizon": 1,
+      "nearest_warning_month_display": "November 2026",
+      "message": "Critical future malnutrition planning risk detected for Kandy."
+    }
+  ]
+}
