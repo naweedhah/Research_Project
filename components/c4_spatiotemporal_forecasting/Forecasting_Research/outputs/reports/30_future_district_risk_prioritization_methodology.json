@@ -1,0 +1,43 @@
+{
+  "step": "30",
+  "name": "Final Future District Risk / Priority Export with NGBoost Uncertainty",
+  "inputs": {
+    "dmbi_priority": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\29f_future_dmbi_critic_topsis_prioritization_2026_2030.csv",
+    "ngboost_uncertainty": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\27b_future_forecasts_with_ngboost_uncertainty_2026_2030.csv"
+  },
+  "system_design": {
+    "point_forecast": "Random Forest",
+    "uncertainty": "NGBoost probabilistic predictive distribution",
+    "planning_priority": "CRITIC-TOPSIS DMBI"
+  },
+  "join_key": [
+    "District",
+    "Forecast_Target_Date",
+    "Horizon_Months"
+  ],
+  "recalculation_policy": {
+    "random_forest_retrained": false,
+    "ngboost_retrained": false,
+    "uncertainty_recalibrated": false,
+    "critic_weights_recalculated": false,
+    "topsis_rerun": false,
+    "dmbi_recalculated": false,
+    "priority_rank_recalculated": false,
+    "priority_level_recalculated": false
+  },
+  "uncertainty_fields": [
+    "NGBoost_Predictive_Mean",
+    "NGBoost_Predicted_SD",
+    "NGBoost_Lower_95",
+    "NGBoost_Upper_95",
+    "NGBoost_95_Interval_Width",
+    "NGBoost_Relative_Interval_Width",
+    "Uncertainty_Level",
+    "Confidence_Label",
+    "Nominal_Prediction_Interval_Percentage",
+    "Validated_2025_Observed_Coverage_Percentage"
+  ],
+  "uncertainty_interpretation": "The 95% interval is an NGBoost probabilistic prediction interval. It is not a formal Random Forest confidence interval and does not imply 95% accuracy or certainty.",
+  "priority_interpretation": "DMBI priority is a relative forecast-based district planning priority, not a clinical emergency classification.",
+  "next_step": "Step 31 GIS district priority mapping"
+}
