@@ -98,7 +98,7 @@ Pass the report to a cycle with `orchestrator.run_cycle(..., context=build_conte
 all safety features active.
 
 - **Drift does not mean harm:** the drift monitors explain only a small part of the actual performance drop
-  (R² ≈ 0.17); conventional limits (PSI ≥ 0.2, KS p < 0.05) raise alarms on 90% of harmless shifts, the data-driven
+  (R² ≈ 0.18); conventional limits (PSI ≥ 0.2, KS p < 0.05) raise alarms on 90% of harmless shifts, the data-driven
   limits on 56%. Unseen area PHM04 drifted strongly (PSI 1.5) with no harm; PHM07 drifted less (PSI 0.49) and was harmed.
 - **Adaptive maintenance:** 41% intervention rate (vs 64–97% for fixed strategies), 37% unnecessary interventions on
   harmless shifts (vs 53–96%), mean cost 0.98 (vs 1.93–2.92 for retraining strategies), same final test performance.
