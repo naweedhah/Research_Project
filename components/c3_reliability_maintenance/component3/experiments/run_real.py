@@ -30,6 +30,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
 from component3.assess.metrics import classification_metrics
+from component3.assess.subgroups import sex_age_groups
 from component3.config import ACTION_COST, PromotionCriteria, Thresholds, calibrated_thresholds
 from component3.data import CATEGORICAL, NUMERIC, load_prediction_data
 from component3.experiments import stress_scenarios as ss
@@ -38,6 +39,7 @@ from component3.experiments.strategies import STRATEGY_DECISION_FNS, build_orche
 from component3.models import standin_factory
 from component3.monitor.monitor import run_monitoring
 from component3.registry.registry import ModelRegistry
+from component3.validate import default_validator
 
 HARM_TOLERANCE = 0.05       # drop in balanced accuracy that counts as harm
 MIN_SENSITIVITY = 0.65      # floor for sensitivity (detecting true cases)
@@ -91,6 +93,9 @@ def shift_grid() -> list[Shift]:
                        ss.inject_missingness(["Weight_kg_2025", "WAZ_2025", "WHZ_2025"], r)))
     for h, w in ((1.0, 0.3), (2.0, 0.6), (4.0, 1.2)):
         g.append(Shift("measurement_error", "A", h, f"height SD {h} cm, weight SD {w} kg", measurement_error(h, w)))
+    for r in (0.05, 0.2):
+        g.append(Shift("impossible_values", "A", r, f"{r:.0%} weights recorded 5x too high",
+                       ss.inject_out_of_range_values(["Weight_kg_2025", "WAZ_2025"], factor=5.0, rate=r)))
     for kg in (-0.25, -0.5, -1.0):
         g.append(Shift("scale_bias", "A", abs(kg), f"scale reads {abs(kg)} kg low", scale_bias(kg)))
     for s in (0.5, 1.0, 1.5):
@@ -185,7 +190,8 @@ def run_strategies(setting: Setting, shifted: dict, data, factory, thr, crit, ha
     before = evaluate(setting.model, X_test, y_test)
     for strategy in STRATEGY_DECISION_FNS:
         registry = ModelRegistry(setting.model)
-        orch = build_orchestrator(strategy, registry, data.schema, thr, crit)
+        orch = build_orchestrator(strategy, registry, data.schema, thr, crit,
+                                  validator=default_validator(), group_fn=sex_age_groups())
         cycle = orch.run_cycle(
             reference_data=setting.X_ref, current_data=shifted["current"][0], current_labels=shifted["current"][1],
             adapt_data=shifted["adapt"][0], adapt_labels=shifted["adapt"][1],

@@ -57,6 +57,7 @@ def build_orchestrator(
     schema: FeatureSchema,
     thresholds: Thresholds | None = None,
     criteria=None,
+    **orchestrator_options,
 ) -> C3Orchestrator:
     if strategy not in STRATEGY_DECISION_FNS:
         raise ValueError(f"unknown strategy '{strategy}', expected one of {list(STRATEGY_DECISION_FNS)}")
@@ -66,4 +67,5 @@ def build_orchestrator(
         thresholds=thresholds,
         criteria=criteria,
         decision_fn=STRATEGY_DECISION_FNS[strategy],
+        **orchestrator_options,
     )
