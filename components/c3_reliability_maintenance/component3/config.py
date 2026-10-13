@@ -17,6 +17,10 @@ class Thresholds:
     # Monitor: shift detectors
     psi_flag: float = 0.2  # conventional "moderate shift" cutoff
     ks_alpha: float = 0.05
+    # Optional data-driven limits (see calibrated_thresholds): KS statistic instead of its p-value, which flags
+    # trivial differences once batches are large, and a separate limit for drift in the model's predictions.
+    ks_statistic_flag: float | None = None
+    prediction_psi_flag: float | None = None
     missingness_delta_flag: float = 0.1  # absolute change in NaN rate
 
     # Assess: reliability floors/ceilings
@@ -34,6 +38,15 @@ class Thresholds:
 
     # Adapt: operating point re-tuned for every recalibrated/retrained binary candidate
     operating_sensitivity: float = 0.80
+
+
+def calibrated_thresholds(**overrides) -> Thresholds:
+    """Drift limits derived from the real-data experiments (results/c3_underweight, 150 shift runs): the values that
+    best separated harmful from harmless shifts (detection minus false alarms) for batches of ~200-400 children.
+    Conventional PSI >= 0.2 flagged 92% of harmless shifts. Re-derive if batch sizes or the model change."""
+    base = dict(psi_flag=0.6, ks_statistic_flag=0.27, prediction_psi_flag=0.04)
+    base.update(overrides)
+    return Thresholds(**base)
 
 
 # Relative cost of each maintenance action, used to quantify "least invasive" (spec §12) when comparing

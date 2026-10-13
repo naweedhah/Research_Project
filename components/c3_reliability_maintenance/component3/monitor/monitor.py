@@ -48,7 +48,10 @@ def _assess_feature(name: str, kind: str, reference: pd.Series, current: pd.Seri
         ks_stat, ks_p = ks_test(reference, current)
         if not np.isnan(psi_value) and psi_value >= thresholds.psi_flag:
             reasons.append(f"psi={psi_value:.3f}>={thresholds.psi_flag}")
-        if ks_p is not None and not np.isnan(ks_p) and ks_p < thresholds.ks_alpha:
+        if thresholds.ks_statistic_flag is not None:
+            if ks_stat is not None and not np.isnan(ks_stat) and ks_stat >= thresholds.ks_statistic_flag:
+                reasons.append(f"ks={ks_stat:.3f}>={thresholds.ks_statistic_flag}")
+        elif ks_p is not None and not np.isnan(ks_p) and ks_p < thresholds.ks_alpha:
             reasons.append(f"ks_p={ks_p:.4f}<{thresholds.ks_alpha}")
     else:
         psi_value = psi_categorical(reference, current)
@@ -96,7 +99,8 @@ def run_monitoring(
     prediction_flagged = False
     if reference_predictions is not None and current_predictions is not None:
         prediction_psi = psi_categorical(pd.Series(reference_predictions), pd.Series(current_predictions))
-        prediction_flagged = not np.isnan(prediction_psi) and prediction_psi >= thresholds.psi_flag
+        limit = thresholds.prediction_psi_flag if thresholds.prediction_psi_flag is not None else thresholds.psi_flag
+        prediction_flagged = not np.isnan(prediction_psi) and prediction_psi >= limit
 
     any_flagged = any(r.flagged for r in results) or prediction_flagged
 

@@ -75,7 +75,10 @@ class ContextReport:
         f = self.rules.tighten_factor
         return replace(thresholds, psi_flag=thresholds.psi_flag * f,
                        missingness_delta_flag=thresholds.missingness_delta_flag * f,
-                       ks_alpha=min(0.10, thresholds.ks_alpha / f))
+                       ks_alpha=min(0.10, thresholds.ks_alpha / f),
+                       ks_statistic_flag=None if thresholds.ks_statistic_flag is None else thresholds.ks_statistic_flag * f,
+                       prediction_psi_flag=None if thresholds.prediction_psi_flag is None
+                       else thresholds.prediction_psi_flag * f)
 
     def possible_causes(self) -> list[str]:
         return [s.summary for s in self.signals]

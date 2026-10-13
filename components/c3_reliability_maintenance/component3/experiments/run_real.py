@@ -30,7 +30,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
 from component3.assess.metrics import classification_metrics
-from component3.config import ACTION_COST, PromotionCriteria, Thresholds
+from component3.config import ACTION_COST, PromotionCriteria, Thresholds, calibrated_thresholds
 from component3.data import CATEGORICAL, NUMERIC, load_prediction_data
 from component3.experiments import stress_scenarios as ss
 from component3.experiments.run_comparison import fit_initial_model
@@ -43,6 +43,7 @@ HARM_TOLERANCE = 0.05       # drop in balanced accuracy that counts as harm
 MIN_SENSITIVITY = 0.65      # floor for sensitivity (detecting true cases)
 CLASSES = np.array([0, 1])
 DRIFT_COLUMNS = ["max_psi", "max_ks", "max_missing_delta", "prediction_psi"]
+DRIFT_MODE = {"mode": "conventional"}  # "calibrated" uses config.calibrated_thresholds() drift limits
 
 
 # ---------------------------------------------------------------- shifts
@@ -124,8 +125,9 @@ def thresholds_from_baseline(baseline: dict) -> tuple[Thresholds, PromotionCrite
     development time), replacing the generic placeholders in config.py."""
     tau = baseline["bal_acc"] - HARM_TOLERANCE
     cal = max(baseline["ece"] + 0.05, 0.08)
-    thr = Thresholds(reliability_tau=tau, calibration_tau=cal, min_minority_recall=MIN_SENSITIVITY,
-                     minority_classes=(1,), min_labeled_for_retrain=100, operating_sensitivity=0.80)
+    limits = dict(reliability_tau=tau, calibration_tau=cal, min_minority_recall=MIN_SENSITIVITY,
+                  minority_classes=(1,), min_labeled_for_retrain=100, operating_sensitivity=0.80)
+    thr = calibrated_thresholds(**limits) if DRIFT_MODE["mode"] == "calibrated" else Thresholds(**limits)
     crit = PromotionCriteria(min_recall_macro=tau, min_minority_recall=MIN_SENSITIVITY, max_ece=cal, max_brier=0.35,
                              max_regression=0.02, minority_classes=(1,))
     return thr, crit
@@ -320,8 +322,9 @@ def _record(setting: Setting, shift: Shift, seed: int, kind: str, shifted: dict,
     return shift_row, run_strategies(setting, shifted, data, factory, thr, crit, harmful, meta)
 
 
-def _stress_task(target: str, seed: int) -> tuple[list, list]:
+def _stress_task(target: str, seed: int, mode: str = "conventional") -> tuple[list, list]:
     from threadpoolctl import threadpool_limits
+    DRIFT_MODE["mode"] = mode
     with threadpool_limits(1):
         data = load_prediction_data(target)
         factory = standin_factory(NUMERIC, CATEGORICAL)
@@ -336,8 +339,9 @@ def _stress_task(target: str, seed: int) -> tuple[list, list]:
         return shift_rows, run_rows
 
 
-def _area_task(target: str, phm: str, seed: int) -> tuple[list, list]:
+def _area_task(target: str, phm: str, seed: int, mode: str = "conventional") -> tuple[list, list]:
     from threadpoolctl import threadpool_limits
+    DRIFT_MODE["mode"] = mode
     with threadpool_limits(1):
         data = load_prediction_data(target)
         factory = standin_factory(NUMERIC, CATEGORICAL)
@@ -347,16 +351,17 @@ def _area_task(target: str, phm: str, seed: int) -> tuple[list, list]:
         return [row], runs
 
 
-def run(target: str, seeds: int, out: Path, include_phm: bool = True, workers: int | None = None) -> None:
+def run(target: str, seeds: int, out: Path, include_phm: bool = True, workers: int | None = None,
+        mode: str = "conventional") -> None:
     import os
     from concurrent.futures import ProcessPoolExecutor, as_completed
 
     start = time.time()
     out.mkdir(parents=True, exist_ok=True)
     data = load_prediction_data(target)
-    tasks = [(_stress_task, (target, s)) for s in range(seeds)]
+    tasks = [(_stress_task, (target, s, mode)) for s in range(seeds)]
     if include_phm:
-        tasks += [(_area_task, (target, phm, s)) for phm in sorted(np.unique(data.phm)) for s in range(seeds)]
+        tasks += [(_area_task, (target, phm, s, mode)) for phm in sorted(np.unique(data.phm)) for s in range(seeds)]
     shift_rows, run_rows = [], []
     with ProcessPoolExecutor(max_workers=workers or max(1, (os.cpu_count() or 2) - 1)) as pool:
         futures = [pool.submit(fn, *args) for fn, args in tasks]
@@ -418,11 +423,14 @@ def main() -> None:
     ap.add_argument("--no-phm", action="store_true", help="skip the real unseen-PHM-area shifts")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--report-only", action="store_true", help="rebuild REPORT.md and figures from saved CSVs")
+    ap.add_argument("--thresholds", choices=["conventional", "calibrated"], default="conventional",
+                    help="drift limits: conventional (PSI 0.2, KS p<0.05) or calibrated from earlier experiments")
     a = ap.parse_args()
+    default_out = Path("results") / (f"c3_{a.target}" + ("_calibrated" if a.thresholds == "calibrated" else ""))
     if a.report_only:
-        write_report(a.target, a.seeds, a.out or Path("results") / f"c3_{a.target}")
+        write_report(a.target, a.seeds, a.out or default_out)
         return
-    run(a.target, a.seeds, a.out or Path("results") / f"c3_{a.target}", include_phm=not a.no_phm, workers=a.workers)
+    run(a.target, a.seeds, a.out or default_out, include_phm=not a.no_phm, workers=a.workers, mode=a.thresholds)
 
 
 if __name__ == "__main__":
