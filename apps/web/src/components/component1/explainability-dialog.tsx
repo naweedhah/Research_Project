@@ -118,7 +118,7 @@ export function ExplainabilityDialog({
                 </p>
                 <p className="mt-1 text-xs text-[#64748b]">
                   {prediction?.ga_rgca
-                    ? "Task: 12-month nutritional-risk prediction from this visit. Research decision-support model — clinical confirmation required."
+                    ? "Task: future nutritional-risk prediction from this visit. Research decision-support model — clinical confirmation required."
                     : "AI-assisted assessment from the measurements recorded at this visit. Clinical review required."}
                 </p>
               </section>
@@ -144,7 +144,7 @@ export function ExplainabilityDialog({
                       <li>Supplementation {formatPercent(prediction.ga_rgca.modality_reliability.supplementation)}</li>
                     </ul>
                     <p className="mt-2 text-xs text-[#64748b]">
-                      Reliability indicates how the GA-RGCA fusion mechanism weighted the quality/availability of each information source for this prediction. It is not a causal explanation.
+                      Modality reliability reflects how the GA-RGCA fusion mechanism weighted the quality and availability of each information source for this prediction. It is not a causal explanation or feature importance measure.
                     </p>
                   </>
                 ) : (

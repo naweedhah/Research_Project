@@ -27,7 +27,7 @@ import { api } from "@/services/component4/httpClient";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { Button } from "@/components/common/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
-import { displayedConditionList, displayedMalnutritionType } from "@/data/child-profile";
+import { displayedMalnutritionType } from "@/data/child-profile";
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
@@ -234,7 +234,7 @@ export default function DashboardPage() {
         <p className="mt-1 text-sm text-[#64748b]">
           {data.model.is_demo
             ? `${data.model.version} · demonstration output`
-            : `${data.model.version} · 12-month research prediction · clinical confirmation required`}
+            : `${data.model.version} · future nutritional-risk prediction · clinical confirmation required`}
         </p>
       </header>
 
@@ -499,7 +499,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           {row.current_status ? (
             <p className="mt-2 inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-[#0f2744]">
               {row.score_kind === "highest_condition_probability"
-                ? `12-month prediction: ${displayedConditionList(row).join(", ") || "—"}`
+                ? `Predicted type: ${displayedMalnutritionType(row) || "—"}`
                 : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
             </p>
           ) : null}
@@ -710,7 +710,7 @@ function ProbabilityInfoButton({
             <>
               <p className="mt-2">
                 {twelveMonthRisk
-                  ? "This is the highest GA-RGCA v3 condition probability for the next 12 months. It is a model estimate, not a confirmed current nutritional status."
+                  ? "This is the highest GA-RGCA v3 condition probability. It is a model estimate, not a confirmed current nutritional status."
                   : "The model currently estimates nutritional risk from the latest visit."}{" "}
                 <strong className="text-[#0f2744]">{currentText}</strong>
               </p>

@@ -219,23 +219,31 @@ function CategorySelect({
   value,
   options,
   onChange,
+  allowNotApplicable = false,
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  allowNotApplicable?: boolean;
 }) {
   return (
     <div>
       <Label>{label}</Label>
       <Select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Not recorded</option>
+        {allowNotApplicable ? <option value="__not_applicable__">Not yet applicable</option> : null}
         {options.map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}
       </Select>
     </div>
   );
+}
+
+function modelCategory(value: string): string | null {
+  if (!value || value === "__not_applicable__") return null;
+  return value;
 }
 
 function str(v: unknown): string {
@@ -396,13 +404,13 @@ export default function NewVisitPage() {
           household_income_range: form.household_income_range || null,
           father_occupation: form.father_occupation || null,
           mother_occupation: form.mother_occupation || null,
-          exclusive_breastfeeding: form.exclusive_breastfeeding || null,
-          breastfeeding_duration: form.breastfeeding_duration_category || null,
-          complementary_feeding_timing: form.complementary_feeding_timing || null,
-          meal_frequency: form.meal_frequency_category || null,
-          dietary_diversity: form.dietary_diversity_category || null,
-          triposha_supplementation: form.triposha_supplementation || null,
-          vitamin_supplementation: form.vitamin_supplementation || null,
+          exclusive_breastfeeding: modelCategory(form.exclusive_breastfeeding),
+          breastfeeding_duration: modelCategory(form.breastfeeding_duration_category),
+          complementary_feeding_timing: modelCategory(form.complementary_feeding_timing),
+          meal_frequency: modelCategory(form.meal_frequency_category),
+          dietary_diversity: modelCategory(form.dietary_diversity_category),
+          triposha_supplementation: modelCategory(form.triposha_supplementation),
+          vitamin_supplementation: modelCategory(form.vitamin_supplementation),
           historical_mam: form.historical_mam === "" ? null : Number(form.historical_mam),
           historical_sam: form.historical_sam === "" ? null : Number(form.historical_sam),
           historical_underweight: form.historical_underweight || null,
@@ -496,7 +504,7 @@ export default function NewVisitPage() {
       <Card className="max-w-xl border-[#e4ecf4] shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
         <CardHeader>
           <CardTitle id="visit-result-title">
-            {p.ga_rgca ? "12-Month Nutritional Risk Prediction" : "AI-assisted assessment"}
+            {p.ga_rgca ? "Future Nutritional Risk Prediction" : "AI-assisted assessment"}
           </CardTitle>
         </CardHeader>
         <CardBody className="space-y-3">
@@ -516,11 +524,8 @@ export default function NewVisitPage() {
               <p>Model Uncertainty <strong>{p.ga_rgca.uncertainty_flag ? "Elevated" : "Low"}</strong></p>
               <p className="text-sm text-muted">{p.ga_rgca.uncertainty_label}</p>
               <p>Clinical Recommendation <strong>{p.ga_rgca.triage}</strong></p>
-              <p>Highest Predicted Condition Risk <strong>{formatPercent(p.risk)}</strong></p>
-              <p>Acute Malnutrition Status <strong>{p.ga_rgca.acute_status}</strong></p>
-              <p className="text-sm text-muted">
-                Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
-              </p>
+              <p className="text-sm text-[#64748b]">Highest Predicted Condition Risk {formatPercent(p.risk)}</p>
+              <p className="text-sm text-muted">Research decision-support model — clinical confirmation required.</p>
               {p.ga_rgca.historical_inputs ? (
                 <p className="text-sm text-muted">
                   Baseline {p.ga_rgca.historical_inputs.assessment_date ? new Date(p.ga_rgca.historical_inputs.assessment_date).toLocaleDateString() : "date not recorded"}
@@ -645,7 +650,7 @@ export default function NewVisitPage() {
                 </p>
                 {prefillQ.data.historical_growth ? (
                   <p className="text-xs text-[#334155]">
-                    The 12-month model uses visit {prefillQ.data.historical_growth.visit_number} on{" "}
+                    The model uses visit {prefillQ.data.historical_growth.visit_number} on{" "}
                     {new Date(prefillQ.data.historical_growth.visit_date).toLocaleDateString()} as its baseline
                     ({str(prefillQ.data.historical_growth.age_months)} months, {str(prefillQ.data.historical_growth.weight_kg)} kg,{" "}
                     {str(prefillQ.data.historical_growth.height_cm)} cm). Today&apos;s weight and height stay on this visit and are not copied into that baseline. The horizon is 12 months after that earlier date.
@@ -724,7 +729,7 @@ export default function NewVisitPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-[#0f2744]">12-month risk model — household</p>
+                <p className="text-sm font-medium text-[#0f2744]">GA-RGCA household context</p>
                 <p className="text-xs text-[#64748b]">Leave a field as not recorded when the clinic did not assess it. These labels match the trained categories.</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
@@ -782,14 +787,14 @@ export default function NewVisitPage() {
           ) : null}
           {step === 3 ? (
             <div className="mt-4 space-y-2">
-              <p className="text-sm font-medium text-[#0f2744]">12-month risk model — feeding and supplementation</p>
+              <p className="text-sm font-medium text-[#0f2744]">GA-RGCA feeding and supplementation</p>
               <p className="text-xs text-[#64748b]">These are separate from the fields above. A yes/no answer is not converted into a timing or variety category.</p>
               <div className="grid gap-3 md:grid-cols-2">
                 <CategorySelect label="Exclusive breastfeeding" value={form.exclusive_breastfeeding} options={["Yes", "No"]} onChange={(value) => set("exclusive_breastfeeding", value)} />
                 <CategorySelect label="Breastfeeding duration" value={form.breastfeeding_duration_category} options={["Less than 6 months", "More than 6 months"]} onChange={(value) => set("breastfeeding_duration_category", value)} />
-                <CategorySelect label="Complementary feeding timing" value={form.complementary_feeding_timing} options={["Before 6 months", "After 6 months"]} onChange={(value) => set("complementary_feeding_timing", value)} />
-                <CategorySelect label="Meal frequency" value={form.meal_frequency_category} options={["2 meals/day", "3 meals/day", "4+ meals/day"]} onChange={(value) => set("meal_frequency_category", value)} />
-                <CategorySelect label="Dietary diversity" value={form.dietary_diversity_category} options={["Less than 2 varieties", "2 to 5 varieties", "More than 5 varieties"]} onChange={(value) => set("dietary_diversity_category", value)} />
+                <CategorySelect label="Complementary feeding timing" value={form.complementary_feeding_timing} options={["Before 6 months", "After 6 months"]} allowNotApplicable onChange={(value) => set("complementary_feeding_timing", value)} />
+                <CategorySelect label="Meal frequency" value={form.meal_frequency_category} options={["2 meals/day", "3 meals/day", "4+ meals/day"]} allowNotApplicable onChange={(value) => set("meal_frequency_category", value)} />
+                <CategorySelect label="Dietary diversity" value={form.dietary_diversity_category} options={["Less than 2 varieties", "2 to 5 varieties", "More than 5 varieties"]} allowNotApplicable onChange={(value) => set("dietary_diversity_category", value)} />
                 <CategorySelect label="Triposha supplementation" value={form.triposha_supplementation} options={["No", "Yes - irregular use", "Yes - regular use"]} onChange={(value) => set("triposha_supplementation", value)} />
                 <CategorySelect label="Vitamin supplementation" value={form.vitamin_supplementation} options={["Yes", "No"]} onChange={(value) => set("vitamin_supplementation", value)} />
               </div>
