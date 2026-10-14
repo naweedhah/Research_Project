@@ -14,6 +14,7 @@ COPY services/api/requirements.txt /tmp/requirements.txt
 COPY workers/alerts/requirements.txt /tmp/worker-requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/worker-requirements.txt
 
+COPY services/inference/app/malnutrition_type.py /opt/ga_rgca/malnutrition_type.py
 COPY services/api /app
 COPY workers /app/workers
 COPY packages/contracts /contracts

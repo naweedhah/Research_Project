@@ -46,6 +46,7 @@ services:
     volumes:
       - ./packages/contracts:/contracts:ro
       - ./services/api/app:/app/app:ro
+      - ./services/inference/app/malnutrition_type.py:/opt/ga_rgca/malnutrition_type.py:ro
       - ./ml:/ml:ro
     depends_on:
       postgres:
