@@ -52,6 +52,11 @@ export type ProfilePrediction = {
     clinical_use?: boolean;
     disclaimer?: string;
     data_limitations?: string[];
+    binary_thresholds?: { Underweight?: number; Stunting?: number };
+    input_snapshot?: { values?: Record<string, unknown>; missing_features?: string[] };
+    missing_features?: string[];
+    applicability?: { message?: string };
+    output_consistency?: string;
   } | null;
 };
 
@@ -224,6 +229,78 @@ export function visitProbabilityDeltaPp(current?: number | null, previous?: numb
   return Math.round((current - previous) * 1000) / 10;
 }
 
+export const TREND_CONDITIONS = ["Underweight", "Stunting", "MAM", "SAM"] as const;
+export type TrendCondition = (typeof TREND_CONDITIONS)[number];
+
+export function conditionProbability(
+  source?: {
+    risk?: number | null;
+    predicted_malnutrition_type?: string | null;
+    ga_rgca?: {
+      underweight_probability?: number;
+      stunting_probability?: number;
+      mam_probability?: number;
+      sam_probability?: number;
+    } | null;
+  } | null,
+  condition?: string | null,
+): number | null {
+  const ga = source?.ga_rgca;
+  if (condition === "Underweight") return ga?.underweight_probability ?? null;
+  if (condition === "Stunting") return ga?.stunting_probability ?? null;
+  if (condition === "MAM") return ga?.mam_probability ?? null;
+  if (condition === "SAM") return ga?.sam_probability ?? null;
+  return null;
+}
+
+export function primaryTypeProbability(
+  source?: {
+    risk?: number | null;
+    predicted_malnutrition_type?: string | null;
+    status?: string | null;
+    ga_rgca?: {
+      predicted_malnutrition_type?: string | null;
+      underweight_probability?: number;
+      stunting_probability?: number;
+      mam_probability?: number;
+      sam_probability?: number;
+    } | null;
+  } | null,
+): number | null {
+  const type = displayedMalnutritionType(source);
+  const matched = conditionProbability(source, type);
+  if (matched != null) return matched;
+  return source?.risk ?? null;
+}
+
+export function sameConditionDelta(
+  current?: Parameters<typeof conditionProbability>[0],
+  previous?: Parameters<typeof conditionProbability>[0],
+  condition?: string | null,
+): number | null {
+  const type = condition || displayedMalnutritionType(current);
+  if (!type || type === "Normal") return null;
+  return visitProbabilityDeltaPp(conditionProbability(current, type), conditionProbability(previous, type));
+}
+
+export function defaultTrendCondition(source?: Parameters<typeof displayedMalnutritionType>[0]): TrendCondition {
+  const type = displayedMalnutritionType(source);
+  if (type === "Underweight" || type === "Stunting" || type === "MAM" || type === "SAM") return type;
+  return "Stunting";
+}
+
+export function visitBinding(visit?: ProfileVisit | null, dob?: string | null, fallbackAge = 0) {
+  return {
+    visit_number: visit?.visit_number ?? null,
+    visit_date: visit?.visit_date ?? null,
+    age_months: ageMonthsAtVisit(dob, visit?.visit_date, fallbackAge),
+    height_cm: visit?.measurements?.height_cm ?? null,
+    weight_kg: visit?.measurements?.weight_kg ?? null,
+    status: displayedMalnutritionType(visit?.prediction) ?? null,
+    risk: visit?.prediction?.risk ?? null,
+  };
+}
+
 /** Convert stored visit risk_velocity (0–1 scale per month) to percentage points. */
 export function riskVelocityPpMonth(raw?: number | null): number | null {
   if (raw == null) return null;
@@ -291,17 +368,24 @@ export function predictedVisits(profile: ChildProfile): ProfileVisit[] {
   return profile.visits.filter((v) => v.prediction?.risk != null);
 }
 
-export function probabilitySeries(profile: ChildProfile) {
-  return predictedVisits(profile).map((v) => ({
-    visit: `V${v.visit_number}`,
-    date: v.visit_date,
-    probability: Math.round((v.prediction!.risk as number) * 100),
-    status: displayedMalnutritionType(v.prediction),
-    severity: v.prediction?.severity,
-    weight: v.measurements?.weight_kg ?? null,
-    height: v.measurements?.height_cm ?? null,
-    muac: v.measurements?.muac_cm ?? null,
-  }));
+export function probabilitySeries(profile: ChildProfile, condition?: TrendCondition) {
+  return predictedVisits(profile).map((v) => {
+    const selected = conditionProbability(v.prediction, condition) ?? (condition ? null : v.prediction!.risk);
+    return {
+      visit: `V${v.visit_number}`,
+      date: v.visit_date,
+      probability: selected == null ? null : Math.round(selected * 100),
+      underweight: conditionProbability(v.prediction, "Underweight"),
+      stunting: conditionProbability(v.prediction, "Stunting"),
+      mam: conditionProbability(v.prediction, "MAM"),
+      sam: conditionProbability(v.prediction, "SAM"),
+      status: displayedMalnutritionType(v.prediction),
+      severity: v.prediction?.severity,
+      weight: v.measurements?.weight_kg ?? null,
+      height: v.measurements?.height_cm ?? null,
+      muac: v.measurements?.muac_cm ?? null,
+    };
+  });
 }
 
 export type TrendPoint = ReturnType<typeof probabilitySeries>[number];

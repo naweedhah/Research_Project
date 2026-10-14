@@ -184,7 +184,7 @@ describe("child profile page markup contract", () => {
     expect(hud).toMatch(/label: "Sex"/);
     expect(hud).not.toMatch(/>\s*Snapshot\s*</);
     expect(hud).not.toMatch(/>\s*Assessment\s*</);
-    expect(hud).toMatch(/label: "Status"/);
+    expect(hud).toMatch(/statusLabel = "Status"/);
     expect(hud).toMatch(/scoreLabel/);
     expect(hud).toMatch(/Model-assessed probability/);
     expect(hud).toMatch(/Risk velocity/);

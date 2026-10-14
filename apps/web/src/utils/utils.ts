@@ -7,7 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatPercent(value?: number | null) {
   if (value === null || value === undefined) return "—";
-  return `${Math.round(value * 100)}%`;
+  if (value === 0) return "0%";
+  const percent = value * 100;
+  if (percent > 0 && percent < 1) return "<1%";
+  return `${Math.round(percent)}%`;
 }
 
 const STATUS_LABELS: Record<string, string> = {
