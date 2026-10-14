@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cnip.local/contracts/integrations/c1-c4-prediction-observation.v1.json",
+  "title": "C1→C4 Prediction Observation v1",
+  "type": "object",
+  "required": ["contract_version", "event_id", "event_type", "occurred_at", "child", "visit", "features", "prediction", "model"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "const": "c1.prediction.completed" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "child": { "type": "object" },
+    "visit": { "type": "object" },
+    "features": { "type": "object" },
+    "prediction": { "type": "object" },
+    "model": { "type": "object" },
+    "quality": { "type": "object" },
+    "longitudinal": { "type": ["object", "null"] }
+  },
+  "additionalProperties": false
+}

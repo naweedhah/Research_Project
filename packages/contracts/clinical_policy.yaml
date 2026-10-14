@@ -1,0 +1,55 @@
+# Research / Demo Configuration — REQUIRES CLINICAL VALIDATION
+# Do not treat these thresholds as clinically approved cut-offs.
+policy_id: demo-policy-2026-001
+status: RESEARCH_DEMO
+disclaimer: DEMO CONFIG — REQUIRES CLINICAL VALIDATION
+approved_by: null
+effective_from: "2026-01-01"
+notes: >
+  Undergraduate research demonstration policy. Stagnation, deterioration,
+  relapse and follow-up grace values are engineering defaults for the
+  synthetic demonstration dataset. They are not WHO or Ministry of Health
+  clinical rules.
+
+stagnation:
+  # |RV| below this (risk points per month) is treated as little change
+  threshold: 0.03
+  consecutive_followups: 2
+
+deterioration:
+  # absolute increase in calibrated risk to flag deterioration
+  delta: 0.08
+
+relapse:
+  # previously improved (baseline recovery > this), then risk rises by delta
+  prior_improvement: 0.10
+  subsequent_increase: 0.08
+
+missed_follow_up:
+  grace_period_days: 7
+  grace_period_note: DEMO CONFIG — REQUIRES CLINICAL VALIDATION
+
+follow_up:
+  default_interval_days: 30
+
+measurement_ranges:
+  # Operational sanity ranges, not diagnostic cut-offs
+  age_months: { min: 0, max: 60 }
+  weight_kg: { min: 1.0, max: 40.0 }
+  height_cm: { min: 35.0, max: 130.0 }
+  muac_cm: { min: 6.0, max: 25.0 }
+  birth_weight_kg: { min: 0.5, max: 6.0 }
+  head_circumference_cm: { min: 25.0, max: 60.0 }
+  maternal_bmi: { min: 12.0, max: 50.0 }
+  gestational_age_weeks: { min: 22, max: 44 }
+  household_size: { min: 1, max: 20 }
+
+alert_severity_map:
+  STAGNATION: MODERATE
+  DETERIORATION: HIGH
+  RELAPSE: HIGH
+  MISSED_FOLLOW_UP: MODERATE
+
+embedding:
+  default_dim: 128
+  allowed_dims: [64, 128]

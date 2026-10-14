@@ -1,0 +1,92 @@
+# Feature-set configuration for leakage protection.
+# A. Current-status classification may use contemporaneous anthropometry
+#    where scientifically valid.
+# B. Early-risk prediction must exclude variables that deterministically
+#    define the target.
+
+schema_version: "fs-2026-001"
+
+feature_sets:
+  current_status:
+    description: >
+      Current nutritional status classification. Anthropometric measurements
+      from the same visit may be used. Direct identity fields are forbidden.
+    allowed_modalities:
+      - anthropometric
+      - socioeconomic
+      - dietary
+      - maternal_child_health
+    forbidden_features:
+      - child_name
+      - caregiver_name
+      - phone
+      - national_id
+      - address
+      - external_patient_id
+      - clinical_notes
+    leakage_risk: low
+    notes: Anthropometry may be strongly associated with status labels.
+
+  early_risk:
+    description: >
+      Early-risk prediction. Exclude variables that deterministically define
+      the malnutrition type/severity target (same-visit WHZ/WAZ/HAZ-equivalents,
+      MUAC-based wasting labels, or previously assigned status/severity).
+    allowed_modalities:
+      - socioeconomic
+      - dietary
+      - maternal_child_health
+      - prior_visit_summary
+    forbidden_features:
+      - child_name
+      - caregiver_name
+      - phone
+      - national_id
+      - address
+      - external_patient_id
+      - clinical_notes
+      - current_status_label
+      - current_severity_label
+      - current_whz
+      - current_waz
+      - current_haz
+      - current_muac_category
+    leakage_risk: high
+    notes: >
+      Same-visit anthropometric z-score equivalents and status labels must
+      not leak into the early-risk predictor set.
+
+documentation:
+  anthropometric:
+    age_months: Age in months at visit. Operational + ML.
+    sex: Biological sex as recorded. Operational + ML.
+    height_cm: Height/length in centimetres. Current-status only for early-risk.
+    weight_kg: Weight in kilograms. Current-status only for early-risk.
+    muac_cm: Mid-upper arm circumference. Current-status only for early-risk.
+    birth_weight_kg: Birth weight. Allowed in both tasks.
+    head_circumference_cm: Optional. Allowed in both tasks if available.
+  socioeconomic:
+    wealth_proxy: Ordinal household wealth proxy. Not a national ID.
+    maternal_education: Highest completed education category.
+    paternal_education: Highest completed education category.
+    maternal_employment: Employment status category.
+    household_size: Number of household members.
+    geographical_area: District/area code, not street address.
+    drinking_water: Water source category.
+    sanitation: Sanitation facility category.
+  dietary:
+    breastfeeding_status: Current breastfeeding category.
+    breastfeeding_duration_months: Duration if known.
+    complementary_feeding: Whether complementary feeding has started.
+    dietary_diversity_score: Count of food groups (research instrument).
+    meal_frequency: Meals in previous 24h.
+    food_groups: Multi-hot encoding of food groups.
+    micronutrient_supplementation: Vitamin/micronutrient flag.
+  maternal_child_health:
+    maternal_bmi: Maternal BMI if available.
+    gestational_age_weeks: Gestational age at birth.
+    immunization_uptodate: Immunization completeness flag.
+    vitamin_a: Recent vitamin A supplementation.
+    recent_diarrhoea: Recent diarrhoeal illness.
+    recent_respiratory_illness: Recent ARI.
+    recent_hospitalization: Recent hospital admission.

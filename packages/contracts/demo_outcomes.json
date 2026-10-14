@@ -1,0 +1,493 @@
+{
+  "visit_number_convention": "1-based, matching database Visit.visit_number",
+  "projection_version": "demo-latent-projection-v1",
+  "confidence": "moderate",
+  "confidence_note": "Demo indicator only — not statistically calibrated",
+  "outcomes": {
+    "C-1042": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.82
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.61
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.59
+      }
+    },
+    "C-1001": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.74
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.58
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.41
+      },
+      "4": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.28
+      }
+    },
+    "C-1002": {
+      "1": {
+        "status": "stunting",
+        "severity": "mild",
+        "score": 0.38
+      },
+      "2": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.47
+      },
+      "3": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.62
+      },
+      "4": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.71
+      }
+    },
+    "C-1003": {
+      "1": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.22
+      },
+      "2": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.21
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.23
+      }
+    },
+    "C-1004": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.55
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.52
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.5
+      }
+    },
+    "C-1005": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.78
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.49
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.33
+      },
+      "4": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.58
+      }
+    },
+    "C-1006": {
+      "1": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.66
+      },
+      "2": {
+        "status": "stunting",
+        "severity": "mild",
+        "score": 0.51
+      },
+      "3": {
+        "status": "stunting",
+        "severity": "mild",
+        "score": 0.39
+      },
+      "4": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.3
+      }
+    },
+    "C-1007": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.88
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.7
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.54
+      }
+    },
+    "C-1008": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.57
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.56
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.55
+      },
+      "4": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.54
+      }
+    },
+    "C-1009": {
+      "1": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.18
+      },
+      "2": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.17
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.19
+      },
+      "4": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.16
+      }
+    },
+    "C-1010": {
+      "1": {
+        "status": "wasting",
+        "severity": "mild",
+        "score": 0.44
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.53
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.67
+      }
+    },
+    "C-1011": {
+      "1": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.69
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.48
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.47
+      },
+      "4": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.46
+      }
+    },
+    "C-1012": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.81
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.76
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.73
+      }
+    },
+    "C-1013": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.6
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.49
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.37
+      },
+      "4": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.29
+      },
+      "5": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.24
+      }
+    },
+    "C-1014": {
+      "1": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.64
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.58
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.57
+      }
+    },
+    "C-1015": {
+      "1": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.72
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.55
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.42
+      }
+    },
+    "C-1016": {
+      "1": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.35
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.48
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.63
+      }
+    },
+    "C-1017": {
+      "1": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.26
+      },
+      "2": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.25
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.27
+      }
+    },
+    "C-1018": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.79
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.61
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.45
+      }
+    },
+    "C-1019": {
+      "1": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.68
+      },
+      "2": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.66
+      },
+      "3": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.65
+      },
+      "4": {
+        "status": "stunting",
+        "severity": "moderate",
+        "score": 0.64
+      }
+    },
+    "C-1020": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.51
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.46
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.41
+      }
+    },
+    "C-1021": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.83
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.67
+      },
+      "3": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.52
+      },
+      "4": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.38
+      }
+    },
+    "C-1022": {
+      "1": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.59
+      },
+      "2": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.57
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "moderate",
+        "score": 0.56
+      }
+    },
+    "C-1023": {
+      "1": {
+        "status": "wasting",
+        "severity": "severe",
+        "score": 0.75
+      },
+      "2": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.52
+      },
+      "3": {
+        "status": "underweight",
+        "severity": "mild",
+        "score": 0.34
+      },
+      "4": {
+        "status": "wasting",
+        "severity": "moderate",
+        "score": 0.61
+      }
+    },
+    "C-1024": {
+      "1": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.19
+      },
+      "2": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.18
+      },
+      "3": {
+        "status": "normal",
+        "severity": "none",
+        "score": 0.2
+      }
+    }
+  }
+}
