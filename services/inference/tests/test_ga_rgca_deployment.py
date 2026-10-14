@@ -27,6 +27,16 @@ def test_deployment_artifacts_and_one_prediction():
             "weight_kg": 10,
             "birth_weight_kg": 2.8,
         },
+        "historical_baseline": {
+            "source": "baseline_assessment",
+            "assessment_date": "2025-06-01T00:00:00",
+            "horizon_end_date": "2026-06-01T00:00:00",
+            "age_months": 24,
+            "sex": "Female",
+            "height_cm": 80,
+            "weight_kg": 10,
+            "birth_weight_kg": 2.8,
+        },
         "socioeconomic": {"household_size": 4},
         "ga_rgca_context": {
             "maternal_age_years": 28,
@@ -77,7 +87,8 @@ def test_deployment_artifacts_and_one_prediction():
 def test_incomplete_input_does_not_use_demo():
     request = PredictRequest(
         child_pseudonymous_id="synthetic-check",
-        anthropometric={"age_months": 24, "sex": "Female"},
+        anthropometric={"age_months": 24, "sex": "Female", "height_cm": 90, "weight_kg": 14},
+        historical_baseline={"source": "unavailable"},
         allow_demo=False,
     )
     try:

@@ -245,6 +245,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             "latest_visit": last_visit.visit_date.isoformat() if last_visit else None,
             "current_status": displayed_status,
             "predicted_malnutrition_type": displayed_ga.get("predicted_malnutrition_type") if displayed_ga else None,
+            "detected_conditions": displayed_ga.get("detected_conditions") if displayed_ga else None,
             "severity": pred.severity_prediction if pred else None,
             "probability_label": semantics["score_label"],
             "score_kind": semantics["score_kind"],

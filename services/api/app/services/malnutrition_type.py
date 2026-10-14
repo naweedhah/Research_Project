@@ -142,7 +142,8 @@ def apply_new_prediction_interpretation(result: dict) -> dict:
         raw = dict(raw)
         raw_ga = dict(raw["ga_rgca"])
         for key in _DERIVED_KEYS:
-            raw_ga[key] = block[key]
+            if key in block:
+                raw_ga[key] = block[key]
         raw["ga_rgca"] = raw_ga
         result["raw_probabilities"] = raw
     result["status"] = predicted

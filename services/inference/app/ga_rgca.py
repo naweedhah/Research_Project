@@ -357,24 +357,40 @@ def _nested(payload: dict, key: str) -> dict:
 
 
 def build_feature_row(payload: dict) -> tuple[dict, list[str]]:
-    """Map the visit being entered onto the training feature names.
+    """Map a verified baseline onto the training feature names.
 
-    Names containing 2025 are the baseline column names from training.
-    They are this visit's measurements. Unmatched categories stay missing.
-    Previous model output is never used as a clinical label.
+    Hist_2025_* is the baseline assessment, not whichever measurements are
+    being typed in today. Growth values come only from historical_baseline.
+    Clinical history comes only from that same verified record. A missing
+    value stays missing; it is not coded as Normal or as confirmed absent.
     """
     limitations: list[str] = []
     anthro = _nested(payload, "anthropometric") or payload
     socio = _nested(payload, "socioeconomic")
     context = _nested(payload, "ga_rgca_context")
-    clinical = _nested(payload, "baseline_clinical")
-    height = _finite(anthro.get("height_cm"))
-    weight = _finite(anthro.get("weight_kg"))
-    age = _finite(anthro.get("age_months"))
-    birth_kg = _finite(anthro.get("birth_weight_kg"))
+    baseline = payload.get("historical_baseline")
+    if not isinstance(baseline, dict):
+        baseline = {}
+        limitations.append("historical_baseline_not_supplied")
+    clinical = baseline if baseline else _nested(payload, "baseline_clinical")
+    height = _finite(baseline.get("height_cm"))
+    weight = _finite(baseline.get("weight_kg"))
+    age = _finite(baseline.get("age_months"))
+    birth_kg = _finite(baseline.get("birth_weight_kg"))
     bmi = None
     if height and weight and height > 0:
         bmi = weight / ((height / 100) ** 2)
+    source = baseline.get("source")
+    if source:
+        limitations.append(f"baseline_source:{source}")
+    if source == "baseline_assessment":
+        limitations.append("baseline_is_this_assessment_dated_and_horizon_labeled")
+    elif source == "earlier_visit":
+        limitations.append("baseline_growth_is_from_an_earlier_visit_not_today")
+    if baseline.get("assessment_date"):
+        limitations.append(f"baseline_date:{baseline.get('assessment_date')}")
+    if baseline.get("horizon_end_date"):
+        limitations.append(f"horizon_end:{baseline.get('horizon_end_date')}")
     education = _exact(context.get("maternal_education"), EDUCATION_VALUES)
     if education is None and "maternal_education" not in context:
         education = _exact(socio.get("maternal_education"), EDUCATION_VALUES)
@@ -407,14 +423,13 @@ def build_feature_row(payload: dict) -> tuple[dict, list[str]]:
         "Triposha_Supplementation": _exact(context.get("triposha_supplementation"), TRIPOSHA_VALUES),
         "Vitamin_Supplementation": _exact(context.get("vitamin_supplementation"), YES_NO),
     }
-    if not clinical:
+    if clinical.get("mam") is None and clinical.get("sam") is None and clinical.get("underweight") is None and clinical.get("stunting") is None:
         limitations.append("baseline_clinical_status_not_recorded")
     for column, value in row.items():
         if value is None:
             limitations.append(f"{column}_not_recorded")
     if age is not None and age < 12:
         limitations.append("baseline_age_below_12_months")
-    limitations.append("baseline_is_the_visit_being_entered")
     return row, limitations
 
 
@@ -481,6 +496,8 @@ class GaRgcaModel:
 
     def predict_prior(self, payload: dict) -> dict:
         row, limitations = build_feature_row(payload)
+        supplied = payload.get("historical_baseline")
+        baseline = supplied if isinstance(supplied, dict) else {}
         missing_growth = [
             name
             for name, key in (
@@ -590,6 +607,7 @@ class GaRgcaModel:
             "acute_probabilities_temperature_scaled": True,
             "severity_probabilities_temperature_scaled": True,
             "data_limitations": limitations,
+            "historical_inputs": _historical_input_report(row, baseline),
             "feature_row": row,
             "latent_output": [round(float(v), 4) for v in (*mean_logits[0], *acute_scaled)],
         }
@@ -600,6 +618,33 @@ class IncompleteBaseline(Exception):
         self.missing = missing
         self.row = row
         super().__init__(", ".join(missing))
+
+
+def _historical_input_report(row: dict, baseline: dict) -> dict:
+    """Say which baseline fields were observed. Imputed medians are not listed as facts."""
+    fields = (
+        "Hist_2025_Age_months",
+        "Hist_2025_Height_cm",
+        "Hist_2025_Weight_kg",
+        "Hist_2025_BMI",
+        "Birth_Weight_g",
+        "Hist_2025_MAM",
+        "Hist_2025_SAM",
+        "Hist_2025_Underweight",
+        "Hist_2025_Stunting",
+    )
+    source = baseline.get("source")
+    return {
+        "source": source,
+        "assessment_date": baseline.get("assessment_date"),
+        "horizon_months": 12,
+        "horizon_end_date": baseline.get("horizon_end_date"),
+        "uses_current_visit_measurements": source == "baseline_assessment",
+        "fields": {name: "observed" if row.get(name) is not None else "not_recorded" for name in fields},
+        "note": (
+            "Not recorded is unknown. It is not a confirmed absence, and the training median used inside the model is not a measured value."
+        ),
+    }
 
 
 def _temperature_softmax(logits: np.ndarray, temperature: float) -> np.ndarray:

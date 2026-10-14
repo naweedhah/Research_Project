@@ -11,7 +11,7 @@ import { Input, Select } from "@/components/common/field";
 import { RegisterChildModal } from "@/components/component1/register-child-modal";
 import { ConfirmAction, RecordActions } from "@/components/component1/record-actions";
 import { toast } from "sonner";
-import { displayedMalnutritionType } from "@/data/child-profile";
+import { displayedConditionList, displayedMalnutritionType } from "@/data/child-profile";
 import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn } from "@/utils/utils";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 
@@ -30,6 +30,8 @@ type Item = {
   has_assessment: boolean;
   current_status?: string;
   predicted_malnutrition_type?: string | null;
+  detected_conditions?: string[] | null;
+  score_kind?: string;
   severity?: string;
   current_risk?: number;
   previous_risk?: number | null;
@@ -449,7 +451,11 @@ function AssessmentCell({ row }: { row: Item }) {
   return (
     <div>
       <div className="flex flex-wrap gap-1">
-        <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#1e40af]">{formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}</span>
+        <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#1e40af]">
+          {row.score_kind === "highest_condition_probability"
+            ? displayedConditionList(row).join(", ") || "—"
+            : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
+        </span>
         {showSeverity && !["MAM", "SAM"].includes(formatNutritionalStatus(displayedMalnutritionType(row), row.severity)) ? (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{formatStatus(row.severity)}</span>
         ) : null}

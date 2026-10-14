@@ -82,7 +82,7 @@ export type ProfileAlert = {
   message: string;
   headline?: string;
   created_at?: string;
-  trigger_value?: { previous_risk?: number; current_risk?: number; risk_velocity?: number };
+  trigger_value?: { previous_risk?: number; current_risk?: number; risk_velocity?: number; basis?: string };
 };
 
 export type ClinicianReview = {
@@ -269,6 +269,22 @@ export function displayedMalnutritionType(
   if (fromHead) return fromHead;
   if (source?.predicted_malnutrition_type) return source.predicted_malnutrition_type;
   return source?.status ?? source?.current_status ?? undefined;
+}
+
+/** All positive model conditions. A single stored type is used when the list is absent. */
+export function displayedConditionList(
+  source?: {
+    status?: string | null;
+    current_status?: string | null;
+    predicted_malnutrition_type?: string | null;
+    detected_conditions?: string[] | null;
+    ga_rgca?: { predicted_malnutrition_type?: string | null; detected_conditions?: string[] | null } | null;
+  } | null,
+): string[] {
+  const detected = source?.ga_rgca?.detected_conditions ?? source?.detected_conditions;
+  if (Array.isArray(detected) && detected.length > 0) return detected;
+  const single = displayedMalnutritionType(source);
+  return single ? [single] : [];
 }
 
 export function predictedVisits(profile: ChildProfile): ProfileVisit[] {

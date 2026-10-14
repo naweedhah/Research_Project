@@ -13,11 +13,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.demo_outcomes import demo_confidence, get_demo_outcome
 from app.ga_rgca import REQUIRED_FILES, IncompleteBaseline, load_ga_rgca
 
-CONTRACTS = Path("/contracts") if Path("/contracts").exists() else Path(__file__).resolve().parents[3] / "packages" / "contracts"
+_REPO = Path(__file__).resolve().parents[3]
+CONTRACTS = Path("/contracts") if Path("/contracts").exists() else _REPO / "packages" / "contracts"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_REPO / ".env"), extra="ignore")
     model_mode: str = "demo"
     model_artifact_path: str = "/artifacts/active"
     embedding_dim: int = 128
@@ -38,6 +39,7 @@ class PredictRequest(BaseModel):
     prior_visit: dict | None = None
     ga_rgca_context: dict | None = None
     baseline_clinical: dict | None = None
+    historical_baseline: dict | None = None
     model_mode: str | None = None
     allow_demo: bool = False
 
@@ -260,7 +262,7 @@ class GaRgcaAdapter:
                 status_code=422,
                 detail={
                     "code": "REAL_MODEL_INPUT_INCOMPLETE",
-                    "message": "GA-RGCA v3 needs the current visit height and weight. No demo score was substituted.",
+                    "message": "GA-RGCA v3 needs historical baseline height and weight. Current-visit measurements were not substituted, and no demo score was substituted.",
                     "missing": exc.missing,
                     "prediction_source": None,
                 },

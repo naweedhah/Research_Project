@@ -86,8 +86,28 @@ def visit_prefill(child_id: UUID, db: Session = Depends(get_db), current=Depends
         "ga_rgca_context": last.data_quality.get("ga_rgca_context")
         if last and isinstance(last.data_quality, dict)
         else None,
+        "historical_growth": _historical_growth(db, child.id),
     }
     return payload
+
+
+def _historical_growth(db: Session, child_id: UUID) -> dict | None:
+    """Earliest stored measurements. Not a model prediction."""
+    rows = db.scalars(
+        select(Visit).where(Visit.child_id == child_id).order_by(Visit.visit_number.asc())
+    ).all()
+    for visit in rows:
+        anthro = visit.anthropometry
+        if anthro is None or anthro.height_cm is None or anthro.weight_kg is None:
+            continue
+        return {
+            "visit_number": visit.visit_number,
+            "visit_date": visit.visit_date.isoformat(),
+            "age_months": anthro.age_months,
+            "height_cm": anthro.height_cm,
+            "weight_kg": anthro.weight_kg,
+        }
+    return None
 
 
 @router.get("/children/{child_id}/visits")

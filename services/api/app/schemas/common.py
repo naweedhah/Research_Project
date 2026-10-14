@@ -160,11 +160,13 @@ class ChildListItem(ORMModel):
     has_assessment: bool = False
     current_status: str | None = None
     predicted_malnutrition_type: str | None = None
+    detected_conditions: list[str] | None = None
     severity: str | None = None
     current_risk: float | None = None
     previous_risk: float | None = None
     risk_change_pp: int | None = None
     probability_label: str = "Demo Progression Score"
+    score_kind: str | None = None
     prediction_confidence: str | None = None
     risk_velocity_pp_month: float | None = None
     risk_velocity_available: bool = False
@@ -247,6 +249,10 @@ class GaRgcaContextIn(BaseModel):
     dietary_diversity: str | None = None
     triposha_supplementation: str | None = None
     vitamin_supplementation: str | None = None
+    historical_mam: int | None = None
+    historical_sam: int | None = None
+    historical_underweight: str | None = None
+    historical_stunting: str | None = None
 
 
 class VisitCreate(BaseModel):

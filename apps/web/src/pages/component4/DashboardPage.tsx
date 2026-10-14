@@ -27,7 +27,7 @@ import { api } from "@/services/component4/httpClient";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { Button } from "@/components/common/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
-import { displayedMalnutritionType } from "@/data/child-profile";
+import { displayedConditionList, displayedMalnutritionType } from "@/data/child-profile";
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
@@ -47,6 +47,8 @@ type PriorityPatient = {
   latest_visit?: string | null;
   current_status?: string | null;
   predicted_malnutrition_type?: string | null;
+  detected_conditions?: string[] | null;
+  score_kind?: string;
   severity?: string | null;
   probability_label: string;
   current_probability?: number | null;
@@ -229,6 +231,11 @@ export default function DashboardPage() {
     <div className="min-w-[1240px] space-y-5">
       <header>
         <h1 className="text-2xl font-bold text-[#0f2744]">Dashboard</h1>
+        <p className="mt-1 text-sm text-[#64748b]">
+          {data.model.is_demo
+            ? `${data.model.version} · demonstration output`
+            : `${data.model.version} · 12-month research prediction · clinical confirmation required`}
+        </p>
       </header>
 
       <section className="grid grid-cols-5 gap-3">
@@ -491,7 +498,9 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           </div>
           {row.current_status ? (
             <p className="mt-2 inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-[#0f2744]">
-              {formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
+              {row.score_kind === "highest_condition_probability"
+                ? `12-month prediction: ${displayedConditionList(row).join(", ") || "—"}`
+                : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
             </p>
           ) : null}
         </div>
@@ -520,6 +529,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
                 current={row.current_probability}
                 previous={row.previous_probability}
                 deltaPp={row.probability_delta_pp}
+                twelveMonthRisk={row.score_kind === "highest_condition_probability"}
               />
             </span>
           }
@@ -646,10 +656,12 @@ function ProbabilityInfoButton({
   current,
   previous,
   deltaPp,
+  twelveMonthRisk = false,
 }: {
   current?: number | null;
   previous?: number | null;
   deltaPp?: number | null;
+  twelveMonthRisk?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -697,8 +709,10 @@ function ProbabilityInfoButton({
           ) : (
             <>
               <p className="mt-2">
-                The model currently estimates <strong className="text-[#0f2744]">{currentText}</strong> nutritional
-                risk from the latest visit.
+                {twelveMonthRisk
+                  ? "This is the highest GA-RGCA v3 condition probability for the next 12 months. It is a model estimate, not a confirmed current nutritional status."
+                  : "The model currently estimates nutritional risk from the latest visit."}{" "}
+                <strong className="text-[#0f2744]">{currentText}</strong>
               </p>
               {previous != null ? (
                 <>

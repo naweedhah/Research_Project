@@ -9,7 +9,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-CONTRACTS = Path("/contracts") if Path("/contracts").exists() else Path(__file__).resolve().parents[3] / "packages" / "contracts"
+CONTRACTS = Path("/contracts") if Path("/contracts").exists() else Path(__file__).resolve().parents[4] / "packages" / "contracts"
 
 
 @lru_cache(maxsize=1)

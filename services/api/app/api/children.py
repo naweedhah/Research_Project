@@ -633,7 +633,11 @@ def _child_profile(db: Session, child: Child) -> dict:
                 "severity": a.severity.value,
                 "status": a.status.value,
                 "message": a.message,
-                "headline": ALERT_HEADLINES.get(a.type.value, a.message),
+                "headline": (
+                    "Predicted risk increased"
+                    if isinstance(a.trigger_value, dict) and a.trigger_value.get("basis") == "predicted_risk_change"
+                    else ALERT_HEADLINES.get(a.type.value, a.message)
+                ),
                 "created_at": a.created_at.isoformat(),
                 "trigger_value": a.trigger_value,
             }

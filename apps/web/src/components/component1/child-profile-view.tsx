@@ -40,6 +40,7 @@ import {
   probabilitySeries,
   progressLabel,
   reviewLabel,
+  displayedConditionList,
   displayedMalnutritionType,
   visitProbabilityDeltaPp,
   riskVelocityPpMonth,
@@ -519,7 +520,12 @@ function Overview({
             </span>
           </p>
           <p className="mt-1 text-sm leading-relaxed text-[#3f3f46]">{alert.message}</p>
-          {alert.trigger_value?.previous_risk != null && alert.trigger_value?.current_risk != null ? (
+          {alert.trigger_value?.basis === "predicted_risk_change" ? (
+            <p className="mt-1 text-sm text-[#3f3f46]">
+              Predicted 12-month risk changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
+              {formatPercent(alert.trigger_value.current_risk)}. Weight and height changes are shown separately and were not used for this alert.
+            </p>
+          ) : alert.trigger_value?.previous_risk != null && alert.trigger_value?.current_risk != null ? (
             <p className="mt-1 text-sm text-[#3f3f46]">
               Model score changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
               {formatPercent(alert.trigger_value.current_risk)} since the previous assessment.
@@ -561,7 +567,7 @@ function Overview({
                   changeTile("Weight", measurementDelta(meas?.weight_kg, prevMeas?.weight_kg), "kg", prevMeas?.weight_kg, meas?.weight_kg),
                   changeTile("Height", measurementDelta(meas?.height_cm, prevMeas?.height_cm), "cm", prevMeas?.height_cm, meas?.height_cm),
                   {
-                    label: "Probability",
+                    label: pred?.ga_rgca ? "Predicted risk" : "Probability",
                     amount: change == null ? "—" : formatPp(change).replace(/ pp$/, ""),
                     unit: change == null ? "" : "pp",
                     note:
@@ -604,11 +610,13 @@ function Overview({
             <div className="space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <FieldLabel>Predicted malnutrition type</FieldLabel>
+                  <FieldLabel>12-month predicted conditions</FieldLabel>
                   <p className="mt-1 text-3xl font-semibold tracking-tight text-[#0f2744]">
-                    {formatNutritionalStatus(displayedMalnutritionType(pred), pred.ga_rgca.severity)}
+                    {displayedConditionList(pred).join(", ") || "—"}
                   </p>
-                  <p className="mt-1 text-sm text-[#64748b]">Severity {pred.ga_rgca.severity ?? "—"}</p>
+                  <p className="mt-1 text-sm text-[#64748b]">
+                    Model estimate for 12 months ahead. This is not a confirmed current nutritional status. Overall severity {pred.ga_rgca.severity ?? "—"}.
+                  </p>
                   <p className="mt-1 text-sm text-[#64748b]">
                     Model uncertainty {pred.ga_rgca.uncertainty_flag ? "Elevated" : "Low"}
                   </p>
@@ -675,7 +683,12 @@ function Overview({
             sex={formatStatus(profile.sex)}
             latestAssessment={selected ? formatClinicalDate(selected.visit_date) : null}
             assessmentLabel={isLatest ? "Latest assessment date" : "Assessment date"}
-            status={formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)}
+            status={
+              pred?.ga_rgca
+                ? displayedConditionList(pred).join(", ") || "—"
+                : formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)
+            }
+            statusLabel={pred?.ga_rgca ? "12-month prediction" : "Status"}
             severity={pred?.severity ? formatStatus(pred.severity) : "—"}
             probability={formatPercent(pred?.risk)}
             previousProbability={comparable && prevPred?.risk != null ? formatPercent(prevPred.risk) : null}

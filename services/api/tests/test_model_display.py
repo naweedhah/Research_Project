@@ -6,15 +6,15 @@ from app.services.demo_outcomes import get_demo_outcome
 
 def test_demo_display_semantics():
     meta = get_model_output_display_metadata(model_mode="demo", is_demo=True)
-    assert meta["score_label"] == "Demo Progression Score"
-    assert meta["score_is_probability"] is False
-    assert meta["velocity_label"] == "Demo Score Velocity"
-    assert meta["prediction_task_label"] == "Current-status demonstration"
-    assert "Not for clinical use" in meta["banner_subtitle"]
-    assert meta["projection_version"] == DEMO_PROJECTION_VERSION
-    assert "pca" not in meta["projection_version"]
+    assert meta["is_demo"] is True
+    assert meta["score_label"] == "Model-assessed probability"
+    assert meta["score_is_probability"] is True
+    assert meta["velocity_label"] == "Risk velocity"
+    assert meta["prediction_task_label"] == "Current nutritional assessment"
+    assert meta["banner_subtitle"] == "AI-assisted assessment. Clinical review required."
+    assert meta["projection_version"] is None
     assert meta["clinical_use"] is False
-    assert "Not for clinical use" in meta["report_disclaimer"]
+    assert meta["report_disclaimer"] == "AI-assisted assessment. Clinical review required."
 
 
 def test_research_mode_not_clinically_validated():

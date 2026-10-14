@@ -155,6 +155,7 @@ export function ChildModelHud({
   latestAssessment,
   assessmentLabel = "Latest assessment date",
   status,
+  statusLabel = "Status",
   severity,
   probability,
   previousProbability,
@@ -182,6 +183,7 @@ export function ChildModelHud({
   latestAssessment?: string | null;
   assessmentLabel?: string;
   status: string;
+  statusLabel?: string;
   severity?: string | null;
   probability: string;
   previousProbability?: string | null;
@@ -237,7 +239,7 @@ export function ChildModelHud({
       },
       {
         id: "status",
-        label: "Status",
+        label: statusLabel,
         value: status,
         secondaryLabel: compact ? null : "Severity",
         secondaryValue: compact ? null : (severity ?? "—"),
@@ -268,6 +270,7 @@ export function ChildModelHud({
     previousHeight,
     heightHistory,
     status,
+    statusLabel,
     severity,
     probability,
     previousProbability,

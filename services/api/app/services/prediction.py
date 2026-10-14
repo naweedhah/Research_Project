@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
@@ -71,9 +72,101 @@ def current_visit_payload(visit: Visit, child: Child) -> dict:
     }
 
 
+def _add_months(moment: datetime, months: int) -> datetime:
+    year = moment.year + (moment.month - 1 + months) // 12
+    month = (moment.month - 1 + months) % 12 + 1
+    day = min(moment.day, calendar.monthrange(year, month)[1])
+    return moment.replace(year=year, month=month, day=day)
+
+
+def _verified_clinical(context: dict | None) -> dict:
+    """Clinician-entered history only. Missing stays unknown, not confirmed absent."""
+    context = context or {}
+
+    def flag(value):
+        if value in (0, 1):
+            return int(value)
+        return None
+
+    def grade(value):
+        if value in {"Normal", "Moderate", "Severe"}:
+            return value
+        return None
+
+    return {
+        "mam": flag(context.get("historical_mam")),
+        "sam": flag(context.get("historical_sam")),
+        "underweight": grade(context.get("historical_underweight")),
+        "stunting": grade(context.get("historical_stunting")),
+    }
+
+
+def assemble_historical_baseline(*, current: dict, earlier: list[dict], context: dict | None) -> dict:
+    """Choose the Hist_2025 baseline without copying a later visit over an earlier one.
+
+    A follow-up uses the earliest stored visit that has height and weight.
+    The first stored assessment is the baseline itself, labeled with its own date
+    and a 12-month horizon. Clinical flags come only from the verified context.
+    """
+    clinical = _verified_clinical(context)
+    birth = current.get("birth_weight_kg")
+    chosen = None
+    for visit in earlier:
+        if visit.get("height_cm") is not None and visit.get("weight_kg") is not None:
+            chosen = visit
+            break
+    if chosen is not None:
+        source = "earlier_visit"
+        growth = chosen
+    else:
+        source = "baseline_assessment"
+        growth = current
+    assessment = growth.get("visit_date")
+    horizon_end = _add_months(assessment, 12).isoformat() if isinstance(assessment, datetime) else None
+    return {
+        "source": source,
+        "visit_number": growth.get("visit_number"),
+        "assessment_date": assessment.isoformat() if isinstance(assessment, datetime) else None,
+        "horizon_months": 12,
+        "horizon_end_date": horizon_end,
+        "age_months": growth.get("age_months"),
+        "height_cm": growth.get("height_cm"),
+        "weight_kg": growth.get("weight_kg"),
+        "birth_weight_kg": birth if birth is not None else growth.get("birth_weight_kg"),
+        **clinical,
+    }
+
+
+def _visit_growth(visit: Visit) -> dict:
+    anthro = visit.anthropometry
+    return {
+        "visit_number": visit.visit_number,
+        "visit_date": visit.visit_date,
+        "age_months": anthro.age_months if anthro else None,
+        "height_cm": anthro.height_cm if anthro else None,
+        "weight_kg": anthro.weight_kg if anthro else None,
+        "birth_weight_kg": anthro.birth_weight_kg if anthro else None,
+    }
+
+
 def build_inference_payload(db: Session, visit: Visit, child: Child) -> dict:
-    """The visit being saved is the GA-RGCA baseline. Prior model output is not sent."""
-    return current_visit_payload(visit, child)
+    """Send the verified baseline separately from the visit being saved.
+
+    Prior model output is not sent and is never used as a clinical label.
+    """
+    payload = current_visit_payload(visit, child)
+    earlier_rows = db.scalars(
+        select(Visit)
+        .where(Visit.child_id == child.id, Visit.visit_number < visit.visit_number)
+        .order_by(Visit.visit_number.asc())
+        .options(joinedload(Visit.anthropometry))
+    ).all()
+    payload["historical_baseline"] = assemble_historical_baseline(
+        current=_visit_growth(visit),
+        earlier=[_visit_growth(row) for row in earlier_rows],
+        context=payload.get("ga_rgca_context"),
+    )
+    return payload
 
 
 def _to_dict(obj) -> dict:
@@ -376,7 +469,7 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
     ):
         created.append(AlertType.STAGNATION)
         _emit_event(db, IntegrationEventType.PROGRESS_STAGNATING, {"child_id": child.pseudonymous_id})
-    if deterioration_alert(
+    if evaluation.progress_state != ProgressState.INCOMPATIBLE_MODEL and deterioration_alert(
         previous_risk=prev_active.primary_risk_score if prev_active else None,
         current_risk=prediction.primary_risk_score,
         policy=policy,
@@ -386,7 +479,7 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
     improved = False
     if base_active:
         improved = (base_active.primary_risk_score - prediction.primary_risk_score) >= policy.relapse_prior_improvement
-    if relapse_alert(
+    if evaluation.progress_state != ProgressState.INCOMPATIBLE_MODEL and relapse_alert(
         improved_from_baseline=improved,
         previous_risk=prev_active.primary_risk_score if prev_active else None,
         current_risk=prediction.primary_risk_score,
@@ -400,11 +493,27 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
         if existing:
             continue
         prev = prev_active.primary_risk_score if prev_active else None
+        calibrated = prediction.calibrated_probabilities if isinstance(prediction.calibrated_probabilities, dict) else {}
+        ga_block = calibrated.get("ga_rgca") if isinstance(calibrated, dict) else None
+        predicted_risk = isinstance(ga_block, dict) and ga_block.get("prediction_source") == "GA-RGCA-v3"
         message = {
             AlertType.STAGNATION: "Progress stagnation detected",
-            AlertType.DETERIORATION: "Deterioration detected",
+            AlertType.DETERIORATION: (
+                "Predicted 12-month risk increased. This alert does not use a change in weight or height."
+                if predicted_risk
+                else "Deterioration detected"
+            ),
             AlertType.RELAPSE: "Possible relapse / regression",
         }[alert_type]
+        trigger_value = {
+            "previous_risk": prev,
+            "current_risk": prediction.primary_risk_score,
+            "risk_velocity": evaluation.risk_velocity,
+            "policy_id": policy.policy_id,
+        }
+        if predicted_risk and alert_type == AlertType.DETERIORATION:
+            trigger_value["basis"] = "predicted_risk_change"
+            trigger_value["observed_growth"] = "not_used"
         alert = Alert(
             child_id=child.id,
             visit_id=visit.id,
@@ -413,12 +522,7 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
             severity=severity_for(alert_type, policy),
             status=AlertStatus.OPEN,
             message=message,
-            trigger_value={
-                "previous_risk": prev,
-                "current_risk": prediction.primary_risk_score,
-                "risk_velocity": evaluation.risk_velocity,
-                "policy_id": policy.policy_id,
-            },
+            trigger_value=trigger_value,
             threshold_version=policy.policy_id,
             event_window_key=key,
         )

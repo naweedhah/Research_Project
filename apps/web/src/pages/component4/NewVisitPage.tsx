@@ -114,6 +114,14 @@ type Prefill = {
   socioeconomic?: Record<string, unknown> | null;
   dietary?: Record<string, unknown> | null;
   maternal_child_health?: Record<string, unknown> | null;
+  ga_rgca_context?: Record<string, unknown> | null;
+  historical_growth?: {
+    visit_number: number;
+    visit_date: string;
+    age_months?: number | null;
+    height_cm?: number | null;
+    weight_kg?: number | null;
+  } | null;
 };
 
 type VisitForm = {
@@ -154,6 +162,10 @@ type VisitForm = {
   dietary_diversity_category: string;
   triposha_supplementation: string;
   vitamin_supplementation: string;
+  historical_mam: string;
+  historical_sam: string;
+  historical_underweight: string;
+  historical_stunting: string;
 };
 
 function emptyForm(sex = ""): VisitForm {
@@ -195,6 +207,10 @@ function emptyForm(sex = ""): VisitForm {
     dietary_diversity_category: "",
     triposha_supplementation: "",
     vitamin_supplementation: "",
+    historical_mam: "",
+    historical_sam: "",
+    historical_underweight: "",
+    historical_stunting: "",
   };
 }
 
@@ -232,7 +248,11 @@ function applyPrefill(base: VisitForm, prefill: Prefill): VisitForm {
   const s = prefill.socioeconomic ?? {};
   const d = prefill.dietary ?? {};
   const m = prefill.maternal_child_health ?? {};
+  const history = prefill.ga_rgca_context ?? {};
   const isBaseline = prefill.child.is_baseline;
+  const recordedFlag = (value: unknown) => (value === 0 || value === 1 ? String(value) : "");
+  const recordedGrade = (value: unknown) =>
+    value === "Normal" || value === "Moderate" || value === "Severe" ? value : "";
 
   return {
     ...base,
@@ -257,6 +277,10 @@ function applyPrefill(base: VisitForm, prefill: Prefill): VisitForm {
     gestational_age_weeks: str(m.gestational_age_weeks),
     immunization_uptodate: triFromBool(m.immunization_uptodate),
     vitamin_a: triFromBool(m.vitamin_a),
+    historical_mam: recordedFlag(history.historical_mam),
+    historical_sam: recordedFlag(history.historical_sam),
+    historical_underweight: recordedGrade(history.historical_underweight),
+    historical_stunting: recordedGrade(history.historical_stunting),
   };
 }
 
@@ -379,6 +403,10 @@ export default function NewVisitPage() {
           dietary_diversity: form.dietary_diversity_category || null,
           triposha_supplementation: form.triposha_supplementation || null,
           vitamin_supplementation: form.vitamin_supplementation || null,
+          historical_mam: form.historical_mam === "" ? null : Number(form.historical_mam),
+          historical_sam: form.historical_sam === "" ? null : Number(form.historical_sam),
+          historical_underweight: form.historical_underweight || null,
+          historical_stunting: form.historical_stunting || null,
         },
       };
       const created = await api<{ visit: { id: string }; prediction: Record<string, unknown>; quality: Record<string, unknown> }>(
@@ -455,6 +483,12 @@ export default function NewVisitPage() {
         triage?: string;
         model_version?: string;
         prediction_source?: string;
+        historical_inputs?: {
+          assessment_date?: string | null;
+          horizon_end_date?: string | null;
+          uses_current_visit_measurements?: boolean;
+          fields: Record<string, string>;
+        };
       } | null;
     };
     return (
@@ -487,6 +521,25 @@ export default function NewVisitPage() {
               <p className="text-sm text-muted">
                 Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
               </p>
+              {p.ga_rgca.historical_inputs ? (
+                <p className="text-sm text-muted">
+                  Baseline {p.ga_rgca.historical_inputs.assessment_date ? new Date(p.ga_rgca.historical_inputs.assessment_date).toLocaleDateString() : "date not recorded"}
+                  {p.ga_rgca.historical_inputs.horizon_end_date
+                    ? `, 12-month horizon ends ${new Date(p.ga_rgca.historical_inputs.horizon_end_date).toLocaleDateString()}`
+                    : ""}
+                  .{" "}
+                  {p.ga_rgca.historical_inputs.uses_current_visit_measurements
+                    ? "This visit is the baseline assessment."
+                    : "Today's measurements were not copied over the earlier baseline."}{" "}
+                  {Object.entries(p.ga_rgca.historical_inputs.fields)
+                    .filter(([, state]) => state === "not_recorded")
+                    .map(([name]) => name)
+                    .join(", ") || "All baseline fields were recorded"}
+                  {Object.values(p.ga_rgca.historical_inputs.fields).some((state) => state === "not_recorded")
+                    ? " not recorded. Not recorded is unknown, not a confirmed absence."
+                    : "."}
+                </p>
+              ) : null}
               <p>Model <strong>GA-RGCA v3</strong></p>
               <p className="text-sm text-muted">AI-assisted assessment. Clinical review required.</p>
             </>
@@ -585,6 +638,44 @@ export default function NewVisitPage() {
                   {str(prefillQ.data.anthropometric.height_cm)} cm
                 </p>
               ) : null}
+              <div className="md:col-span-2 space-y-2 rounded-xl border border-[#e4ecf4] bg-[#f8fafc] p-3">
+                <p className="text-sm font-medium text-[#0f2744]">Earlier clinical record</p>
+                <p className="text-xs text-[#64748b]">
+                  These are verified earlier findings. They are not taken from a model prediction. Underweight and stunting can both be present. Not recorded means unknown, not confirmed absent.
+                </p>
+                {prefillQ.data.historical_growth ? (
+                  <p className="text-xs text-[#334155]">
+                    The 12-month model uses visit {prefillQ.data.historical_growth.visit_number} on{" "}
+                    {new Date(prefillQ.data.historical_growth.visit_date).toLocaleDateString()} as its baseline
+                    ({str(prefillQ.data.historical_growth.age_months)} months, {str(prefillQ.data.historical_growth.weight_kg)} kg,{" "}
+                    {str(prefillQ.data.historical_growth.height_cm)} cm). Today&apos;s weight and height stay on this visit and are not copied into that baseline. The horizon is 12 months after that earlier date.
+                  </p>
+                ) : (
+                  <p className="text-xs text-[#334155]">
+                    No earlier measurement is stored. This visit is the baseline. Today&apos;s age, height, and weight are used with this visit date, and the horizon is 12 months after that date.
+                  </p>
+                )}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label>Earlier MAM</Label>
+                    <Select value={form.historical_mam} onChange={(e) => set("historical_mam", e.target.value)}>
+                      <option value="">Not recorded</option>
+                      <option value="0">No, confirmed absent</option>
+                      <option value="1">Yes, confirmed present</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Earlier SAM</Label>
+                    <Select value={form.historical_sam} onChange={(e) => set("historical_sam", e.target.value)}>
+                      <option value="">Not recorded</option>
+                      <option value="0">No, confirmed absent</option>
+                      <option value="1">Yes, confirmed present</option>
+                    </Select>
+                  </div>
+                  <CategorySelect label="Earlier underweight" value={form.historical_underweight} options={["Normal", "Moderate", "Severe"]} onChange={(value) => set("historical_underweight", value)} />
+                  <CategorySelect label="Earlier stunting" value={form.historical_stunting} options={["Normal", "Moderate", "Severe"]} onChange={(value) => set("historical_stunting", value)} />
+                </div>
+              </div>
             </div>
           ) : null}
 

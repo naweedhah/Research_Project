@@ -253,6 +253,7 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
         "has_assessment": has_assessment,
         "current_status": displayed_status,
         "predicted_malnutrition_type": displayed_ga.get("predicted_malnutrition_type") if displayed_ga else None,
+        "detected_conditions": displayed_ga.get("detected_conditions") if displayed_ga else None,
         "severity": pred.severity_prediction if pred else None,
         "current_risk": current_risk,
         "previous_risk": previous_risk,

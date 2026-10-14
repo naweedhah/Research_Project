@@ -45,13 +45,22 @@ def test_forward_returns_binary_acute_and_severity():
 def test_missing_prior_diagnosis_is_not_coded_as_absent():
     row, limitations = build_feature_row(
         {
-            "anthropometric": {"age_months": 24, "sex": "female", "height_cm": 80, "weight_kg": 10, "birth_weight_kg": 2.5},
+            "anthropometric": {"age_months": 40, "sex": "female", "height_cm": 99, "weight_kg": 18, "birth_weight_kg": 3.4},
             "socioeconomic": {"household_size": 4, "maternal_education": "primary"},
             "ga_rgca_context": {"exclusive_breastfeeding": "continued"},
+            "historical_baseline": {
+                "source": "baseline_assessment",
+                "age_months": 24,
+                "height_cm": 80,
+                "weight_kg": 10,
+                "birth_weight_kg": 2.5,
+            },
         }
     )
     assert row["Sex"] == "Female"
     assert row["Birth_Weight_g"] == 2500
+    assert row["Hist_2025_Age_months"] == 24
+    assert row["Hist_2025_Height_cm"] == 80
     assert row["Hist_2025_MAM"] is None
     assert row["Hist_2025_SAM"] is None
     assert row["Hist_2025_Underweight"] is None
