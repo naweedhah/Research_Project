@@ -16,6 +16,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from app.malnutrition_type import derive_predicted_malnutrition_type
+
 logger = logging.getLogger("uvicorn.error")
 
 D_MODEL = 72
@@ -531,6 +533,15 @@ class GaRgcaModel:
             name: round(float(np.mean(values)), 4)
             for name, values in gate_values.items()
         }
+        underweight_probability = round(float(binary_prob[0]), 4)
+        stunting_probability = round(float(binary_prob[1]), 4)
+        interpretation = derive_predicted_malnutrition_type(
+            underweight_probability=underweight_probability,
+            stunting_probability=stunting_probability,
+            underweight_threshold=float(self.thresholds[0]),
+            stunting_threshold=float(self.thresholds[1]),
+            acute_status=acute_status,
+        )
         uncertainty_label = (
             "Clinician review recommended because prediction uncertainty is elevated"
             if uncertainty_flag
@@ -541,8 +552,14 @@ class GaRgcaModel:
             "prediction_task": "twelve_month_nutritional_risk",
             "clinical_use": False,
             "disclaimer": self.metadata.get("disclaimer"),
-            "underweight_probability": round(float(binary_prob[0]), 4),
-            "stunting_probability": round(float(binary_prob[1]), 4),
+            "underweight_probability": underweight_probability,
+            "stunting_probability": stunting_probability,
+            "underweight_positive": interpretation["underweight_positive"],
+            "stunting_positive": interpretation["stunting_positive"],
+            "predicted_malnutrition_type": interpretation["predicted_malnutrition_type"],
+            "detected_conditions": interpretation["detected_conditions"],
+            "uw_decision_strength": interpretation["uw_decision_strength"],
+            "st_decision_strength": interpretation["st_decision_strength"],
             "underweight_status": underweight_status,
             "stunting_status": stunting_status,
             "mam_probability": round(float(acute_scaled[1]), 4),

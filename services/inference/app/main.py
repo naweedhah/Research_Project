@@ -279,7 +279,7 @@ class GaRgcaAdapter:
         )
         stored = {key: value for key, value in heads.items() if key != "feature_row"}
         return PredictionResult(
-            status=heads["acute_status"],
+            status=heads["predicted_malnutrition_type"],
             severity=heads["severity"],
             raw_probabilities={"acute": acute, "ga_rgca": stored},
             calibrated_probabilities={"acute": acute, "risk": condition_risk, "ga_rgca": stored},

@@ -64,7 +64,12 @@ def test_deployment_artifacts_and_one_prediction():
     assert result["model_version"] == "GA-RGCA-v3"
     assert result["prediction_source"] == "GA-RGCA-v3"
     assert result["acute_status"] in {"Normal", "MAM", "SAM"}
+    assert result["predicted_malnutrition_type"] in {"Normal", "Underweight", "Stunting", "MAM", "SAM"}
     assert result["severity"] in {"Normal", "Moderate", "Severe"}
+    if result["predicted_malnutrition_type"] == "Normal":
+        assert result["underweight_positive"] is False
+        assert result["stunting_positive"] is False
+        assert result["acute_status"] == "Normal"
     assert isinstance(result["uncertainty_flag"], bool)
     assert result["triage"]
 
