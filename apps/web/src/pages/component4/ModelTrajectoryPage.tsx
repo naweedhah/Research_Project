@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { AdvancedAiSummary } from "@/components/component4/child-profile-view";
+import { AdvancedAiSummary } from "@/components/component1/child-profile-view";
 import { ErrorState, Skeleton } from "@/components/common/states";
 import { type ChildProfile } from "@/data/child-profile";
 import { api } from "@/services/component4/httpClient";

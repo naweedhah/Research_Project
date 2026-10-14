@@ -150,8 +150,8 @@ describe("child profile view model", () => {
 });
 
 describe("child profile page markup contract", () => {
-  const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component4/child-profile-view.tsx"), "utf8");
-  const hud = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component4/child-model-hud.tsx"), "utf8");
+  const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component1/child-profile-view.tsx"), "utf8");
+  const hud = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component1/child-model-hud.tsx"), "utf8");
 
   it("renders each primary clinical block once", () => {
     expect(src.match(/id="clinical-snapshot"/g)).toHaveLength(1);
@@ -169,7 +169,7 @@ describe("child profile page markup contract", () => {
     expect(src).toMatch(/ExplainabilityTrigger/);
     expect(src).not.toMatch(/Explainability component not connected/);
     const explain = readFileSync(
-      path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component4/explainability-dialog.tsx"),
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "../components/component1/explainability-dialog.tsx"),
       "utf8",
     );
     expect(explain).not.toMatch(/Request Component 2 explanation/);

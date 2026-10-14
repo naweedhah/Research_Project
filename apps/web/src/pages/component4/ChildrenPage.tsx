@@ -1,4 +1,4 @@
-import { ChildrenWorklist } from "@/components/component4/children-worklist";
+import { ChildrenWorklist } from "@/components/component1/children-worklist";
 
 export default function ChildrenPage() {
   return <ChildrenWorklist />;

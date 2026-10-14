@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import type { ChildProfile, ModalityCount } from "@/data/child-profile";
+import { displayedMalnutritionType, type ChildProfile, type ModalityCount } from "@/data/child-profile";
 import { cn, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -113,7 +113,7 @@ export function ExplainabilityDialog({
               <section>
                 <FieldLabel>Prediction being reviewed</FieldLabel>
                 <p className="mt-1 text-sm font-medium text-[#0f2744]">
-                  {formatNutritionalStatus(prediction?.status, prediction?.severity)}
+                  {formatNutritionalStatus(displayedMalnutritionType(prediction), prediction?.severity)}
                   {prediction?.risk != null ? ` · ${formatPercent(prediction.risk)}` : ""}
                 </p>
                 <p className="mt-1 text-xs text-[#64748b]">
@@ -122,6 +122,16 @@ export function ExplainabilityDialog({
                     : "AI-assisted assessment from the measurements recorded at this visit. Clinical review required."}
                 </p>
               </section>
+
+              {prediction?.ga_rgca ? (
+                <section>
+                  <FieldLabel>Acute malnutrition status</FieldLabel>
+                  <p className="mt-1 text-sm font-medium text-[#0f2744]">{prediction.ga_rgca.acute_status ?? "—"}</p>
+                  <p className="mt-1 text-xs text-[#64748b]">
+                    Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
+                  </p>
+                </section>
+              ) : null}
 
               <section>
                 <FieldLabel>Modality Reliability</FieldLabel>

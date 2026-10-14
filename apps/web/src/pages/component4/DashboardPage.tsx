@@ -27,6 +27,7 @@ import { api } from "@/services/component4/httpClient";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { Button } from "@/components/common/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
+import { displayedMalnutritionType } from "@/data/child-profile";
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
@@ -45,6 +46,7 @@ type PriorityPatient = {
   sex?: string;
   latest_visit?: string | null;
   current_status?: string | null;
+  predicted_malnutrition_type?: string | null;
   severity?: string | null;
   probability_label: string;
   current_probability?: number | null;
@@ -489,7 +491,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           </div>
           {row.current_status ? (
             <p className="mt-2 inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-[#0f2744]">
-              {formatNutritionalStatus(row.current_status, row.severity)}
+              {formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
             </p>
           ) : null}
         </div>

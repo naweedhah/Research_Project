@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
 import { toast } from "sonner";
-import { ChildProfileView } from "@/components/component4/child-profile-view";
+import { ChildProfileView } from "@/components/component1/child-profile-view";
 import { ErrorState, Skeleton } from "@/components/common/states";
 import { api } from "@/services/component4/httpClient";
 import { PROFILE_TABS, type ChildProfile, type ProfileTab } from "@/data/child-profile";

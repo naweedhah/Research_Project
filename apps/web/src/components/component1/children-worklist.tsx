@@ -8,9 +8,10 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { api } from "@/services/component4/httpClient";
 import { Button } from "@/components/common/button";
 import { Input, Select } from "@/components/common/field";
-import { RegisterChildModal } from "@/components/component4/register-child-modal";
-import { ConfirmAction, RecordActions } from "@/components/component4/record-actions";
+import { RegisterChildModal } from "@/components/component1/register-child-modal";
+import { ConfirmAction, RecordActions } from "@/components/component1/record-actions";
 import { toast } from "sonner";
+import { displayedMalnutritionType } from "@/data/child-profile";
 import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn } from "@/utils/utils";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 
@@ -28,6 +29,7 @@ type Item = {
   assessment_count: number;
   has_assessment: boolean;
   current_status?: string;
+  predicted_malnutrition_type?: string | null;
   severity?: string;
   current_risk?: number;
   previous_risk?: number | null;
@@ -143,7 +145,7 @@ function InfoTip({ text }: { text: string }) {
 }
 
 function WorklistContent() {
-  const params = useSearchParams();
+  const params = useSearchParams() ?? new URLSearchParams();
   const router = useRouter();
   const [q, setQ] = useState(params.get("q") ?? "");
   const [status, setStatus] = useState(params.get("status") ?? "");
@@ -447,8 +449,8 @@ function AssessmentCell({ row }: { row: Item }) {
   return (
     <div>
       <div className="flex flex-wrap gap-1">
-        <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#1e40af]">{formatNutritionalStatus(row.current_status, row.severity)}</span>
-        {showSeverity && !["MAM", "SAM"].includes(formatNutritionalStatus(row.current_status, row.severity)) ? (
+        <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#1e40af]">{formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}</span>
+        {showSeverity && !["MAM", "SAM"].includes(formatNutritionalStatus(displayedMalnutritionType(row), row.severity)) ? (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{formatStatus(row.severity)}</span>
         ) : null}
       </div>

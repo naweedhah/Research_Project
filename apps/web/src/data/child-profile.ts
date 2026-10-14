@@ -1,3 +1,9 @@
+export const PREDICTED_MALNUTRITION_TYPES = ["Normal", "Underweight", "Stunting", "MAM", "SAM"] as const;
+export type PredictedMalnutritionType = (typeof PREDICTED_MALNUTRITION_TYPES)[number];
+
+export const ACUTE_MALNUTRITION_STATUSES = ["Normal", "MAM", "SAM"] as const;
+export type AcuteMalnutritionStatus = (typeof ACUTE_MALNUTRITION_STATUSES)[number];
+
 export type ProfileMeasurements = {
   weight_kg?: number | null;
   height_cm?: number | null;
@@ -6,6 +12,7 @@ export type ProfileMeasurements = {
 
 export type ProfilePrediction = {
   status?: string;
+  predicted_malnutrition_type?: PredictedMalnutritionType | string | null;
   severity?: string;
   risk?: number;
   confidence?: string;
@@ -21,8 +28,12 @@ export type ProfilePrediction = {
     stunting_probability?: number;
     mam_probability?: number;
     sam_probability?: number;
+    underweight_positive?: boolean;
+    stunting_positive?: boolean;
+    predicted_malnutrition_type?: PredictedMalnutritionType | string;
+    detected_conditions?: string[];
     normal_acute_probability?: number;
-    acute_status?: string;
+    acute_status?: AcuteMalnutritionStatus | string;
     acute_probability?: number;
     severity?: string;
     severity_probabilities?: { normal?: number; moderate?: number; severe?: number };
@@ -245,6 +256,21 @@ export function openAlert(profile: ChildProfile): ProfileAlert | undefined {
   );
 }
 
+/** Display the backend overall type. Does not derive Underweight or Stunting positivity. */
+export function displayedMalnutritionType(
+  source?: {
+    status?: string | null;
+    current_status?: string | null;
+    predicted_malnutrition_type?: string | null;
+    ga_rgca?: { predicted_malnutrition_type?: string | null } | null;
+  } | null,
+): string | undefined {
+  const fromHead = source?.ga_rgca?.predicted_malnutrition_type;
+  if (fromHead) return fromHead;
+  if (source?.predicted_malnutrition_type) return source.predicted_malnutrition_type;
+  return source?.status ?? source?.current_status ?? undefined;
+}
+
 export function predictedVisits(profile: ChildProfile): ProfileVisit[] {
   return profile.visits.filter((v) => v.prediction?.risk != null);
 }
@@ -254,7 +280,7 @@ export function probabilitySeries(profile: ChildProfile) {
     visit: `V${v.visit_number}`,
     date: v.visit_date,
     probability: Math.round((v.prediction!.risk as number) * 100),
-    status: v.prediction?.status,
+    status: displayedMalnutritionType(v.prediction),
     severity: v.prediction?.severity,
     weight: v.measurements?.weight_kg ?? null,
     height: v.measurements?.height_cm ?? null,

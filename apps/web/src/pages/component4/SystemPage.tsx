@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/component4/httpClient";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
-import { IntegrationFlowPanel } from "@/components/component4/integration-flow-panel";
+import { IntegrationFlowPanel } from "@/components/component1/integration-flow-panel";
 
 type IntegrationStatus = {
   c3: { status: string; configured: boolean; pending_events: number; failed_events: number; last_success_at?: string | null };

@@ -8,6 +8,7 @@ import { Button } from "@/components/common/button";
 import { Input, Label, Select } from "@/components/common/field";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
+import { displayedMalnutritionType } from "@/data/child-profile";
 import { formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { X } from "lucide-react";
 
@@ -435,12 +436,19 @@ export default function NewVisitPage() {
       confidence?: string;
       mode: string;
       prediction_source?: string;
+      predicted_malnutrition_type?: string;
+      detected_conditions?: string[];
+      acute_status?: "Normal" | "MAM" | "SAM" | string;
       ga_rgca?: {
         underweight_probability?: number;
         stunting_probability?: number;
         mam_probability?: number;
         sam_probability?: number;
-        acute_status?: string;
+        underweight_positive?: boolean;
+        stunting_positive?: boolean;
+        predicted_malnutrition_type?: "Normal" | "Underweight" | "Stunting" | "MAM" | "SAM" | string;
+        detected_conditions?: string[];
+        acute_status?: "Normal" | "MAM" | "SAM" | string;
         severity?: string;
         uncertainty_flag?: boolean;
         uncertainty_label?: string;
@@ -469,18 +477,22 @@ export default function NewVisitPage() {
                 <p>MAM <strong>{formatPercent(p.ga_rgca.mam_probability)}</strong></p>
                 <p>SAM <strong>{formatPercent(p.ga_rgca.sam_probability)}</strong></p>
               </div>
-              <p>Predicted Acute Status <strong>{p.ga_rgca.acute_status}</strong></p>
+              <p>Predicted Malnutrition Type <strong>{formatNutritionalStatus(displayedMalnutritionType(p), p.ga_rgca.severity)}</strong></p>
               <p>Overall Severity <strong>{p.ga_rgca.severity}</strong></p>
               <p>Model Uncertainty <strong>{p.ga_rgca.uncertainty_flag ? "Elevated" : "Low"}</strong></p>
               <p className="text-sm text-muted">{p.ga_rgca.uncertainty_label}</p>
               <p>Clinical Recommendation <strong>{p.ga_rgca.triage}</strong></p>
               <p>Highest Predicted Condition Risk <strong>{formatPercent(p.risk)}</strong></p>
+              <p>Acute Malnutrition Status <strong>{p.ga_rgca.acute_status}</strong></p>
+              <p className="text-sm text-muted">
+                Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
+              </p>
               <p>Model <strong>GA-RGCA v3</strong></p>
               <p className="text-sm text-muted">AI-assisted assessment. Clinical review required.</p>
             </>
           ) : (
             <>
-              <p>Predicted status <strong>{formatNutritionalStatus(p.status, p.severity)}</strong></p>
+              <p>Predicted status <strong>{formatNutritionalStatus(displayedMalnutritionType(p), p.severity)}</strong></p>
               <p>Model-assessed probability <strong>{formatPercent(p.risk)}</strong></p>
               <p className="text-sm text-muted">AI-assisted assessment from the measurements recorded at this visit. Clinical review required.</p>
             </>

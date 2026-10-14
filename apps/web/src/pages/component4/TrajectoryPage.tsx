@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { AdvancedAiSummary } from "@/components/component4/child-profile-view";
+import { AdvancedAiSummary } from "@/components/component1/child-profile-view";
 import { ErrorState, Skeleton } from "@/components/common/states";
 import { type ChildProfile } from "@/data/child-profile";
 import { api } from "@/services/component4/httpClient";

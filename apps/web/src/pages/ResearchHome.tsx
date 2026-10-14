@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/component4/httpClient";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
 import { EmptyState } from "@/components/common/states";
-import { IntegrationFlowPanel } from "@/components/component4/integration-flow-panel";
+import { IntegrationFlowPanel } from "@/components/component1/integration-flow-panel";
 
 export default function ResearchPage() {
   const profile = useQuery({ queryKey: ["dataset"], queryFn: () => api<Record<string, unknown>>("/research/dataset-profile") });
