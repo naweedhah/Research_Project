@@ -29,6 +29,7 @@ from app.models.paediatric import Child, Visit
 from app.services.alerts import deterioration_alert, event_window_key, relapse_alert, severity_for, stagnation_alert
 from app.services.audit import write_audit
 from app.services.longitudinal import LongitudinalError, classify_progress, elapsed_months
+from app.services.malnutrition_type import apply_new_prediction_interpretation
 from app.services.model_display import DEMO_PROJECTION_VERSION
 
 
@@ -159,7 +160,7 @@ def run_inference(db: Session, visit: Visit, child: Child, user_id, ip: str | No
         with httpx.Client(timeout=30.0) as client:
             response = client.post(f"{settings.inference_url}/predict", json=payload)
             response.raise_for_status()
-            result = response.json()
+            result = apply_new_prediction_interpretation(response.json())
     except httpx.HTTPStatusError as exc:
         detail = exc.response.text
         try:
