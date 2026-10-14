@@ -18,6 +18,52 @@ def test_outlier_weight_blocks():
     assert report.complete is False
 
 
+def test_missing_height_and_weight_block():
+    policy = load_clinical_policy()
+    missing_height = validate_visit_payload(
+        {"anthropometric": {"age_months": 18, "sex": "female", "weight_kg": 9.2}},
+        policy,
+    )
+    missing_weight = validate_visit_payload(
+        {"anthropometric": {"age_months": 18, "sex": "female", "height_cm": 80}},
+        policy,
+    )
+    assert missing_height.complete is False
+    assert any(issue.field == "height_cm" for issue in missing_height.blocking_errors)
+    assert missing_weight.complete is False
+    assert any(issue.field == "weight_kg" for issue in missing_weight.blocking_errors)
+
+
+def test_negative_height_and_zero_weight_block():
+    policy = load_clinical_policy()
+    negative = validate_visit_payload(
+        {"anthropometric": {"age_months": 18, "sex": "female", "height_cm": -80, "weight_kg": 9.2}},
+        policy,
+    )
+    zero = validate_visit_payload(
+        {"anthropometric": {"age_months": 18, "sex": "female", "height_cm": 80, "weight_kg": 0}},
+        policy,
+    )
+    assert negative.complete is False
+    assert "Please verify this measurement before prediction." in negative.blocking_errors[0].message
+    assert zero.complete is False
+
+
+def test_height_in_metres_and_invalid_numeric_block():
+    policy = load_clinical_policy()
+    metres = validate_visit_payload(
+        {"anthropometric": {"age_months": 24, "sex": "female", "height_cm": 0.8, "weight_kg": 10}},
+        policy,
+    )
+    invalid = validate_visit_payload(
+        {"anthropometric": {"age_months": 24, "sex": "female", "height_cm": "abc", "weight_kg": 10}},
+        policy,
+    )
+    assert metres.complete is False
+    assert "Please verify this measurement before prediction." in metres.blocking_errors[0].message
+    assert invalid.complete is False
+
+
 def test_complete_visit_passes():
     policy = load_clinical_policy()
     report = validate_visit_payload(

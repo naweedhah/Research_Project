@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from app.core.policy import ClinicalPolicy
 from app.models.enums import DataQualityFlag
+
+VERIFY_MEASUREMENT = "Please verify this measurement before prediction."
 
 
 @dataclass
@@ -59,6 +62,28 @@ def _in_range(value: float | None, spec: dict | None) -> bool:
     return spec["min"] <= value <= spec["max"]
 
 
+def _as_finite_number(value) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _implausible_unit(field: str, number: float) -> bool:
+    if field == "height_cm" and 0 < number < 3:
+        return True
+    if field == "weight_kg" and number >= 200:
+        return True
+    if field in {"height_cm", "weight_kg", "age_months"} and number <= 0:
+        return True
+    return False
+
+
 def validate_visit_payload(payload: dict, policy: ClinicalPolicy, socioeconomic_stale: bool = False) -> QualityReport:
     issues: list[QualityIssue] = []
     warnings: list[QualityIssue] = []
@@ -89,17 +114,38 @@ def validate_visit_payload(payload: dict, policy: ClinicalPolicy, socioeconomic_
         "gestational_age_weeks": (payload.get("maternal_child_health") or {}).get("gestational_age_weeks"),
     }
     for key, value in numeric_map.items():
-        if value is None:
+        if value is None or value == "":
+            continue
+        number = _as_finite_number(value)
+        label = FIELD_LABELS.get(key, key)
+        if number is None:
+            issues.append(
+                QualityIssue(
+                    key,
+                    DataQualityFlag.OUTLIER_REVIEW_REQUIRED,
+                    f"{label} is not a valid number. {VERIFY_MEASUREMENT}",
+                    blocking=True,
+                )
+            )
+            continue
+        if _implausible_unit(key, number):
+            issues.append(
+                QualityIssue(
+                    key,
+                    DataQualityFlag.OUTLIER_REVIEW_REQUIRED,
+                    f"{label} {value} looks implausible. {VERIFY_MEASUREMENT}",
+                    blocking=True,
+                )
+            )
             continue
         spec = ranges.get(key)
-        if not _in_range(float(value), spec):
-            label = FIELD_LABELS.get(key, key)
+        if not _in_range(number, spec):
             span = f" ({spec['min']}–{spec['max']})" if spec else ""
             issues.append(
                 QualityIssue(
                     key,
                     DataQualityFlag.OUTLIER_REVIEW_REQUIRED,
-                    f"{label} {value} is outside the accepted range{span}.",
+                    f"{label} {value} is outside the accepted range{span}. {VERIFY_MEASUREMENT}",
                     blocking=True,
                 )
             )
