@@ -11,10 +11,13 @@ import {
   formatPp,
   formatRv,
   measurementDelta,
+  monthlyVelocityDisplay,
   openAlert,
   probabilitySeries,
   progressLabel,
   reviewLabel,
+  sameConditionDelta,
+  TREND_CONDITIONS,
   visitProbabilityDeltaPp,
   riskVelocityPpMonth,
   type ChildProfile,
@@ -75,6 +78,51 @@ describe("child profile view model", () => {
     expect(formatRv(null, true)).toBe("Not available");
     expect(formatRv(-12.4, true)).toBe("−12.4 pp/month");
     expect(formatRv(1, false)).toBe("Not available");
+    expect(formatRv(Number.POSITIVE_INFINITY, true)).toBe("Not available");
+    expect(formatRv(Number.NaN, true)).toBe("Not available");
+  });
+
+  it("keeps absolute same-condition change for same-day visits but not monthly velocity", () => {
+    const current = {
+      predicted_malnutrition_type: "Stunting",
+      ga_rgca: { stunting_probability: 0.88, predicted_malnutrition_type: "Stunting" },
+    };
+    const previous = {
+      predicted_malnutrition_type: "Stunting",
+      ga_rgca: { stunting_probability: 0.83, predicted_malnutrition_type: "Stunting" },
+    };
+    expect(sameConditionDelta(current, previous)).toBe(5);
+    const display = monthlyVelocityDisplay(-451.7, true, "2026-10-14T09:00:00Z", "2026-10-14T16:30:00Z");
+    expect(display.value).toBe("Not available");
+    expect(display.hint).toBe("Same-day assessments");
+    expect(display.available).toBe(false);
+  });
+
+  it("calculates monthly velocity when visits are on different dates", () => {
+    const display = monthlyVelocityDisplay(-12.4, true, "2026-09-14T09:00:00Z", "2026-10-14T09:00:00Z");
+    expect(display.value).toBe("−12.4 pp/month");
+    expect(display.hint).toBeNull();
+    expect(display.available).toBe(true);
+  });
+
+  it("does not display NaN or Infinity velocity", () => {
+    expect(monthlyVelocityDisplay(Number.POSITIVE_INFINITY, true, "2026-09-14", "2026-10-14").value).toBe("Not available");
+    expect(monthlyVelocityDisplay(Number.NaN, true, "2026-09-14", "2026-10-14").value).toBe("Not available");
+  });
+
+  it("keeps the condition trend selector options", () => {
+    expect(TREND_CONDITIONS).toEqual(["Underweight", "Stunting", "MAM", "SAM"]);
+  });
+
+  it("keeps same-day visits as separate chart points", () => {
+    const sameDay: ChildProfile = {
+      ...profile,
+      visits: [
+        visit(1, 0.83, { visit_date: "2026-10-14T09:00:00Z" }),
+        visit(2, 0.88, { visit_date: "2026-10-14T16:30:00Z" }),
+      ],
+    };
+    expect(probabilitySeries(sameDay)).toHaveLength(2);
   });
 
   it("labels a single visit as insufficient history instead of stable", () => {

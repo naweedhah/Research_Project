@@ -215,8 +215,58 @@ export function formatPp(value?: number | null): string {
 
 export function formatRv(value?: number | null, comparable = true): string {
   if (!comparable) return "Not available";
-  if (value === null || value === undefined) return "Not available";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "Not available";
   return `${formatPp(value)}/month`;
+}
+
+export function calendarDay(iso?: string | null): string | null {
+  if (!iso) return null;
+  const day = iso.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+}
+
+export function elapsedCalendarDays(previous?: string | null, current?: string | null): number | null {
+  const start = calendarDay(previous);
+  const end = calendarDay(current);
+  if (!start || !end) return null;
+  const ms = Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`);
+  if (!Number.isFinite(ms)) return null;
+  return ms / 86_400_000;
+}
+
+export type VelocityIntervalReason = "ok" | "same-day" | "insufficient" | "missing";
+
+export function velocityIntervalReason(previous?: string | null, current?: string | null): VelocityIntervalReason {
+  const days = elapsedCalendarDays(previous, current);
+  if (days == null) return "missing";
+  if (days === 0) return "same-day";
+  if (days <= 0) return "insufficient";
+  return "ok";
+}
+
+export type MonthlyVelocityDisplay = {
+  value: string;
+  hint: string | null;
+  available: boolean;
+};
+
+export function monthlyVelocityDisplay(
+  storedPpMonth?: number | null,
+  comparable = true,
+  previousVisitDate?: string | null,
+  currentVisitDate?: string | null,
+): MonthlyVelocityDisplay {
+  const unavailable = (hint: string | null = null): MonthlyVelocityDisplay => ({
+    value: "Not available",
+    hint,
+    available: false,
+  });
+  if (!comparable) return unavailable();
+  const reason = velocityIntervalReason(previousVisitDate, currentVisitDate);
+  if (reason === "same-day") return unavailable("Same-day assessments");
+  if (reason === "insufficient") return unavailable("Insufficient time between assessments");
+  if (storedPpMonth == null || !Number.isFinite(storedPpMonth)) return unavailable();
+  return { value: formatRv(storedPpMonth, true), hint: null, available: true };
 }
 
 export function measurementDelta(current?: number | null, previous?: number | null): number | null {

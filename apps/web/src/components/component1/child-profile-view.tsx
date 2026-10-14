@@ -34,7 +34,6 @@ import {
   alertTone,
   emptyAssessmentMessage,
   formatPp,
-  formatRv,
   measurementDelta,
   openAlert,
   probabilitySeries,
@@ -49,6 +48,7 @@ import {
   TREND_CONDITIONS,
   visitProbabilityDeltaPp,
   riskVelocityPpMonth,
+  monthlyVelocityDisplay,
   type ChildProfile,
   type ProfileTab,
   type ProfileVisit,
@@ -495,6 +495,13 @@ function Overview({
   const ageAtVisit = ageMonthsAtVisit(profile.date_of_birth, selected?.visit_date, profile.age_months);
   const visitProgress = isLatest ? profile.progress_display : selected?.progress;
   const visitRv = isLatest ? profile.risk_velocity_pp_month : comparable ? riskVelocityPpMonth(selected?.risk_velocity ?? null) : null;
+  const visitVelocity = monthlyVelocityDisplay(visitRv, comparable, prior?.visit_date, selected?.visit_date);
+  const latestVelocity = monthlyVelocityDisplay(
+    profile.risk_velocity_pp_month,
+    comparable,
+    profile.previous?.visit_date,
+    profile.current?.visit_date,
+  );
   const tone = alert ? alertTone(alert.type) : "amber";
 
   if (!hasBaseline) {
@@ -711,7 +718,7 @@ function Overview({
             }
             probabilityChange={comparable ? change : null}
             progress={progressLabel(visitProgress, comparable)}
-            riskVelocity={formatRv(visitRv, comparable)}
+            riskVelocity={visitVelocity.value}
             scoreLabel={semantics.score_label}
             scoreTip={semantics.score_description}
             velocityLabel={semantics.velocity_label}
@@ -797,7 +804,8 @@ function Overview({
         <div className="mt-4 grid grid-cols-2 gap-3">
           <MetricTile
             label={semantics.velocity_label}
-            value={formatRv(profile.risk_velocity_pp_month, comparable)}
+            value={latestVelocity.value}
+            hint={latestVelocity.hint}
             action={<InfoTip label={`About ${semantics.velocity_label.toLowerCase()}`} text={semantics.velocity_description} />}
           />
           <MetricTile
@@ -1277,6 +1285,12 @@ function ProgressTab({
   const hasConditionProbabilities = profile.visits.some((visit) => visit.prediction?.ga_rgca?.stunting_probability != null);
   const conditionSeries = useMemo(() => probabilitySeries(profile, trendCondition), [profile, trendCondition]);
   const chartSeries = metric === "probability" && hasConditionProbabilities ? conditionSeries : series;
+  const latestVelocity = monthlyVelocityDisplay(
+    profile.risk_velocity_pp_month,
+    comparable,
+    profile.previous?.visit_date,
+    profile.current?.visit_date,
+  );
   return (
     <div className="space-y-4">
       <Section
@@ -1323,7 +1337,7 @@ function ProgressTab({
           scoreLabel={metric === "probability" && hasConditionProbabilities ? `${trendCondition} probability` : semantics.score_label}
         />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <MetricTile label={semantics.velocity_label} value={formatRv(profile.risk_velocity_pp_month, comparable)} />
+          <MetricTile label={semantics.velocity_label} value={latestVelocity.value} hint={latestVelocity.hint} />
           <MetricTile
             label="Progress"
             value={
