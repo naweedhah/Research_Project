@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from app.services.malnutrition_type import (
     apply_new_prediction_interpretation,
+    component1_output,
     integration_prediction_fields,
     resolve_display,
 )
@@ -84,3 +85,23 @@ def test_integration_payload_uses_overall_type_for_the_stunting_case():
     assert fields["severity"] == "Moderate"
     assert fields["status"] == "Stunting"
     assert row.status_prediction == "Normal"
+
+
+def test_component1_contract_uses_overall_type_and_hides_identity():
+    calibrated = {"ga_rgca": dict(STUNTING_BLOCK)}
+    row = SimpleNamespace(
+        visit_id="visit-1",
+        created_at=None,
+        feature_schema_version="ga-rgca-v3-current-visit-baseline",
+        calibration_version="ga-rgca-v3-binary-calibrators",
+        status_prediction="Normal",
+        calibrated_probabilities=calibrated,
+        severity_prediction="Moderate",
+    )
+    body = component1_output(row)
+    assert body["schema_version"] == "component1-ga-rgca-v3-1"
+    assert body["prediction"]["predicted_malnutrition_type"] == "Stunting"
+    assert body["prediction"]["detected_conditions"] == ["Stunting"]
+    assert body["observed_outcome"] is None
+    assert "full_name" not in str(body)
+    assert "phone" not in str(body)

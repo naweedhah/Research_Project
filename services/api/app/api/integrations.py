@@ -30,6 +30,7 @@ from app.models.enums import (
 from app.models.intelligence import ModelVersion
 from app.models.operations import C3ReassessmentRequest, IntegrationEvent, Notification
 from app.models.paediatric import Child, Visit
+from app.security.rbac import assert_child_access
 from app.schemas.common import CounterfactualRequest
 from app.services.audit import write_audit
 from app.services.clinician_review import active_prediction_for_visit, get_review_for_visit
@@ -422,6 +423,28 @@ def product():
     return data
 
 
+@router.get("/integrations/component1/visits/{visit_id}")
+def component1_visit_output(
+    visit_id: UUID,
+    db: Session = Depends(get_db),
+    current=Depends(require_permission("child:read")),
+):
+    """Component 1 prediction contract for C2/C3. Served by the application API only."""
+    from app.services.malnutrition_type import component1_output
+
+    visit = db.get(Visit, visit_id)
+    if visit is None:
+        raise HTTPException(404, "Visit not found")
+    child = db.get(Child, visit.child_id)
+    if child is None:
+        raise HTTPException(404, "Child not found")
+    assert_child_access(current, child)
+    prediction = active_prediction_for_visit(db, visit.id)
+    if prediction is None:
+        raise HTTPException(404, "No active prediction for this visit")
+    return component1_output(prediction)
+
+
 @router.get("/runtime/model-display")
 def runtime_model_display(
     db: Session = Depends(get_db),
@@ -465,5 +488,11 @@ def runtime_ga_rgca(current=Depends(require_permission("child:read"))):
         "configured_model_mode": info.get("configured_model_mode"),
         "prediction_source": info.get("prediction_source"),
         "ensemble_members": info.get("ensemble_members"),
+        "architecture": info.get("architecture"),
+        "prediction_type": info.get("prediction_type"),
+        "outputs": info.get("outputs"),
+        "uncertainty_method": info.get("uncertainty_method"),
+        "clinical_use": False,
+        "external_validation_complete": False,
         "demo": False,
     }

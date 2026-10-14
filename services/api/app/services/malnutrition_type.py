@@ -8,7 +8,10 @@ rewrite historical database rows.
 from __future__ import annotations
 
 import importlib.util
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 _DERIVED_KEYS = (
     "predicted_malnutrition_type",
@@ -17,6 +20,7 @@ _DERIVED_KEYS = (
     "detected_conditions",
     "uw_decision_strength",
     "st_decision_strength",
+    "output_consistency",
 )
 
 _PUBLIC_KEYS = (
@@ -30,10 +34,18 @@ _PUBLIC_KEYS = (
     "stunting_positive",
     "acute_status",
     "severity",
+    "severity_probabilities",
     "uncertainty_flag",
+    "binary_variance",
     "triage",
+    "modality_reliability",
     "model_version",
     "prediction_source",
+    "output_consistency",
+    "binary_thresholds",
+    "input_snapshot",
+    "missing_features",
+    "applicability",
 )
 
 
@@ -57,6 +69,7 @@ def _load_decision_module():
 _decision = _load_decision_module()
 derive_predicted_malnutrition_type = _decision.derive_predicted_malnutrition_type
 load_binary_thresholds = _decision.load_binary_thresholds
+check_output_consistency = _decision.check_output_consistency
 
 
 def _ga_block(calibrated) -> dict | None:
@@ -99,13 +112,18 @@ def _with_derivation(block: dict) -> dict:
     copied = dict(block)
     if copied.get("prediction_source") != "GA-RGCA-v3":
         return copied
-    if copied.get("predicted_malnutrition_type"):
-        return copied
-    derived = derive_from_ga_block(copied)
-    if derived is None:
-        return copied
-    for key in _DERIVED_KEYS:
-        copied[key] = derived[key]
+    if not copied.get("predicted_malnutrition_type"):
+        derived = derive_from_ga_block(copied)
+        if derived is not None:
+            for key in _DERIVED_KEYS:
+                copied[key] = derived[key]
+    if copied.get("predicted_malnutrition_type") and "output_consistency" not in copied:
+        copied["output_consistency"] = check_output_consistency(
+            predicted_malnutrition_type=copied["predicted_malnutrition_type"],
+            underweight_positive=bool(copied.get("underweight_positive")),
+            stunting_positive=bool(copied.get("stunting_positive")),
+            acute_status=copied.get("acute_status") or "Normal",
+        )
     return copied
 
 
@@ -134,6 +152,8 @@ def apply_new_prediction_interpretation(result: dict) -> dict:
     predicted = block.get("predicted_malnutrition_type")
     if not predicted:
         return result
+    if block.get("output_consistency") != "OK":
+        logger.error("GA-RGCA output_consistency=%s predicted=%s acute=%s", block.get("output_consistency"), predicted, block.get("acute_status"))
     calibrated = dict(calibrated)
     calibrated["ga_rgca"] = block
     result["calibrated_probabilities"] = calibrated
@@ -184,6 +204,52 @@ def outbound_probabilities(prediction, attr: str):
             merged[key] = block[key]
     copied["ga_rgca"] = merged
     return copied
+
+
+def component1_output(prediction) -> dict:
+    """Clean Component 1 contract for C2/C3. No identifiers or model weights."""
+    fields = prediction_api_fields(prediction)
+    block = fields.get("ga_rgca") if isinstance(fields.get("ga_rgca"), dict) else {}
+    snapshot = block.get("input_snapshot") if isinstance(block.get("input_snapshot"), dict) else {}
+    thresholds = block.get("binary_thresholds") if isinstance(block.get("binary_thresholds"), dict) else {}
+    created = getattr(prediction, "created_at", None)
+    prediction_body = {
+        "predicted_malnutrition_type": fields.get("predicted_malnutrition_type") or fields.get("status"),
+        "detected_conditions": fields.get("detected_conditions") or [],
+        "underweight_probability": fields.get("underweight_probability"),
+        "stunting_probability": fields.get("stunting_probability"),
+        "mam_probability": fields.get("mam_probability"),
+        "sam_probability": fields.get("sam_probability"),
+        "underweight_positive": fields.get("underweight_positive"),
+        "stunting_positive": fields.get("stunting_positive"),
+        "acute_status": fields.get("acute_status"),
+        "severity": fields.get("severity"),
+        "severity_probabilities": fields.get("severity_probabilities") or block.get("severity_probabilities"),
+        "uncertainty_flag": fields.get("uncertainty_flag"),
+        "binary_variance": fields.get("binary_variance") or block.get("binary_variance"),
+        "triage": fields.get("triage"),
+        "modality_reliability": fields.get("modality_reliability") or block.get("modality_reliability"),
+    }
+    return {
+        "schema_version": "component1-ga-rgca-v3-1",
+        "visit_id": str(prediction.visit_id),
+        "prediction_timestamp": created.isoformat() if created is not None else None,
+        "prediction_source": fields.get("prediction_source"),
+        "model_version": fields.get("model_version"),
+        "feature_schema_version": getattr(prediction, "feature_schema_version", None),
+        "calibration_version": getattr(prediction, "calibration_version", None),
+        "prediction": prediction_body,
+        "baseline_context": snapshot,
+        "missing_features": block.get("missing_features") or snapshot.get("missing_features") or [],
+        "decision_policy": {
+            "underweight_threshold": thresholds.get("Underweight"),
+            "stunting_threshold": thresholds.get("Stunting"),
+            "acute_temperature": snapshot.get("acute_temperature"),
+            "severity_temperature": snapshot.get("severity_temperature"),
+            "uncertainty_threshold": snapshot.get("uncertainty_threshold") or block.get("uncertainty_threshold"),
+        },
+        "observed_outcome": None,
+    }
 
 
 def integration_prediction_fields(prediction) -> dict:

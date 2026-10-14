@@ -279,7 +279,24 @@ class GaRgcaAdapter:
             heads["mam_probability"],
             heads["sam_probability"],
         )
+        row = heads.get("feature_row") or {}
         stored = {key: value for key, value in heads.items() if key != "feature_row"}
+        stored["input_snapshot"] = {
+            "values": dict(row),
+            "missing_features": [name for name, value in row.items() if value is None],
+            "model_version": heads.get("model_version"),
+            "calibration_version": "ga-rgca-v3-binary-calibrators",
+            "feature_schema_version": "ga-rgca-v3-current-visit-baseline",
+            "binary_thresholds": heads.get("binary_thresholds"),
+            "acute_temperature": (GA_MODEL.metadata or {}).get("acute_temperature") if GA_MODEL else None,
+            "severity_temperature": (GA_MODEL.metadata or {}).get("severity_temperature") if GA_MODEL else None,
+            "uncertainty_threshold": heads.get("uncertainty_threshold"),
+        }
+        stored["missing_features"] = stored["input_snapshot"]["missing_features"]
+        stored["applicability"] = {
+            "validated_deployment_limits": None,
+            "message": "Model applicability outside the validated training range has not been established.",
+        }
         return PredictionResult(
             status=heads["predicted_malnutrition_type"],
             severity=heads["severity"],
@@ -343,9 +360,15 @@ def model_info():
         "adapter": ADAPTER.__class__.__name__,
         "model_version": "GA-RGCA-v3" if loaded else None,
         "prediction_source": "GA-RGCA-v3" if loaded else None,
-        "ensemble_members": len(GA_MODEL.models) if loaded else 0,
         "artifact_directory": str(GA_MODEL.directory) if loaded else None,
         "embedding_dim": settings.embedding_dim,
+        "architecture": "Growth-Anchored Reliability-Gated Cross-Attention",
+        "ensemble_members": len(GA_MODEL.models) if loaded else 0,
+        "prediction_type": "future nutritional risk",
+        "outputs": ["Underweight", "Stunting", "MAM", "SAM", "Severity"],
+        "uncertainty_method": "ensemble binary variance",
+        "clinical_use": False,
+        "external_validation_complete": False,
         "clinically_validated": False,
         "demo": False,
         "ga_rgca_loaded": loaded,
