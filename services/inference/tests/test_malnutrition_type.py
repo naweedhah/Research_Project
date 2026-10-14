@@ -101,6 +101,21 @@ def test_normal_invariant():
         assert result["predicted_malnutrition_type"] != "Normal"
 
 
+def test_output_consistency_flags_impossible_normal():
+    from app.malnutrition_type import check_output_consistency
+
+    assert (
+        check_output_consistency(
+            predicted_malnutrition_type="Normal",
+            underweight_positive=True,
+            stunting_positive=False,
+            acute_status="Normal",
+        )
+        == "REVIEW_REQUIRED"
+    )
+    assert derive(0.00, 0.66, "Normal")["output_consistency"] == "OK"
+
+
 def test_metadata_thresholds_are_loaded_not_hardcoded():
     loaded = load_binary_thresholds()
     assert loaded is not None

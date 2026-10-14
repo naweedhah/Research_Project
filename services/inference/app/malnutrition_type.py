@@ -86,7 +86,34 @@ def derive_predicted_malnutrition_type(
         "detected_conditions": detected,
         "uw_decision_strength": uw_decision_strength,
         "st_decision_strength": st_decision_strength,
+        "output_consistency": check_output_consistency(
+            predicted_malnutrition_type=predicted,
+            underweight_positive=underweight_positive,
+            stunting_positive=stunting_positive,
+            acute_status=acute,
+        ),
     }
+
+
+def check_output_consistency(
+    *,
+    predicted_malnutrition_type: str,
+    underweight_positive: bool,
+    stunting_positive: bool,
+    acute_status: str,
+) -> str:
+    """Software/logic check only. Does not alter neural-network outputs."""
+    predicted = str(predicted_malnutrition_type)
+    acute = str(acute_status)
+    if predicted == "Normal" and (
+        underweight_positive or stunting_positive or acute in {"MAM", "SAM"}
+    ):
+        return "REVIEW_REQUIRED"
+    if predicted == "MAM" and acute != "MAM":
+        return "REVIEW_REQUIRED"
+    if predicted == "SAM" and acute != "SAM":
+        return "REVIEW_REQUIRED"
+    return "OK"
 
 
 def load_binary_thresholds() -> tuple[float, float] | None:
