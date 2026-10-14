@@ -17,6 +17,7 @@ from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Visit
 from app.security.rbac import facility_scope_ids
 from app.services.child_list import child_is_synthetic
+from app.services.longitudinal import monthly_velocity_available
 from app.services.malnutrition_type import resolve_display
 from app.services.model_display import get_model_output_display_metadata, semantics_for_prediction
 
@@ -254,7 +255,15 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             "current_probability": current_risk,
             "previous_probability": previous_risk,
             "probability_delta_pp": prob_delta_pp,
-            "risk_velocity": metric.risk_velocity if metric and metric.risk_velocity is not None else None,
+            "risk_velocity": (
+                metric.risk_velocity
+                if metric
+                and monthly_velocity_available(
+                    stored_elapsed_days=metric.elapsed_days,
+                    risk_velocity_value=metric.risk_velocity,
+                )
+                else None
+            ),
             "progress_state": metric.progress_state.value if metric else None,
             "alerts": [
                 {"type": a.type.value, "severity": a.severity.value, "status": a.status.value, "id": str(a.id)}

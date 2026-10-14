@@ -10,6 +10,7 @@ callers supply stagnation_threshold from the active policy.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -22,11 +23,33 @@ class LongitudinalError(ValueError):
     pass
 
 
+def elapsed_days(start: datetime, end: datetime) -> float:
+    return (end - start).total_seconds() / 86400.0
+
+
 def elapsed_months(start: datetime, end: datetime) -> float:
-    delta_days = (end - start).total_seconds() / 86400.0
-    if delta_days <= 0:
+    if start.date() == end.date() or elapsed_days(start, end) <= 0:
         raise LongitudinalError("Elapsed interval must be greater than zero days")
-    return delta_days / DAYS_PER_MONTH
+    return elapsed_days(start, end) / DAYS_PER_MONTH
+
+
+def monthly_velocity_available(
+    *,
+    previous_date: datetime | None = None,
+    current_date: datetime | None = None,
+    stored_elapsed_days: int | None = None,
+    risk_velocity_value: float | None = None,
+) -> bool:
+    """Monthly pp/month is only valid with a positive elapsed interval."""
+    if risk_velocity_value is None or not math.isfinite(risk_velocity_value):
+        return False
+    if previous_date is not None and current_date is not None:
+        if previous_date.date() == current_date.date() or elapsed_days(previous_date, current_date) <= 0:
+            return False
+        return True
+    if stored_elapsed_days is not None:
+        return stored_elapsed_days > 0
+    return True
 
 
 def risk_velocity(previous_risk: float, current_risk: float, months: float) -> float:
@@ -34,7 +57,10 @@ def risk_velocity(previous_risk: float, current_risk: float, months: float) -> f
         raise LongitudinalError("Missing risk — velocity cannot be calculated")
     if months <= 0:
         raise LongitudinalError("Zero-day or negative interval is not a valid velocity denominator")
-    return (previous_risk - current_risk) / months
+    value = (previous_risk - current_risk) / months
+    if not math.isfinite(value):
+        raise LongitudinalError("Velocity is not a finite value")
+    return value
 
 
 def baseline_recovery_rate(baseline_risk: float, current_risk: float, months_from_baseline: float) -> float:

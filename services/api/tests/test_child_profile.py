@@ -26,6 +26,8 @@ def test_probability_delta_uses_percentage_points():
 def test_risk_velocity_scales_stored_fraction():
     assert risk_velocity_pp_month(0.12) == 12.0
     assert risk_velocity_pp_month(None) is None
+    assert risk_velocity_pp_month(float("inf")) is None
+    assert risk_velocity_pp_month(float("nan")) is None
 
 
 def test_since_baseline_requires_two_visits():

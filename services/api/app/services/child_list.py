@@ -12,6 +12,7 @@ from app.models.identity import Facility
 from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
 from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Visit
+from app.services.longitudinal import monthly_velocity_available
 from app.services.malnutrition_type import resolve_display
 from app.services.model_display import semantics_for_prediction
 
@@ -176,7 +177,17 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
     rv_pp_month: float | None = None
     rv_available = False
     progress_warning = metric.warning if metric else None
-    if metric and metric.risk_velocity is not None and metric.progress_state != ProgressState.INCOMPATIBLE_MODEL:
+    previous_visit = visits[-2] if len(visits) >= 2 else None
+    if (
+        metric
+        and metric.progress_state != ProgressState.INCOMPATIBLE_MODEL
+        and monthly_velocity_available(
+            previous_date=previous_visit.visit_date if previous_visit else None,
+            current_date=last.visit_date if last else None,
+            stored_elapsed_days=metric.elapsed_days,
+            risk_velocity_value=metric.risk_velocity,
+        )
+    ):
         rv_pp_month = round(metric.risk_velocity * 100, 1)
         rv_available = True
 

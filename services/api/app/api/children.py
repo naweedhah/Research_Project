@@ -22,8 +22,6 @@ from app.schemas.common import ChildCreate, ChildListItem, ChildUpdate, Children
 from app.security.rbac import assert_child_access, facility_scope_ids
 from app.services.audit import write_audit
 from app.services.child_list import active_model_is_demo, build_list_item, child_is_synthetic, list_summary
-from app.services.malnutrition_type import prediction_api_fields
-from app.services.model_display import get_model_output_display_metadata
 from app.services.child_profile import (
     ALERT_HEADLINES,
     ANTHRO_FIELDS,
@@ -40,6 +38,9 @@ from app.services.child_profile import (
     risk_velocity_pp_month,
     since_baseline_pp,
 )
+from app.services.longitudinal import monthly_velocity_available
+from app.services.malnutrition_type import prediction_api_fields
+from app.services.model_display import get_model_output_display_metadata
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -448,8 +449,16 @@ def _child_profile(db: Session, child: Child) -> dict:
         emb = db.scalar(select(LatentEmbedding).where(LatentEmbedding.visit_id == visit.id))
         model = db.get(ModelVersion, visit.model_version_id) if visit.model_version_id else None
         anthro = visit.anthropometry
+        prior_visit = visits[index - 1] if index > 0 else None
         next_visit = visits[index + 1] if index + 1 < len(visits) else None
         review = _review_for_visit(visit, next_visit)
+        stored_velocity = metric.risk_velocity if metric else None
+        velocity_ok = monthly_velocity_available(
+            previous_date=prior_visit.visit_date if prior_visit else None,
+            current_date=visit.visit_date,
+            stored_elapsed_days=metric.elapsed_days if metric else None,
+            risk_velocity_value=stored_velocity,
+        )
         history.append(
             {
                 "id": str(visit.id),
@@ -478,7 +487,7 @@ def _child_profile(db: Session, child: Child) -> dict:
                     **prediction_api_fields(pred),
                 },
                 "progress": metric.progress_state.value if metric else None,
-                "risk_velocity": metric.risk_velocity if metric else None,
+                "risk_velocity": stored_velocity if velocity_ok else None,
                 "baseline_recovery_rate": metric.baseline_recovery_rate if metric else None,
                 "model_compatible": metric.model_compatible if metric else None,
                 "warning": metric.warning if metric else None,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import date, datetime
 
@@ -98,7 +99,10 @@ def probability_delta_pp(current: float | None, previous: float | None) -> float
 def risk_velocity_pp_month(stored_velocity: float | None) -> float | None:
     if stored_velocity is None:
         return None
-    return round(stored_velocity * 100, 1)
+    value = round(stored_velocity * 100, 1)
+    if not math.isfinite(value):
+        return None
+    return value
 
 
 def since_baseline_pp(current: float | None, baseline: float | None, visit_count: int) -> float | None:
