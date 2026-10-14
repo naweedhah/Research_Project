@@ -159,6 +159,7 @@ class ChildListItem(ORMModel):
     assessment_count: int = 0
     has_assessment: bool = False
     current_status: str | None = None
+    predicted_malnutrition_type: str | None = None
     severity: str | None = None
     current_risk: float | None = None
     previous_risk: float | None = None

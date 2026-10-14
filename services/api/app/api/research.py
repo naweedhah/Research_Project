@@ -75,10 +75,13 @@ def dataset_profile(db: Session = Depends(get_db), current=Depends(require_permi
 
     children = db.scalar(select(func.count()).select_from(Child)) or 0
     visits = db.scalar(select(func.count()).select_from(Visit)) or 0
+    from app.services.malnutrition_type import resolve_display
+
     preds = db.scalars(select(Prediction).where(Prediction.is_active.is_(True))).all()
     dist: dict[str, int] = {}
     for p in preds:
-        dist[p.status_prediction] = dist.get(p.status_prediction, 0) + 1
+        label = resolve_display(p.status_prediction, p.calibrated_probabilities)[0] or p.status_prediction
+        dist[label] = dist.get(label, 0) + 1
     return {
         "children": children,
         "visits": visits,

@@ -14,6 +14,7 @@ from app.integrations.common.feature_snapshot import build_approved_external_fea
 from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
 from app.models.operations import Alert, ClinicianReview
 from app.models.paediatric import Child, Visit
+from app.services.malnutrition_type import integration_prediction_fields, outbound_probabilities
 from app.services.model_display import get_model_output_display_metadata
 
 
@@ -67,12 +68,11 @@ def build_c3_reassessment_payload(
         },
         prediction={
             "prediction_id": str(prediction.id),
-            "status": prediction.status_prediction,
-            "severity": prediction.severity_prediction,
+            **integration_prediction_fields(prediction),
             "score": score.model_dump(),
             "class_outputs": {
-                "raw": prediction.raw_probabilities,
-                "calibrated": prediction.calibrated_probabilities,
+                "raw": outbound_probabilities(prediction, "raw_probabilities"),
+                "calibrated": outbound_probabilities(prediction, "calibrated_probabilities"),
                 "semantics": {
                     "demo": bool(model.is_demo),
                     "note": "Demo class outputs are synthetic demonstration values, not validated clinical probabilities."

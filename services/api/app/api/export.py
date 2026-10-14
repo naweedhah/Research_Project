@@ -10,6 +10,7 @@ from app.models.enums import AuditAction
 from app.models.intelligence import Prediction
 from app.models.paediatric import Child, Visit
 from app.services.audit import write_audit
+from app.services.malnutrition_type import resolve_display
 
 router = APIRouter(tags=["export"])
 
@@ -27,7 +28,7 @@ def export_deidentified(request: Request, db: Session = Depends(get_db), current
                 "pseudonymous_id": child.pseudonymous_id if child else None,
                 "visit_number": visit.visit_number,
                 "visit_date": visit.visit_date.date().isoformat(),
-                "status_prediction": pred.status_prediction if pred else None,
+                "status_prediction": resolve_display(pred.status_prediction, pred.calibrated_probabilities)[0] if pred else None,
                 "severity_prediction": pred.severity_prediction if pred else None,
                 "risk": pred.primary_risk_score if pred else None,
             }

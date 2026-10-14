@@ -12,6 +12,7 @@ from app.models.identity import Facility
 from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
 from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Visit
+from app.services.malnutrition_type import resolve_display
 from app.services.model_display import semantics_for_prediction
 
 ACTIVE_ALERT_STATUSES = {AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED, AlertStatus.IN_REVIEW}
@@ -234,6 +235,9 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
     fac = db.get(Facility, child.facility_id)
     demo_flag = model_is_demo or (bool(model_version.is_demo) if model_version else False)
     semantics = semantics_for_prediction(pred, is_demo=True)
+    displayed_status, displayed_ga = (
+        resolve_display(pred.status_prediction, pred.calibrated_probabilities) if pred else (None, None)
+    )
 
     item = {
         "id": child.id,
@@ -247,7 +251,8 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
         "visit_count": len(visits),
         "assessment_count": assessment_count,
         "has_assessment": has_assessment,
-        "current_status": pred.status_prediction if pred else None,
+        "current_status": displayed_status,
+        "predicted_malnutrition_type": displayed_ga.get("predicted_malnutrition_type") if displayed_ga else None,
         "severity": pred.severity_prediction if pred else None,
         "current_risk": current_risk,
         "previous_risk": previous_risk,

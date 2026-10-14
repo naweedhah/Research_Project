@@ -11,6 +11,7 @@ from app.core.deps import require_permission
 from app.models.intelligence import LatentEmbedding, Prediction, TrajectoryMetric
 from app.models.paediatric import Child, Visit
 from app.security.rbac import assert_child_access
+from app.services.malnutrition_type import resolve_display
 
 router = APIRouter(tags=["trajectory"])
 
@@ -38,7 +39,7 @@ def trajectory(child_id: UUID, db: Session = Depends(get_db), current=Depends(re
                 "x": emb.projection_x,
                 "y": emb.projection_y,
                 "risk": pred.primary_risk_score,
-                "status": pred.status_prediction,
+                "status": resolve_display(pred.status_prediction, pred.calibrated_probabilities)[0],
                 "severity": pred.severity_prediction,
                 "embedding_space_id": emb.embedding_space_id,
                 "dimension": emb.embedding_dimension,
@@ -79,7 +80,7 @@ def risk_history(child_id: UUID, db: Session = Depends(get_db), current=Depends(
                     "date": visit.visit_date.isoformat(),
                     "risk": pred.primary_risk_score,
                     "severity": pred.severity_prediction,
-                    "status": pred.status_prediction,
+                    "status": resolve_display(pred.status_prediction, pred.calibrated_probabilities)[0],
                     "progress": metric.progress_state.value if metric else None,
                     "risk_velocity": metric.risk_velocity if metric else None,
                     "weight_kg": anthro.weight_kg if anthro else None,

@@ -22,6 +22,7 @@ from app.schemas.common import ChildCreate, ChildListItem, ChildUpdate, Children
 from app.security.rbac import assert_child_access, facility_scope_ids
 from app.services.audit import write_audit
 from app.services.child_list import active_model_is_demo, build_list_item, child_is_synthetic, list_summary
+from app.services.malnutrition_type import prediction_api_fields
 from app.services.model_display import get_model_output_display_metadata
 from app.services.child_profile import (
     ALERT_HEADLINES,
@@ -466,8 +467,6 @@ def _child_profile(db: Session, child: Child) -> dict:
                 "prediction": None
                 if not pred
                 else {
-                    "status": pred.status_prediction,
-                    "severity": pred.severity_prediction,
                     "risk": pred.primary_risk_score,
                     "confidence": pred.confidence,
                     "mode": pred.mode.value if hasattr(pred.mode, "value") else pred.mode,
@@ -476,9 +475,7 @@ def _child_profile(db: Session, child: Child) -> dict:
                     "calibration_version": pred.calibration_version,
                     "feature_schema_version": pred.feature_schema_version,
                     "calibrated_status_probabilities": calibrated_status_probabilities(pred.calibrated_probabilities),
-                    "ga_rgca": (pred.calibrated_probabilities or {}).get("ga_rgca")
-                    if isinstance(pred.calibrated_probabilities, dict)
-                    else None,
+                    **prediction_api_fields(pred),
                 },
                 "progress": metric.progress_state.value if metric else None,
                 "risk_velocity": metric.risk_velocity if metric else None,

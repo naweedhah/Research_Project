@@ -17,6 +17,7 @@ from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Visit
 from app.security.rbac import facility_scope_ids
 from app.services.child_list import child_is_synthetic
+from app.services.malnutrition_type import resolve_display
 from app.services.model_display import get_model_output_display_metadata, semantics_for_prediction
 
 router = APIRouter(tags=["dashboard"])
@@ -226,6 +227,9 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
         if current_risk is not None and previous_risk is not None:
             prob_delta_pp = round((current_risk - previous_risk) * 100)
         semantics = semantics_for_prediction(pred, is_demo=True)
+        displayed_status, displayed_ga = (
+            resolve_display(pred.status_prediction, pred.calibrated_probabilities) if pred else (None, None)
+        )
         rank, badges = _attention_priority(
             review=review, alerts=alerts, metric=metric, follow_overdue=follow_overdue
         )
@@ -239,7 +243,8 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             "age_months": _age_months(child.date_of_birth),
             "sex": child.sex.value,
             "latest_visit": last_visit.visit_date.isoformat() if last_visit else None,
-            "current_status": pred.status_prediction if pred else None,
+            "current_status": displayed_status,
+            "predicted_malnutrition_type": displayed_ga.get("predicted_malnutrition_type") if displayed_ga else None,
             "severity": pred.severity_prediction if pred else None,
             "probability_label": semantics["score_label"],
             "score_kind": semantics["score_kind"],

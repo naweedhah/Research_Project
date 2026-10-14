@@ -25,6 +25,7 @@ from app.models.paediatric import (
 from app.schemas.common import VisitCorrection, VisitCreate, VisitOut
 from app.security.rbac import assert_child_access
 from app.services.audit import write_audit
+from app.services.malnutrition_type import prediction_api_fields
 from app.services.prediction import run_inference
 from app.services.quality import validate_visit_payload
 
@@ -230,16 +231,12 @@ def create_visit(
     kick_delivery_best_effort(pop_scheduled_delivery_ids(db))
     result["prediction"] = {
         "id": str(prediction.id),
-        "status": prediction.status_prediction,
-        "severity": prediction.severity_prediction,
         "risk": prediction.primary_risk_score,
         "confidence": prediction.confidence,
         "mode": prediction.mode.value if hasattr(prediction.mode, "value") else prediction.mode,
         "run_number": prediction.run_number,
         "inference_ms": prediction.inference_ms,
-        "ga_rgca": (prediction.calibrated_probabilities or {}).get("ga_rgca")
-        if isinstance(prediction.calibrated_probabilities, dict)
-        else None,
+        **prediction_api_fields(prediction),
     }
     result["visit"].status = visit.status.value
     return result
@@ -326,9 +323,8 @@ def correct_visit(
         "id": str(visit.id),
         "visit_number": visit.visit_number,
         "prediction": {
-            "status": prediction.status_prediction,
-            "severity": prediction.severity_prediction,
             "risk": prediction.primary_risk_score,
+            **prediction_api_fields(prediction),
         },
     }
 
@@ -436,14 +432,10 @@ def predict_visit(visit_id: UUID, request: Request, db: Session = Depends(get_db
     return {
         "id": str(prediction.id),
         "run_number": prediction.run_number,
-        "status": prediction.status_prediction,
-        "severity": prediction.severity_prediction,
         "risk": prediction.primary_risk_score,
         "mode": prediction.mode.value if hasattr(prediction.mode, "value") else prediction.mode,
         "inference_ms": prediction.inference_ms,
-        "ga_rgca": (prediction.calibrated_probabilities or {}).get("ga_rgca")
-        if isinstance(prediction.calibrated_probabilities, dict)
-        else None,
+        **prediction_api_fields(prediction),
     }
 
 
@@ -461,9 +453,8 @@ def get_prediction(visit_id: UUID, db: Session = Depends(get_db), current=Depend
             "id": str(p.id),
             "run_number": p.run_number,
             "is_active": p.is_active,
-            "status": p.status_prediction,
-            "severity": p.severity_prediction,
             "risk": p.primary_risk_score,
+            **prediction_api_fields(p),
             "mode": p.mode.value if hasattr(p.mode, "value") else p.mode,
             "raw_probabilities": p.raw_probabilities,
             "calibrated_probabilities": p.calibrated_probabilities,
