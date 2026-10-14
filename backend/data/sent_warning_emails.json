@@ -1,0 +1,26 @@
+[
+  {
+    "user_id": "2d020b5b-d7a0-467e-8268-06890b9e7462",
+    "email": "imbulgodanimshara@gmail.com",
+    "forecast_origin": "2026-10-01",
+    "sent_at": "2026-10-05T10:16:30.213276+00:00"
+  },
+  {
+    "user_id": "6caba52f-d501-470f-af2a-56c21e139858",
+    "email": "doctor5743@example.com",
+    "forecast_origin": "2026-10-01",
+    "sent_at": "2026-10-07T07:19:33.396249+00:00"
+  },
+  {
+    "user_id": "b6c712d5-2cf0-46b5-9a41-1bc76bfe0b91",
+    "email": "isuruninimshara813@gmail.com",
+    "forecast_origin": "2026-10-01",
+    "sent_at": "2026-10-07T11:32:47.158816+00:00"
+  },
+  {
+    "user_id": "5b669737-e714-46e4-84a8-a491950270d5",
+    "email": "chatgptusedsliit@gmail.com",
+    "forecast_origin": "2026-10-01",
+    "sent_at": "2026-10-13T11:55:54.686536+00:00"
+  }
+]

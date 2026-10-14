@@ -1,0 +1,30 @@
+[
+  {
+    "id": "2d020b5b-d7a0-467e-8268-06890b9e7462",
+    "name": "nim",
+    "email": "imbulgodanimshara@gmail.com",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$RkcwFlK08Z+kajSp2HaAwg$GTPDtRMD3IsbVAlCV/fk7qy/Yi13jKSnCwolcOBbVz0",
+    "created_at": "2026-10-05T10:05:48.414612+00:00"
+  },
+  {
+    "id": "6caba52f-d501-470f-af2a-56c21e139858",
+    "name": "Dr Test",
+    "email": "doctor5743@example.com",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$klwVAQNiWbYc/tJz8tU5HA$xcrcKWEY2tbWn93hw9gDsF+9vGqr8E47mPFmhAXNo44",
+    "created_at": "2026-10-07T07:19:26.111825+00:00"
+  },
+  {
+    "id": "b6c712d5-2cf0-46b5-9a41-1bc76bfe0b91",
+    "name": "Isuruni Nimshara",
+    "email": "isuruninimshara813@gmail.com",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$+hxUz1ERuxHYQ5nCiXB9tQ$TNCFVoEc70cCEnf85Jlbm/S47FuYTKkhU0pIxrjDtMM",
+    "created_at": "2026-10-07T11:32:40.464494+00:00"
+  },
+  {
+    "id": "5b669737-e714-46e4-84a8-a491950270d5",
+    "name": "nimshara imbulgoda",
+    "email": "chatgptusedsliit@gmail.com",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$WKQxzUgdOEeR9ENA3p0EoQ$nIZkyxHXGwhtwXj4RjxNVFWlAxppSWNigBx3xQxDpWk",
+    "created_at": "2026-10-13T11:55:46.725767+00:00"
+  }
+]
