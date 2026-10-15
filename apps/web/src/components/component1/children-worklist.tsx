@@ -20,6 +20,7 @@ type ClinicalAttention = { type: string; label: string; severity?: string; statu
 type Item = {
   id: string;
   pseudonymous_id: string;
+  full_name?: string | null;
   age_months: number;
   sex: string;
   responsible_team?: string | null;
@@ -297,7 +298,7 @@ function WorklistContent() {
             <table className="w-full min-w-[1180px] text-left text-sm">
               <thead>
                 <tr className="border-b border-[#e8eef5] text-[10px] uppercase tracking-wide text-[#64748b]">
-                  <th className="px-4 py-3 font-semibold">Patient</th>
+                  <th className="px-4 py-3 font-semibold">Child name</th>
                   <th className="px-3 py-3 font-semibold">Latest Assessment</th>
                   <th className="px-3 py-3 font-semibold">AI-Assisted Assessment</th>
                   <th className="px-3 py-3 font-semibold">Longitudinal Progress</th>
@@ -390,8 +391,10 @@ function WorklistRow({
           <button type="button" onClick={onToggle} className="mr-1 inline-flex text-[#94a3b8] hover:text-[#2563eb]" aria-label="Expand row">
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
-          <p className="inline font-semibold text-[#0f2744]">{row.pseudonymous_id}</p>
+          <p className="inline font-semibold text-[#0f2744]">{row.full_name?.trim() || "—"}</p>
           <p className="mt-0.5 text-xs text-[#64748b]">
+            {row.pseudonymous_id}
+            {" · "}
             {ageLabel(row.age_months)} · {formatStatus(row.sex)}
             {row.facility_code ? ` · ${row.facility_code}` : ""}
           </p>
@@ -587,8 +590,10 @@ function MobileCard({
     <article className={cn("rounded-2xl border border-[#e8eef5] bg-white p-4 shadow-sm", progressTone(row.progress_display))}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-[#0f2744]">{row.pseudonymous_id}</p>
-          <p className="text-xs text-[#64748b]">{ageLabel(row.age_months)} · {formatStatus(row.sex)}</p>
+          <p className="font-semibold text-[#0f2744]">{row.full_name?.trim() || "—"}</p>
+          <p className="text-xs text-[#64748b]">
+            {row.pseudonymous_id} · {ageLabel(row.age_months)} · {formatStatus(row.sex)}
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {canWrite ? <RecordActions onEdit={onEdit} onDelete={onDelete} editLabel={`Edit ${row.pseudonymous_id}`} deleteLabel={`Remove ${row.pseudonymous_id}`} /> : null}

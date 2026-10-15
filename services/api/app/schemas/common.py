@@ -150,6 +150,7 @@ class MeasurementsSummary(BaseModel):
 class ChildListItem(ORMModel):
     id: UUID
     pseudonymous_id: str
+    full_name: str | None = None
     age_months: int
     sex: str
     responsible_team: str | None = None

@@ -18,7 +18,7 @@ from app.models.identity import Facility, User
 from app.models.intelligence import Prediction, TrajectoryMetric
 from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Caregiver, Visit
-from app.schemas.common import ChildCreate, ChildListItem, ChildUpdate, ChildrenListPage
+from app.schemas.common import ChildCreate, ChildUpdate, ChildrenListPage
 from app.security.rbac import assert_child_access, facility_scope_ids
 from app.services.audit import write_audit
 from app.services.child_list import active_model_is_demo, build_list_item, child_is_synthetic, list_summary
@@ -134,7 +134,16 @@ def list_children(
 
     rows = [c for c in db.scalars(stmt.order_by(Child.pseudonymous_id)).all() if not child_is_synthetic(c)]
     demo = active_model_is_demo(db)
-    items = [build_list_item(db, c, model_is_demo=demo) for c in rows]
+    enc = FieldEncryptor(get_settings().encryption_key)
+    name_by_id = dict(
+        db.execute(select(Child.id, Child.full_name_encrypted).where(Child.id.in_([c.id for c in rows]))).all()
+    ) if rows else {}
+    items = []
+    for c in rows:
+        item = build_list_item(db, c, model_is_demo=demo)
+        blob = name_by_id.get(c.id) or c.full_name_encrypted
+        item["full_name"] = enc.decrypt(blob) if blob else None
+        items.append(item)
 
     if nutritional_status:
         want = nutritional_status.lower()
@@ -190,7 +199,7 @@ def list_children(
     page_items = items[start : start + page_size]
 
     return ChildrenListPage(
-        items=[ChildListItem.model_validate(i) for i in page_items],
+        items=page_items,
         total=total,
         page=page,
         page_size=page_size,

@@ -7,6 +7,8 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.config import get_settings
+from app.core.security import FieldEncryptor
 from app.models.enums import AlertStatus, AlertType, FollowUpStatus, ModelStatus, ProgressState
 from app.models.identity import Facility
 from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
@@ -253,6 +255,7 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
     item = {
         "id": child.id,
         "pseudonymous_id": child.pseudonymous_id,
+        "full_name": FieldEncryptor(get_settings().encryption_key).decrypt(child.full_name_encrypted) if child.full_name_encrypted else None,
         "age_months": age_months(child.date_of_birth),
         "sex": child.sex.value,
         "responsible_team": child.responsible_team,
