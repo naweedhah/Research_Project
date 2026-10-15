@@ -110,7 +110,7 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
         date_of_birth: form.get("dob"),
         sex: form.get("sex"),
         external_patient_id: form.get("external"),
-        responsible_team: form.get("team"),
+        responsible_team: String(form.get("midwife") || "").trim() || String(form.get("team") || "").trim() || options.data?.facility.name || "Clinic",
         assigned_doctor_id: form.get("doctor") || options.data?.current_user_id,
         district: form.get("district") || null,
         moh_area: form.get("moh") || null,
@@ -145,8 +145,6 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
 
   const facilityName = options.data?.facility.name ?? "Your facility";
   const record = editChildId ? existing.data : null;
-  const teams = options.data?.care_teams ?? [];
-  const teamOptions = record?.responsible_team && !teams.includes(record.responsible_team) ? [record.responsible_team, ...teams] : teams;
   const relationships = options.data?.caregiver_relationships ?? ["Mother"];
   const relationship = record?.caregiver?.relationship;
   const relationshipOptions = relationship && !relationships.includes(relationship) ? [relationship, ...relationships] : relationships;
@@ -178,10 +176,6 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
               <h2 id="register-child-title" className="text-2xl font-bold text-[#0f2744]">
                 {editChildId ? "Edit child record" : "Register new child"}
               </h2>
-              <p className="mt-1 text-sm text-[#64748b]">
-                Facility: {facilityName}
-                {options.data?.facility.code ? ` · ${options.data.facility.code}` : ""}
-              </p>
             </div>
 
             <form key={editChildId ? `${editChildId}-${existing.dataUpdatedAt}` : "register"} onSubmit={onSubmit}>
@@ -194,7 +188,7 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
                       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#94a3b8]">Patient information</p>
                       <div>
                         <Label htmlFor="reg-external">
-                          Hospital / Patient ID <span className="text-clinical-danger">*</span>
+                          Child ID <span className="text-clinical-danger">*</span>
                         </Label>
                         <Input id="reg-external" name="external" required defaultValue={record?.external_patient_id ?? ""} className={fieldClass} />
                       </div>
@@ -242,20 +236,8 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
                             <Label>Facility</Label>
                             <Input readOnly disabled value={facilityName} className="border-[#e8eef5] bg-[#f8fafc]" />
                           </div>
+                          <input type="hidden" name="team" value={record?.responsible_team || facilityName || "Clinic"} />
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <Label htmlFor="reg-team">
-                                Clinic / care team <span className="text-clinical-danger">*</span>
-                              </Label>
-                              <Select id="reg-team" name="team" required defaultValue={record?.responsible_team ?? ""} className={fieldClass}>
-                                <option value="">Select…</option>
-                                {teamOptions.map((t) => (
-                                  <option key={t} value={t}>
-                                    {t}
-                                  </option>
-                                ))}
-                              </Select>
-                            </div>
                             <div>
                               <Label htmlFor="reg-doctor">Assigned doctor</Label>
                               <Select id="reg-doctor" name="doctor" defaultValue={record?.assigned_doctor?.id ?? options.data?.current_user_id} className={fieldClass}>
@@ -265,6 +247,10 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
                                   </option>
                                 ))}
                               </Select>
+                            </div>
+                            <div>
+                              <Label htmlFor="reg-midwife">Assigned midwife</Label>
+                              <Input id="reg-midwife" name="midwife" defaultValue={record?.responsible_team ?? ""} className={fieldClass} />
                             </div>
                           </div>
                         </div>
