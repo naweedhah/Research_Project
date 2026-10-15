@@ -7,9 +7,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_permission
 from app.core.policy import load_product
+from app.core.security import FieldEncryptor
 from app.models.enums import AlertStatus, AlertType, FollowUpStatus, ModelStatus, ProgressState
 from app.models.identity import Facility, User
 from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
@@ -140,6 +142,12 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
     children = [c for c in db.scalars(child_stmt).all() if not child_is_synthetic(c)]
     child_ids = [c.id for c in children]
     child_map = {c.id: c for c in children}
+    enc = FieldEncryptor(get_settings().encryption_key)
+
+    def _child_full_name(child: Child | None) -> str | None:
+        if not child or not child.full_name_encrypted:
+            return None
+        return enc.decrypt(child.full_name_encrypted)
 
     latest_metrics = _latest_metric_map(db, child_ids)
     visit_counts = _visit_count_map(db, child_ids)
@@ -241,6 +249,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
         return {
             "child_id": str(child_id),
             "pseudonymous_id": child.pseudonymous_id,
+            "full_name": _child_full_name(child),
             "age_months": _age_months(child.date_of_birth),
             "sex": child.sex.value,
             "latest_visit": last_visit.visit_date.isoformat() if last_visit else None,
@@ -303,6 +312,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
         overdue_days = (today - f.expected_date).days if f.status == FollowUpStatus.OVERDUE else None
         return {
             "child": child.pseudonymous_id if child else None,
+            "full_name": _child_full_name(child),
             "child_id": str(f.child_id),
             "date": f.expected_date.isoformat(),
             "clinic": fac.name if fac else None,
@@ -344,6 +354,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
         author = db.get(User, row.reviewer_user_id)
         parsed = serialize_review(row, author, has_prediction=True)
         parsed["pseudonymous_id"] = child.pseudonymous_id
+        parsed["full_name"] = _child_full_name(child)
         recent_reviews.append(parsed)
         if len(recent_reviews) >= 4:
             break

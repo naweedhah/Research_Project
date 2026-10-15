@@ -42,6 +42,7 @@ type PriorityAlert = {
 type PriorityPatient = {
   child_id: string;
   pseudonymous_id: string;
+  full_name?: string | null;
   age_months?: number;
   sex?: string;
   latest_visit?: string | null;
@@ -97,6 +98,7 @@ type Dashboard = {
     note_id: string;
     child_id: string;
     pseudonymous_id?: string | null;
+    full_name?: string | null;
     assessment: string;
     assessment_key?: string;
     workflow?: string | null;
@@ -109,6 +111,7 @@ type Dashboard = {
 
 type FollowUpItem = {
   child: string | null;
+  full_name?: string | null;
   child_id: string;
   date: string;
   clinic: string | null;
@@ -231,11 +234,6 @@ export default function DashboardPage() {
     <div className="min-w-[1240px] space-y-5">
       <header>
         <h1 className="text-2xl font-bold text-[#0f2744]">Dashboard</h1>
-        <p className="mt-1 text-sm text-[#64748b]">
-          {data.model.is_demo
-            ? `${data.model.version} · demonstration output`
-            : `${data.model.version} · future nutritional-risk prediction · clinical confirmation required`}
-        </p>
       </header>
 
       <section className="grid grid-cols-5 gap-3">
@@ -398,9 +396,14 @@ function RecentClinicalReviewsSection({
                   <div className="min-w-0">
                     <Link
                       href={`/children/${review.child_id}?from=dashboard&focus=review`}
-                      className="text-base font-semibold text-[#2563eb] hover:underline"
+                      className="inline-flex max-w-full flex-wrap items-baseline gap-x-2 text-[#2563eb] hover:underline"
                     >
-                      {review.pseudonymous_id ?? review.child_id}
+                      <span className="truncate text-base font-semibold">
+                        {review.full_name?.trim() || review.pseudonymous_id || review.child_id}
+                      </span>
+                      {review.full_name?.trim() && review.pseudonymous_id ? (
+                        <span className="text-xs font-medium text-[#64748b] no-underline">{review.pseudonymous_id}</span>
+                      ) : null}
                     </Link>
                     <p className="mt-1 text-xs text-[#64748b]">{formatReviewWhen(review.created_at)}</p>
                   </div>
@@ -486,9 +489,14 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Link
               href={`/children/${row.child_id}?from=dashboard&focus=review`}
-              className="text-lg font-semibold tracking-tight text-[#0f2744] hover:text-[#2563eb]"
+              className="inline-flex max-w-full flex-wrap items-baseline gap-x-2 text-[#0f2744] hover:text-[#2563eb]"
             >
-              {row.pseudonymous_id}
+              <span className="truncate text-lg font-semibold tracking-tight">
+                {row.full_name?.trim() || row.pseudonymous_id}
+              </span>
+              {row.full_name?.trim() ? (
+                <span className="text-xs font-medium text-[#64748b]">{row.pseudonymous_id}</span>
+              ) : null}
             </Link>
             <span className="text-sm text-[#64748b]">
               {ageLabel(row.age_months)}
@@ -919,8 +927,11 @@ function FollowUpRow({ item, urgent = false }: { item: FollowUpItem; urgent?: bo
           <span className="text-base font-semibold leading-none">{when?.day ?? "—"}</span>
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`block truncate text-sm font-semibold ${urgent ? "text-[#991b1b]" : "text-[#0f2744]"}`}>
-            {item.child}
+          <span className={`flex min-w-0 items-baseline gap-x-2 ${urgent ? "text-[#991b1b]" : "text-[#0f2744]"}`}>
+            <span className="truncate text-sm font-semibold">{item.full_name?.trim() || item.child}</span>
+            {item.full_name?.trim() && item.child ? (
+              <span className="shrink-0 text-[11px] font-medium text-[#64748b]">{item.child}</span>
+            ) : null}
           </span>
           <span className="mt-0.5 block truncate text-xs text-[#64748b]">
             {urgent && item.overdue_days != null ? `Overdue by ${item.overdue_days} days · ` : ""}
