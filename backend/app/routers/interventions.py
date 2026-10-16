@@ -1,6 +1,8 @@
 """Intervention recommendations endpoints. Owner: Component 2."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+import hmac
+import os
 from pathlib import Path
 import sys
 
@@ -13,8 +15,26 @@ from components.c2_counterfactual_intervention.engine import MissingRealPredicto
 from components.c2_counterfactual_intervention.contracts import PredictorCompatibilityError
 from components.c2_counterfactual_intervention.registry import c1_integration_verified, get_real_predictor
 from components.c2_counterfactual_intervention.schemas import RecommendationRequest, RecommendationResponse
+from components.c2_counterfactual_intervention.c1_engine import C1Request, C1Result, run_c1
+from components.c2_counterfactual_intervention.c1_predictors import C1PredictionUnavailable
 
 router = APIRouter(prefix="/interventions", tags=["Intervention recommendations"])
+
+
+@router.post("/c1-research", response_model=C1Result)
+def c1_research(request: C1Request, http_request: Request) -> C1Result:
+    """Explicit C1-shaped simulator or fail-closed real HTTP path."""
+    if request.mode == "real":
+        token = os.getenv("C2_REAL_API_TOKEN")
+        supplied = http_request.headers.get("authorization", "")
+        if not token:
+            raise HTTPException(status_code=503, detail="real C2 access is not configured")
+        if not hmac.compare_digest(supplied, "Bearer " + token):
+            raise HTTPException(status_code=401, detail="unauthorized")
+    try:
+        return run_c1(request)
+    except C1PredictionUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/status")
