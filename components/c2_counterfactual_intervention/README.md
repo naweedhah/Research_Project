@@ -2,6 +2,10 @@
 
 This research prototype compares bounded search, official DiCE, and a FACE-inspired graph method using synthetic inputs and test-only predictors. No output is clinically validated. Predicted category changes do not establish treatment effects.
 
+## Phase 6 C1-shaped supervisor pathway
+
+The separate `POST /interventions/c1-research` and `supervisor_demo.py` use exact C1 feeding-category strings, a versioned historical snapshot and a clearly identified deterministic simulator. They do not replace the original integer-scale test engine. Bounded search, official DiCE and FACE-inspired graph search have simulated method pathways; real mode uses only bounded search and fails closed until a genuine C1 service, server-approved policy and reviewed food evidence are available. Public comparison fields show labels, not probability or treatment-benefit claims. See [demo commands](SUPERVISOR_DEMO_GUIDE.md), [C1 mapping](C1_ADAPTER_MAPPING.md), [test evidence](C2_TEST_EVIDENCE.md), and [readiness](FINAL_INDEPENDENT_READINESS.md).
+
 ## Architecture
 
 `schemas.py` validates request and response data. `feature_policy.py` lists candidate features and transitions. `candidate_generation.py` enumerates unique one- and two-feature changes. `engine.py` validates each change, calls the replaceable `Predictor` adapter, checks feasibility, and creates cards. `ranking.py` uses predicted category improvement, then fewer changes, lower abstract cost and stable feature order, while preferring different first features when possible. The public card omits its candidate prediction; internal comparisons determine acceptance.
@@ -233,3 +237,12 @@ empty results. FACE prunes infeasible graph paths before emitting candidates,
 so its generation denominator differs. Runtime is measured per run and varies
 by machine. These comparisons are software checks, not clinical validation or
 evidence of a universally superior algorithm.
+
+## Phase 5.5 official references
+
+The [Phase 5.5 source and refresh guide](PHASE5_5_SOURCES.md) documents the
+Sri Lankan retail-price catalog, exact source/market attribution, indicative
+cost calculations for Kalmunai planning scenarios, freshness and refresh procedure, and age-scoped
+feeding-guideline references. Official Colombo prices do not verify Kalmunai
+prices or availability. The system still requires explicit suitability and
+professional review; no real C1 predictor is bundled.
