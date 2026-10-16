@@ -169,6 +169,7 @@ def run_pipeline(request: RecommendationRequest, predictor: Predictor | None = N
                 food_options=foods, required_resources=resources,
                 incremental_cost_lkr=str(assessment.cost_lkr), cost_period=alternative.period,
                 affordability=assessment.affordability, availability=assessment.availability,
+                affordability_scope=assessment.affordability_scope,
                 alternative_id=alternative.alternative_id))
     empty_message = ("No feasible graph path found in synthetic reference data" if request.method == "face_graph"
                      else "No feasible favorable candidate found under supplied constraints")

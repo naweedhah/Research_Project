@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 
-Unit = Literal["g", "kg", "ml", "l", "piece", "serving"]
+Unit = Literal["g", "kg", "ml", "l", "piece", "bunch", "serving"]
 Period = Literal["day", "week", "month"]
 EvidenceKind = Literal["synthetic_test", "verified_source", "authorized_input"]
 
@@ -24,6 +24,18 @@ class Price(BaseModel):
     quantity: Decimal = Field(gt=0)
     unit: Unit
     evidence: Evidence
+    reference_kind: Literal["official_indicative", "local_verified"] | None = None
+    market_coverage: str | None = None
+    source_locator: str | None = None
+    reference_status: Literal["fresh_reference", "historical_reference"] | None = None
+
+    @model_validator(mode="after")
+    def local_evidence(self):
+        if self.reference_kind == "local_verified" and (
+                self.evidence.kind != "verified_source" or not self.market_coverage or
+                "kalmunai" not in self.market_coverage.lower() or not self.source_locator):
+            raise ValueError("locally verified price requires identified Kalmunai source evidence")
+        return self
 
 
 class FoodResource(BaseModel):

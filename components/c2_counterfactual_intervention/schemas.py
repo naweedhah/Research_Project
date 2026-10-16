@@ -94,6 +94,7 @@ class InterventionCard(BaseModel):
     incremental_cost_lkr: str | None = None
     cost_period: str | None = None
     affordability: str | None = None
+    affordability_scope: str | None = None
     availability: str | None = None
     alternative_id: str | None = None
 

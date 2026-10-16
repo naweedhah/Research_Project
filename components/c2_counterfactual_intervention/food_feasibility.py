@@ -6,6 +6,12 @@ from decimal import Decimal
 from .food_resources import Evidence, FoodAlternative, FoodPlanningContext
 
 
+_UNIT_SCALE = {"g": ("mass", Decimal("1")), "kg": ("mass", Decimal("1000")),
+               "ml": ("volume", Decimal("1")), "l": ("volume", Decimal("1000")),
+               "piece": ("piece", Decimal("1")), "bunch": ("bunch", Decimal("1")),
+               "serving": ("serving", Decimal("1"))}
+
+
 @dataclass(frozen=True)
 class FoodAssessment:
     status: str
@@ -13,6 +19,7 @@ class FoodAssessment:
     cost_lkr: Decimal | None
     affordability: str
     availability: str
+    affordability_scope: str = "unknown"
 
 
 def _evidence_ok(evidence: Evidence | None, mode: str, label: str, unresolved: list[str]) -> bool:
@@ -77,13 +84,19 @@ def assess_food_alternative(alternative: FoodAlternative, planning: FoodPlanning
             continue
         if not _evidence_ok(food.price.evidence, mode, f"{food.food_id} price", unresolved):
             cost_known = False
-        if proposal.unit != food.price.unit:
+        if food.price.reference_status == "historical_reference":
+            unresolved.append(f"{food.food_id}: historical official reference price; refresh or review required")
+        proposal_dimension, proposal_scale = _UNIT_SCALE[proposal.unit]
+        price_dimension, price_scale = _UNIT_SCALE[food.price.unit]
+        if proposal_dimension != price_dimension:
             rejected.append(f"{food.food_id}: quantity and price units differ; conversion not supplied")
             cost_known = False
             continue
-        total += proposal.quantity * food.price.amount_lkr / food.price.quantity
+        total += (proposal.quantity * proposal_scale * food.price.amount_lkr /
+                  (food.price.quantity * price_scale))
     budget = planning.budget
     affordability = "unknown"
+    affordability_scope = "unknown"
     if budget.period != alternative.period:
         unresolved.append("budget and proposal periods differ")
     elif budget.amount_lkr is None:
@@ -96,6 +109,11 @@ def assess_food_alternative(alternative: FoodAlternative, planning: FoodPlanning
             affordability = "unaffordable"
         else:
             affordability = "affordable"
+        scopes = {catalog[item.food_id].price.reference_kind for item in alternative.foods
+                  if item.food_id in catalog and catalog[item.food_id].price is not None}
+        affordability_scope = ("indicative_official_reference" if "official_indicative" in scopes else
+                               "locally_verified" if scopes == {"local_verified"} else "supplied_price")
     cost = total if cost_known else None
     status = "rejected" if rejected else "unresolved" if unresolved else "feasible"
-    return FoodAssessment(status, tuple(rejected + unresolved), cost, affordability, availability)
+    return FoodAssessment(status, tuple(rejected + unresolved), cost, affordability, availability,
+                          affordability_scope)
