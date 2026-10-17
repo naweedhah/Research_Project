@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Health — Component 3</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2430; --muted:#5d6675; --line:#e2e5ea; --ok:#1f8a4c; --warn:#b26a00; --bad:#b3261e; --accent:#2457c5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:18px 24px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:20px; } header p { margin:4px 0 0; color:var(--muted); }
+  main { display:grid; gap:16px; padding:16px 24px; grid-template-columns: 340px 1fr; max-width:1300px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding:16px; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  h2 { font-size:15px; margin:0 0 10px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:8px 0 3px; }
+  select, input[type=date] { width:100%; padding:7px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  button { padding:8px 12px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; font:inherit; }
+  button.secondary { background:#fff; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:wait; }
+  .kv { display:grid; grid-template-columns: 170px 1fr; gap:4px 10px; font-size:14px; }
+  .kv div:nth-child(odd) { color:var(--muted); }
+  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-weight:600; font-size:13px; }
+  .no_action { background:#e6f4ec; color:var(--ok); } .recalibrate, .retrain { background:#e8eefb; color:var(--accent); }
+  .hold { background:#fff3e0; color:var(--warn); } .alert { background:#fdecea; color:var(--bad); } .watch { background:#fff3e0; color:var(--warn); }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; } @media (max-width: 900px) { .grid2 { grid-template-columns:1fr; } }
+  table { border-collapse:collapse; width:100%; font-size:13px; } td, th { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line); }
+  .muted { color:var(--muted); font-size:13px; } .reason { margin:8px 0 0; }
+  pre { white-space:pre-wrap; font-size:12px; background:#f3f4f6; padding:8px; border-radius:6px; max-height:220px; overflow:auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Model Health — Adaptive Reliability Monitoring (Component 3)</h1>
+  <p id="model-line">Loading model…</p>
+</header>
+<main>
+  <div style="display:grid; gap:16px; align-content:start">
+    <section>
+      <h2>Run a maintenance cycle</h2>
+      <label for="scenario">What happened to the new data</label>
+      <select id="scenario"></select>
+      <label><input type="checkbox" id="labels" checked> Outcome labels available</label>
+      <label><input type="checkbox" id="approval"> Require human approval before deployment</label>
+      <label><input type="checkbox" id="use-context" checked> Include external context for</label>
+      <div class="row" style="margin-top:2px">
+        <input type="date" id="ctx-start" value="2025-12-01" style="flex:1">
+        <input type="date" id="ctx-end" value="2025-12-31" style="flex:1">
+      </div>
+      <label><input type="checkbox" id="offline" checked> Use bundled context samples (no internet)</label>
+      <div class="row"><button id="run">Run cycle</button><button class="secondary" id="reset">Reset model</button></div>
+    </section>
+    <section>
+      <h2>Deployment controls</h2>
+      <p class="muted" id="pending-line">No model waiting for approval.</p>
+      <div class="row">
+        <button class="secondary" id="approve">Approve pending</button>
+        <button class="secondary" id="reject">Reject pending</button>
+        <button class="secondary" id="rollback">Roll back</button>
+      </div>
+    </section>
+    <section>
+      <h2>Model history</h2>
+      <table><thead><tr><th>Version</th><th>Event</th><th>Note</th></tr></thead><tbody id="history"></tbody></table>
+    </section>
+  </div>
+  <div style="display:grid; gap:16px; align-content:start">
+    <section>
+      <h2>Decision</h2>
+      <div id="decision" class="muted">Run a cycle to see what C3 decides.</div>
+    </section>
+    <div class="grid2">
+      <section><h2>Drift (what changed)</h2><div id="drift" class="muted">—</div></section>
+      <section><h2>Reliability (did it hurt?)</h2><div id="reliability" class="muted">—</div></section>
+      <section><h2>External context</h2><div id="context" class="muted">—</div></section>
+      <section><h2>Safety checks</h2><div id="safety" class="muted">—</div></section>
+    </div>
+    <section><h2>Subgroups (worst-off group)</h2><div id="subgroups" class="muted">—</div></section>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const pct = v => v == null ? "—" : (v * 100).toFixed(1) + "%";
+const num = v => v == null ? "—" : Number(v).toFixed(3);
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+async function api(path, options) {
+  const r = await fetch("/maintenance" + path, options);
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.detail || r.statusText);
+  return body;
+}
+
+async function loadStatus() {
+  const s = await api("/status");
+  if (!s.ready) { $("model-line").textContent = "Model not ready: " + (s.reason || ""); return; }
+  $("model-line").textContent = `Active model ${s.active_version} · predicts ${s.target} · ` +
+    `baseline balanced accuracy ${pct(s.baseline.bal_acc)}, sensitivity ${pct(s.baseline.sensitivity)}`;
+  $("pending-line").textContent = s.pending_approval ? `Model ${s.pending_approval} is waiting for approval.` : "No model waiting for approval.";
+  const h = await api("/history");
+  $("history").innerHTML = h.slice().reverse().map(e =>
+    `<tr><td>${esc(e.version)}</td><td>${esc(e.action.replace("_", " "))}</td><td class="muted">${esc(e.reason || "")}</td></tr>`).join("");
+}
+
+async function loadScenarios() {
+  const list = await api("/scenarios");
+  $("scenario").innerHTML = list.map(s =>
+    `<option value="${s.family}|${s.strength}">${esc(s.family.replaceAll("_", " "))} — ${esc(s.label)}</option>`).join("");
+}
+
+function render(c) {
+  $("decision").innerHTML =
+    `<span class="badge ${c.decision}">${c.decision.replace("_", " ").toUpperCase()}</span>
+     <span class="muted"> · scenario: ${esc(c.scenario)} · model ${esc(c.model_before)} → ${esc(c.model_after)}</span>
+     <p class="reason">${esc(c.reason)}</p>
+     ${c.possible_causes ? `<p class="muted">Possible causes: ${c.possible_causes.map(esc).join("; ")}</p>` : ""}`;
+  const f = c.drift.flagged_features;
+  $("drift").innerHTML = `<div class="kv"><div>Any drift flagged</div><div>${c.drift.any_flagged ? "yes" : "no"}</div>
+     <div>Prediction drift (PSI)</div><div>${num(c.drift.prediction_psi)}</div></div>` +
+    (f.length ? `<table><tr><th>Feature</th><th>Why</th></tr>${f.map(x => `<tr><td>${esc(x.feature)}</td><td>${esc(x.reasons.join(", "))}</td></tr>`).join("")}</table>` : "");
+  const r = c.reliability, m = r.metrics || {};
+  const lf = c.label_free_warning;
+  $("reliability").innerHTML = r.status === "pending_labels"
+    ? `<p>Labels pending — cannot measure accuracy yet.</p>${lf ? `<div class="kv"><div>Label-free urgency</div><div><span class="badge ${lf.urgency === "high" ? "alert" : lf.urgency === "medium" ? "watch" : "no_action"}">${lf.urgency}</span></div><div>Children flagged</div><div>${pct(lf.flagged_rate_reference)} → ${pct(lf.flagged_rate_current)}</div></div>` : ""}`
+    : `<div class="kv"><div>Reliable</div><div>${r.reliable ? "yes" : "no"}</div>
+       <div>Balanced accuracy</div><div>${pct(m.recall_macro)}</div>
+       <div>Sensitivity</div><div>${pct(m.recall_per_class ? m.recall_per_class["1"] : null)}</div>
+       <div>ROC-AUC</div><div>${num(m.auroc)}</div><div>Calibration error</div><div>${num(m.ece)}</div>
+       <div>Test after cycle</div><div>${pct(c.test_after_cycle.bal_acc)} bal. acc.</div></div>`;
+  const ctx = c.context;
+  $("context").innerHTML = !ctx ? "Not included." : (ctx.signals.length
+    ? ctx.signals.map(s => `<p><span class="badge ${s.level}">${s.level}</span> ${esc(s.summary)}</p>`).join("") +
+      (ctx.heightened ? `<p class="muted">Alert active → drift thresholds tightened for this cycle.</p>` : "")
+    : `No signals for ${esc(ctx.window)}.`);
+  const v = c.validation, ver = c.verification, sh = c.shadow;
+  $("safety").innerHTML = `<div class="kv">
+     <div>Invalid records (new data)</div><div>${v && v.adapt ? `${v.adapt.invalid_rows} of ${v.adapt.rows}` : "—"}</div>
+     <div>Candidate model</div><div>${esc(c.candidate || "none")}</div>
+     <div>Shadow agreement</div><div>${sh ? pct(sh.agreement) + ` (flags ${pct(sh.flagged_share_active)} → ${pct(sh.flagged_share_candidate)})` : "—"}</div>
+     <div>Verification gate</div><div>${ver ? (ver.passed ? "passed" : "failed: " + esc(ver.failures.join("; "))) : "—"}</div>
+     <div>Deployed</div><div>${c.promoted ? "yes" : c.pending_approval ? "waiting for approval" : "no"}</div></div>`;
+  const sg = m.subgroups;
+  $("subgroups").innerHTML = !sg || !sg.groups || !Object.keys(sg.groups).length ? "Not measurable for this cycle." :
+    `<table><tr><th>Group</th><th>Children</th><th>Balanced accuracy</th><th>Sensitivity</th></tr>` +
+    Object.entries(sg.groups).map(([g, x]) => `<tr${g === sg.worst_group ? ' style="font-weight:600"' : ""}><td>${esc(g)}${g === sg.worst_group ? " (worst)" : ""}</td><td>${x.n}</td><td>${pct(x.bal_acc)}</td><td>${pct(x.sensitivity)}</td></tr>`).join("") + `</table>`;
+}
+
+async function runCycle() {
+  const [family, strength] = $("scenario").value.split("|");
+  const body = { family, strength: Number(strength), with_labels: $("labels").checked,
+    require_approval: $("approval").checked, offline_context: $("offline").checked };
+  if ($("use-context").checked) { body.context_start = $("ctx-start").value; body.context_end = $("ctx-end").value; }
+  $("run").disabled = true; $("decision").textContent = "Running cycle…";
+  try { render(await api("/cycle", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) })); }
+  catch (e) { $("decision").textContent = "Error: " + e.message; }
+  finally { $("run").disabled = false; loadStatus(); }
+}
+
+async function action(path) {
+  try { await api(path, { method: "POST" }); } catch (e) { alert(e.message); }
+  loadStatus();
+}
+
+$("run").onclick = runCycle;
+$("reset").onclick = () => action("/reset");
+$("approve").onclick = () => action("/approve?approver=MOH%20officer");
+$("reject").onclick = () => action("/reject-pending");
+$("rollback").onclick = () => action("/rollback");
+loadScenarios().then(loadStatus).catch(e => { $("model-line").textContent = "Error: " + e.message; });
+</script>
+</body>
+</html>
