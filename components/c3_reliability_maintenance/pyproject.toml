@@ -17,6 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]
 experiments = ["matplotlib>=3.7", "tabulate>=0.9", "openpyxl>=3.1"]
+c1 = ["torch>=2.0"]  # to load Component 1's GA-RGCA model (component3/models/c1_ga_rgca.py)
 
 [tool.setuptools.packages.find]
 include = ["component3*"]

@@ -16,14 +16,14 @@ component3/
 ├── decide/           # No Action / Recalibrate / Retrain / Hold (incl. data-quality hold)
 ├── adapt/            # recalibration and retraining candidates, operating-threshold tuning
 ├── verify/           # verification gate on untouched data; must not regress vs the active model
-├── registry/         # promote, reject, stage for approval, approve, rollback, full version history
+├── registry/         # promote, reject, stage for approval, approve, rollback, version history, save/load
 ├── orchestrator.py   # one full maintenance cycle
 ├── validate/         # validation gate: impossible values, missing essentials, age-inappropriate answers
 ├── context/          # external signals: disasters (GDACS), food prices (WFP/HDX), inflation (CCPI), World Bank background
 ├── data/             # loader for the real linked 2025 -> 2026 register data (not stored in the repo)
-├── models/           # stand-in C1 model (calibrated gradient-boosted trees) until C1's final model is plugged in
+├── models/           # stand-in C1 model (calibrated gradient-boosted trees) + adapter for C1's GA-RGCA v3 model
 └── experiments/      # stress scenarios, strategies, comparison harness, real-data experiment runner
-tests/                # 67 unit tests (offline; real GDACS/WFP samples in tests/fixtures)
+tests/                # 72 unit tests (offline; real GDACS/WFP samples in tests/fixtures)
 results/c3_underweight/             # experiment results, conventional drift limits (aggregate numbers, graphs)
 results/c3_underweight_calibrated/  # same with data-driven drift limits
 ```
@@ -68,9 +68,22 @@ static, periodic retraining, always recalibrate, always retrain and C3's adaptiv
 
 ## Backend and dashboard
 
-`backend/app/routers/maintenance.py` + `backend/app/c3/` expose C3 through the integrated API; open
-`http://localhost:8000/maintenance/dashboard` for the model-health page (run cycles under any shift, see drift,
-reliability, context, validation, shadow comparison and subgroups; approve, reject or roll back models).
+`backend/app/routers/maintenance.py` + `backend/app/c3/` expose C3 through the integrated API (endpoint list in
+`backend/README.md`, interactive docs at `http://localhost:8000/docs`).
+
+```bash
+./run_demo.sh      # starts the backend, prepares the model, opens the model-health dashboard (Ctrl+C stops)
+```
+
+- **Live workflow** (`/maintenance/live/*`): submit a screening batch → validation, drift and label-free warning;
+  submit its outcomes when they arrive → post-deployment check of a newly deployed model, then assess → adapt →
+  verify, with human approval by default. Models, history and batches are saved in `state/` (or `C3_STATE_DIR`,
+  ignored by git) and survive restarts. Try it with real held-out children:
+  `python -m component3.experiments.simulate_live --shift prevalence:0.4` (needs the backend running).
+- **Demonstration sandbox** (`/maintenance/cycle` …) and the dashboard at `/maintenance/dashboard`: run cycles under
+  any stress shift, see drift, reliability, context, validation, shadow comparison and subgroups; approve, reject or
+  roll back models.
+- **Experiment results** (`/maintenance/results`): strategy summaries, reports and figures from `results/`.
 
 ## External context monitoring
 
@@ -107,6 +120,13 @@ all safety features active.
   them all) but the validation gate catches every invalid record.
 - **Honest limits:** with small batches of new labels, no strategy recovers much lost accuracy (gains ≤ 0.01); the
   verification gate therefore rejects most candidates, which protects against deploying worse models.
+
+## Component 1's model
+
+`component3/models/c1_ga_rgca.py` loads C1's exported GA-RGCA v3 bundle (`metadata.json`, preprocessor, calibrators,
+network weights) as a C3 model, so C3 can monitor and maintain it instead of the stand-in. Needs PyTorch
+(`pip install -e ".[c1]"`) and the bundle in `external_models/ga_rgca_v3/` or `C1_MODEL_DIR` (not stored in git).
+Pickled files are opened with restricted loaders, so loading the bundle cannot run code from it.
 
 ## Data note
 
