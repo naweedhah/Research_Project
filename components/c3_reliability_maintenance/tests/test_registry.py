@@ -62,3 +62,29 @@ def test_rollback_raises_when_nothing_to_roll_back_to():
 
     with pytest.raises(ValueError):
         registry.rollback()
+
+
+def test_staging_a_new_candidate_records_the_superseded_one():
+    registry = ModelRegistry(_fresh_model("v1.0"))
+    registry.stage(_fresh_model("v2.0"))
+    registry.stage(_fresh_model("v3.0"))
+    assert registry.pending.version == "v3.0"
+    assert (registry.history[-2].version, registry.history[-2].action) == ("v2.0", "rejected")
+    assert registry.history[-2].reason == "superseded by v3.0"
+
+
+def test_registry_survives_save_and_load(tmp_path):
+    from component3.registry import load_state, save_state
+
+    registry = ModelRegistry(_fresh_model("v1.0"))
+    registry.promote(_fresh_model("v2.0"))
+    registry.stage(_fresh_model("v3.0"))
+    save_state({"registry": registry}, tmp_path / "state.joblib")
+
+    restored = load_state(tmp_path / "state.joblib")["registry"]
+    assert restored.active_model.version == "v2.0" and restored.pending.version == "v3.0"
+    assert [h.action for h in restored.history] == [h.action for h in registry.history]
+    X, _ = make_toy_data()
+    assert (restored.active_model.predict(X) == registry.active_model.predict(X)).all()
+    assert restored.rollback().version == "v1.0"
+    assert not list(tmp_path.glob("*.tmp"))

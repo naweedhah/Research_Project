@@ -150,7 +150,7 @@ class C3Orchestrator:
         if decision.action == MaintenanceAction.RECALIBRATE:
             if adapt_data is None or adapt_labels is None:
                 raise ValueError("RECALIBRATE decision requires adapt_data and adapt_labels")
-            next_version = bump_version(active.version, "recalibrate")
+            next_version = self._next_version("recalibrate")
             candidate = generate_recalibrated_candidate(
                 active, adapt_data, adapt_labels, next_version, self.thresholds.operating_sensitivity
             )
@@ -158,7 +158,7 @@ class C3Orchestrator:
         elif decision.action == MaintenanceAction.RETRAIN:
             if adapt_data is None or adapt_labels is None or model_factory is None:
                 raise ValueError("RETRAIN decision requires adapt_data, adapt_labels and model_factory")
-            next_version = bump_version(active.version, "retrain")
+            next_version = self._next_version("retrain")
             X_train, y_train = adapt_data, adapt_labels
             if retrain_history is not None:
                 X_train = pd.concat([retrain_history[0], adapt_data], ignore_index=True)
@@ -205,6 +205,14 @@ class C3Orchestrator:
             shadow=shadow,
             pending_approval=pending_approval,
         )
+
+    def _next_version(self, action: str) -> str:
+        """Next unused version: a new candidate never reuses the name of a rejected, superseded or rolled-back one."""
+        used = {h.version for h in self.registry.history}
+        version = bump_version(self.registry.active_model.version, action)
+        while version in used:
+            version = bump_version(version, action)
+        return version
 
     def post_deployment_check(self, X: pd.DataFrame, y: np.ndarray, tolerance: float = 0.03) -> dict:
         """After a new model goes live, compare it with the previous one on the first new labelled batch and roll

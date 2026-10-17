@@ -55,6 +55,8 @@ class ModelRegistry:
         return self._promoted_stack[-2] if len(self._promoted_stack) > 1 else None
 
     def stage(self, candidate: ModelArtifact, verification: VerificationResult | None = None) -> None:
+        if self._pending is not None:  # only one candidate waits at a time; the older one is recorded, not lost
+            self.reject(*self._pending, reason=f"superseded by {candidate.version}")
         self._pending = (candidate, verification)
         self._history.append(HistoryEntry(version=candidate.version, action="pending_approval",
                                           parent_version=candidate.metadata.parent_version,

@@ -48,3 +48,13 @@ def test_post_deployment_check_rolls_back_a_worse_model():
     registry._promoted_stack[-1] = registry._active
     report = orch.post_deployment_check(X, y)
     assert report["rolled_back"] and registry.active_model is initial
+
+
+def test_new_candidate_never_reuses_a_rejected_version_name():
+    orch, registry, _, first, X, y = _cycle(True)
+    registry.reject_pending()
+    second = orch.run_cycle(reference_data=X, current_data=X, current_labels=y, adapt_data=X, adapt_labels=y,
+                            verify_data=X, verify_labels=y)
+    assert second.candidate.version != first.candidate.version
+    versions = [h.version for h in registry.history if h.action != "rejected"]
+    assert len(versions) == len(set(versions))
