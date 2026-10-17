@@ -166,6 +166,11 @@ def _method_candidates(request: C1Request) -> list[dict[str, str]]:
 def _policy_reason(base: C1Output, candidate: C1Output, policy: C1ResearchPolicy) -> str | None:
     if not policy.approved_for_research:
         return "acceptance policy has not been approved for research"
+    return _model_policy_reason(base, candidate, policy)
+
+
+def _model_policy_reason(base: C1Output, candidate: C1Output, policy: C1ResearchPolicy) -> str | None:
+    """Evaluate model-only rules; never grants research authorization by itself."""
     if policy.reject_uncertainty and (base.uncertainty_flag or candidate.uncertainty_flag):
         return "model uncertainty requires review"
     order = {"Normal": 0, "Moderate": 1, "Severe": 2}
