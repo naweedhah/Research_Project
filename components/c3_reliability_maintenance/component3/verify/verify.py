@@ -43,11 +43,11 @@ def verify_candidate(
     failures: list[str] = []
 
     if cand_metrics["recall_macro"] < criteria.min_recall_macro:
-        failures.append(f"recall_macro={cand_metrics['recall_macro']:.3f}<{criteria.min_recall_macro}")
+        failures.append(f"recall_macro={cand_metrics['recall_macro']:.3f}<{criteria.min_recall_macro:.3g}")
     if cand_metrics["ece"] > criteria.max_ece:
-        failures.append(f"ece={cand_metrics['ece']:.3f}>{criteria.max_ece}")
+        failures.append(f"ece={cand_metrics['ece']:.3f}>{criteria.max_ece:.3g}")
     if cand_metrics["brier"] > criteria.max_brier:
-        failures.append(f"brier={cand_metrics['brier']:.3f}>{criteria.max_brier}")
+        failures.append(f"brier={cand_metrics['brier']:.3f}>{criteria.max_brier:.3g}")
 
     if criteria.minority_classes:
         minority_recalls = [
@@ -56,7 +56,7 @@ def verify_candidate(
             if c in cand_metrics["recall_per_class"]
         ]
         if minority_recalls and min(minority_recalls) < criteria.min_minority_recall:
-            failures.append(f"minority_recall={min(minority_recalls):.3f}<{criteria.min_minority_recall}")
+            failures.append(f"minority_recall={min(minority_recalls):.3f}<{criteria.min_minority_recall:.3g}")
 
     active_metrics = None
     if active_model is not None:
@@ -65,7 +65,7 @@ def verify_candidate(
         active_metrics = classification_metrics(y_arr, active_pred, active_proba, classes)
         regression = active_metrics["recall_macro"] - cand_metrics["recall_macro"]
         if regression > criteria.max_regression:
-            failures.append(f"regression_vs_active={regression:.3f}>{criteria.max_regression}")
+            failures.append(f"regression_vs_active={regression:.3f}>{criteria.max_regression:.3g}")
         if groups is not None:
             cand_groups = subgroup_metrics(y_arr, cand_pred, groups, classes)
             active_groups = subgroup_metrics(y_arr, active_pred, groups, classes)
@@ -73,7 +73,7 @@ def verify_candidate(
             if cand_groups["worst_group"] is not None and active_groups["worst_group"] is not None:
                 drop = active_groups["worst_bal_acc"] - cand_groups["worst_bal_acc"]
                 if drop > criteria.max_worst_group_regression:
-                    failures.append(f"worst_group_regression={drop:.3f}>{criteria.max_worst_group_regression} "
+                    failures.append(f"worst_group_regression={drop:.3f}>{criteria.max_worst_group_regression:.3g} "
                                     f"({cand_groups['worst_group']})")
 
     return VerificationResult(

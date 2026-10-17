@@ -47,20 +47,20 @@ def _assess_feature(name: str, kind: str, reference: pd.Series, current: pd.Seri
         psi_value = psi(reference, current)
         ks_stat, ks_p = ks_test(reference, current)
         if not np.isnan(psi_value) and psi_value >= thresholds.psi_flag:
-            reasons.append(f"psi={psi_value:.3f}>={thresholds.psi_flag}")
+            reasons.append(f"psi={psi_value:.3f}>={thresholds.psi_flag:.3g}")
         if thresholds.ks_statistic_flag is not None:
             if ks_stat is not None and not np.isnan(ks_stat) and ks_stat >= thresholds.ks_statistic_flag:
-                reasons.append(f"ks={ks_stat:.3f}>={thresholds.ks_statistic_flag}")
+                reasons.append(f"ks={ks_stat:.3f}>={thresholds.ks_statistic_flag:.3g}")
         elif ks_p is not None and not np.isnan(ks_p) and ks_p < thresholds.ks_alpha:
-            reasons.append(f"ks_p={ks_p:.4f}<{thresholds.ks_alpha}")
+            reasons.append(f"ks_p={ks_p:.4f}<{thresholds.ks_alpha:.3g}")
     else:
         psi_value = psi_categorical(reference, current)
         ks_stat, ks_p = None, None
         if not np.isnan(psi_value) and psi_value >= thresholds.psi_flag:
-            reasons.append(f"psi={psi_value:.3f}>={thresholds.psi_flag}")
+            reasons.append(f"psi={psi_value:.3f}>={thresholds.psi_flag:.3g}")
 
     if miss_delta >= thresholds.missingness_delta_flag:
-        reasons.append(f"missingness_delta={miss_delta:.3f}>={thresholds.missingness_delta_flag}")
+        reasons.append(f"missingness_delta={miss_delta:.3f}>={thresholds.missingness_delta_flag:.3g}")
 
     return FeatureShiftResult(
         feature=name,
