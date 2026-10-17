@@ -1,0 +1,20 @@
+experiment_name: longitudinal_trajectory
+seed: 42
+embedding_dim: 128
+
+projection:
+  pca:
+    n_components: 2
+  umap:
+    n_neighbors: 15
+    min_dist: 0.1
+    metric: euclidean
+  aligned_umap: true
+  notes: >
+    2D projections are exploratory. Operational alerts must come from
+    calibrated risk and longitudinal metrics, not UMAP position.
+
+risk_velocity:
+  stagnation_threshold_source: packages/contracts/clinical_policy.yaml
+
+output_dir: ml/artifacts/trajectory

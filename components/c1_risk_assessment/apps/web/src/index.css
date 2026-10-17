@@ -1,0 +1,359 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #e8eef5;
+  color: #10233a;
+}
+
+*:focus-visible {
+  outline: 2px solid #0e3a67;
+  outline-offset: 2px;
+}
+
+@keyframes hud-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hud-breathe {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.48;
+  }
+}
+
+@keyframes hud-flow {
+  0% {
+    stroke-dashoffset: 48;
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  82% {
+    opacity: 0.8;
+  }
+  100% {
+    stroke-dashoffset: -42;
+    opacity: 0;
+  }
+}
+
+.hud-chip {
+  animation: hud-chip-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.clinical-twin-panel {
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(191, 219, 254, 0.22) 0%, rgba(248, 250, 252, 0.96) 42%, #f8fafc 72%);
+  border: 1px solid #e4ecf4;
+  box-shadow:
+    0 1px 1px rgba(10, 39, 72, 0.03),
+    0 18px 40px -24px rgba(10, 39, 72, 0.18);
+}
+
+.hud-metric-card {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e6eef6;
+  box-shadow: 0 1px 2px rgba(10, 39, 72, 0.04);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.hud-metric-card:hover {
+  transform: translateY(-1px);
+  border-color: #d5e3f0;
+  box-shadow: 0 8px 18px -12px rgba(10, 39, 72, 0.2);
+}
+
+.hud-id-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.7rem 0.22rem 0.22rem;
+  border-radius: 0.7rem;
+  background: rgba(247, 250, 252, 0.92);
+  border: 1px solid #dbe6f0;
+  box-shadow: 0 1px 2px rgba(10, 39, 72, 0.04);
+}
+
+.hud-id-plate-mark {
+  display: grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.4rem;
+  background: #0a2748;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hud-id-plate-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #0a2748;
+}
+
+.hud-connector {
+  fill: none;
+  stroke: #b7c9db;
+  stroke-width: 0.18;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.hud-node {
+  fill: #7f9db8;
+  stroke: #ffffff;
+  stroke-width: 0.18;
+}
+
+.hud-flow,
+.hud-flow-soft {
+  display: none;
+}
+
+.child-stage-well {
+  position: relative;
+  isolation: isolate;
+}
+
+.clinical-halo {
+  pointer-events: none;
+  position: absolute;
+  inset: 8% 12% 10%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(186, 214, 240, 0.35) 0%, rgba(186, 214, 240, 0.08) 46%, transparent 72%);
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 176, 204, 0.12),
+    inset 0 0 0 18px rgba(148, 176, 204, 0.04);
+  animation: hud-breathe 8s ease-in-out infinite;
+}
+
+.child-stage-glow {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-chip,
+  .hud-connector,
+  .hud-flow,
+  .hud-flow-soft,
+  .clinical-halo,
+  .hud-metric-card:hover {
+    animation: none;
+  }
+  .hud-metric-card:hover {
+    transform: none;
+  }
+  .clinical-halo {
+    opacity: 0.45;
+  }
+  .hud-connector {
+    opacity: 0.35;
+  }
+}
+
+@media print {
+  nav,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  .print-plain {
+    box-shadow: none !important;
+    background: white !important;
+  }
+}
+
+/* Viva panel — C1 ↔ C3 / C4 linkage */
+@keyframes viva-packet-flow {
+  0% {
+    stroke-dashoffset: 48;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  88% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: -56;
+    opacity: 0;
+  }
+}
+
+@keyframes viva-hub-pulse {
+  0%,
+  100% {
+    box-shadow: 0 14px 36px -22px rgba(10, 39, 72, 0.45);
+  }
+  50% {
+    box-shadow: 0 18px 42px -18px rgba(14, 58, 103, 0.55);
+  }
+}
+
+.viva-integration-panel {
+  border-radius: 1.25rem;
+  border: 1px solid #d7e3ef;
+  background:
+    radial-gradient(ellipse 70% 80% at 50% 0%, rgba(219, 234, 254, 0.65), transparent 58%),
+    linear-gradient(180deg, #f7fbff 0%, #eef4fa 100%);
+  padding: 1.25rem 1.35rem 1.35rem;
+  box-shadow: 0 18px 40px -28px rgba(10, 39, 72, 0.28);
+}
+
+.viva-flow-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.viva-hub-card {
+  border-radius: 1.1rem;
+  background: linear-gradient(160deg, #0A2748 0%, #123A5C 55%, #1d4f7a 100%);
+  color: white;
+  padding: 1rem 1.05rem;
+  animation: viva-hub-pulse 5.5s ease-in-out infinite;
+}
+
+.viva-flow-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.viva-flow-lane-left {
+  align-items: stretch;
+}
+
+.viva-flow-lane-right {
+  align-items: stretch;
+}
+
+.viva-flow-svg {
+  width: 100%;
+  height: 36px;
+}
+
+.viva-flow-track {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.viva-flow-track-live {
+  stroke: #3b82f6;
+}
+
+.viva-flow-track-degraded {
+  stroke: #d97706;
+}
+
+.viva-flow-track-offline {
+  stroke: #94a3b8;
+  stroke-dasharray: 5 6;
+}
+
+.viva-flow-track-ready {
+  stroke: #94a3b8;
+}
+
+.viva-flow-packet {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 10 38;
+  opacity: 0;
+}
+
+.viva-flow-packet-live {
+  stroke: #2563eb;
+}
+
+.viva-flow-packet-degraded {
+  stroke: #b45309;
+}
+
+.viva-flow-packet-offline,
+.viva-flow-packet-ready {
+  stroke: #64748b;
+}
+
+.viva-flow-packet.is-active {
+  animation: viva-packet-flow 2.4s linear infinite;
+}
+
+.viva-partner-card {
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2eaf3;
+  padding: 0.85rem 0.95rem;
+  box-shadow: 0 1px 2px rgba(10, 39, 72, 0.04);
+}
+
+.viva-partner-card-live {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.12);
+}
+
+.viva-partner-card-degraded {
+  border-color: #fcd34d;
+}
+
+.viva-partner-card-offline {
+  border-color: #cbd5e1;
+}
+
+@media (max-width: 900px) {
+  .viva-flow-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .viva-flow-lane-left {
+    order: 2;
+  }
+
+  .viva-hub-card {
+    order: 1;
+  }
+
+  .viva-flow-lane-right {
+    order: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viva-hub-card,
+  .viva-flow-packet.is-active {
+    animation: none;
+  }
+}

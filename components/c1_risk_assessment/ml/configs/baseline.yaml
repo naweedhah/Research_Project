@@ -1,0 +1,48 @@
+experiment_name: baseline_classifiers
+seed: 42
+task: current_status
+feature_set: current_status
+label_column: status
+embedding_dim: 128
+
+data:
+  path: ml/data/synthetic/visits.csv
+  group_column: child_id
+  time_column: visit_date
+
+split:
+  strategy: group_aware  # never split visits of the same child across sets
+  test_size: 0.2
+  val_size: 0.15
+  stratified: true
+
+imbalance:
+  strategy: class_weight  # class_weight | none | smotenc
+  smotenc_train_only: true
+
+models:
+  random_forest:
+    n_estimators: 200
+    max_depth: 12
+    min_samples_leaf: 4
+  xgboost:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+  lightgbm:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.05
+  concat_mlp:
+    hidden_dims: [256, 128]
+    dropout: 0.2
+    epochs: 40
+    batch_size: 32
+    lr: 0.001
+
+calibration:
+  method: temperature_scaling
+  apply_to: [concat_mlp]
+
+output_dir: ml/artifacts/baselines

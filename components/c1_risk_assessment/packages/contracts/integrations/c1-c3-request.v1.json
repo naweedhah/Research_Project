@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cnip.local/contracts/integrations/c1-c3-request.v1.json",
+  "title": "C1→C3 Intervention Reassessment Request v1",
+  "type": "object",
+  "required": ["contract_version", "request_id", "correlation_id", "source", "child", "visit", "prediction", "model", "features", "requested_at"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "request_id": { "type": "string", "format": "uuid" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "source": { "const": "C1" },
+    "child": {
+      "type": "object",
+      "required": ["pseudonymous_child_id"],
+      "properties": {
+        "pseudonymous_child_id": { "type": "string" },
+        "child_uuid": { "type": "string", "format": "uuid" }
+      },
+      "additionalProperties": false
+    },
+    "visit": {
+      "type": "object",
+      "required": ["visit_id", "visit_number", "visit_date"],
+      "properties": {
+        "visit_id": { "type": "string", "format": "uuid" },
+        "visit_number": { "type": "integer" },
+        "visit_date": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "prediction": { "type": "object" },
+    "longitudinal": { "type": ["object", "null"] },
+    "alerts": { "type": "array", "items": { "type": "string" } },
+    "model": { "type": "object" },
+    "features": { "type": "object" },
+    "data_quality": { "type": "object" },
+    "explanation_context_ref": { "type": ["string", "null"] },
+    "requested_by": { "type": "object" },
+    "requested_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
