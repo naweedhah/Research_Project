@@ -1,0 +1,8 @@
+# Colombo Consumer Price Index, year-on-year % change. Update once a month from the CBSL / DCS press release.
+# Only values confirmed from published releases are listed; leave a field empty if it was not reported.
+month,headline_yoy,food_yoy,source
+2025-06,-0.6,4.3,CBSL/DCS CCPI June 2025 (reported by News 1st and Ada Derana)
+2026-05,5.5,0.9,CBSL CCPI release for June 2026 (previous-month figures)
+2026-06,6.8,3.6,CBSL CCPI release for June 2026
+2026-07,7.3,,Trading Economics report on Colombo inflation (August 2026 release)
+2026-08,8.0,8.5,Trading Economics report on Colombo inflation (August 2026 release)

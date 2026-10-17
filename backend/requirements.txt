@@ -1,2 +1,8 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
+
+# Component 3 (model reliability and maintenance)
+numpy>=1.26
+pandas>=2.0
+scikit-learn>=1.3
+scipy>=1.11
