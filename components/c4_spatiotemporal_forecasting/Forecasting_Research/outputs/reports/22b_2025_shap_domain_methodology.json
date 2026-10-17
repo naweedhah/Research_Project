@@ -1,0 +1,52 @@
+{
+  "step": "22B",
+  "name": "2025 SHAP domain-level retrospective explanation",
+  "period": "2025",
+  "purpose": "Apply the same Step 28B domain interpretation framework to the already generated Step 22 feature-level SHAP values for the 2025 final lockbox forecasts.",
+  "input_files": {
+    "step22_feature_level_shap": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22_final_rf_shap_values_long.csv",
+    "step22_prediction_reproduction": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22_final_rf_shap_predictions.csv"
+  },
+  "forecast_count": 900,
+  "horizons": [
+    1,
+    3,
+    6
+  ],
+  "district_count": 25,
+  "model_retraining": false,
+  "ngboost_retraining": false,
+  "shap_recalculation": false,
+  "hyperparameter_tuning": false,
+  "model_reselection": false,
+  "actual_2025_role": "Retrospective comparison only. 2025 actual values do not change model parameters, SHAP values, domain mapping or explanation contributions.",
+  "domain_framework": "Same domain grouping rules as Step 28B future SHAP explanations.",
+  "domains": [
+    "Historical Malnutrition Burden",
+    "Child Nutrition Status",
+    "Child & Demographic Health",
+    "Maternal Health",
+    "Nutrition Programmes & Services",
+    "Climate & Environment",
+    "Socioeconomic Conditions",
+    "District & Geographic Context",
+    "Seasonality & Time",
+    "Other Model Inputs"
+  ],
+  "domain_aggregation": {
+    "net_contribution": "sum of signed SHAP values inside each domain",
+    "absolute_influence": "sum of absolute SHAP values inside each domain",
+    "positive_component": "sum of positive SHAP values inside each domain",
+    "negative_component": "sum of negative SHAP values inside each domain"
+  },
+  "interpretation": "Positive domain net SHAP pushes the Random Forest prediction above its SHAP baseline; negative domain net SHAP pushes it below the baseline. These values describe model behaviour and do not establish causality. District/geographic context is a model context variable and not a modifiable causal risk factor.",
+  "important_validation_note": "Step 22B is a retrospective explanation consistency and sanity-check layer. It is not an accuracy validation of SHAP itself and does not prove causal correctness.",
+  "outputs": {
+    "domain_contributions_long": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_domain_contributions_long.csv",
+    "forecast_explanations": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_domain_explanations.csv",
+    "feature_domain_mapping": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_feature_domain_mapping.csv",
+    "horizon_summary": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_domain_summary_by_horizon.csv",
+    "audit": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_domain_audit.csv",
+    "additivity_diagnostic_if_failed": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\22b_2025_shap_additivity_diagnostic.csv"
+  }
+}

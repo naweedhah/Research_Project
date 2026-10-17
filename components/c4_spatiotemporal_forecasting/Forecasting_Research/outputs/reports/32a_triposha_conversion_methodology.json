@@ -1,0 +1,22 @@
+{
+  "step": "32A",
+  "name": "Triposha Historical Conversion-Rule Development",
+  "input": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\data\\processed\\malnutrition_preprocessed_base.csv",
+  "development_period": "2015-2023",
+  "validation_year": 2024,
+  "retrospective_check_year": 2025,
+  "historical_ratio": "Triposha_Packets_Distributed / Malnutrition_Cases",
+  "candidate_rules": [
+    "NATIONAL_MEDIAN",
+    "DISTRICT_MEDIAN",
+    "MONTH_MEDIAN",
+    "DISTRICT_MONTH_MEDIAN"
+  ],
+  "selection_rule": "Lowest 2024 MAE; tie-break lower WAPE then lower RMSE",
+  "selected_rule": "DISTRICT_MEDIAN",
+  "2025_used_for_selection": false,
+  "new_ml_model_trained": false,
+  "future_use": "Step 32B applies the frozen rule to 2026-2030 RF malnutrition forecasts",
+  "interpretation": "Operational Triposha packet planning estimate; not clinical eligibility or dosage recommendation.",
+  "rounding_policy": "Raw decimal packet estimates preserved for evaluation; whole packets only for display/planning."
+}

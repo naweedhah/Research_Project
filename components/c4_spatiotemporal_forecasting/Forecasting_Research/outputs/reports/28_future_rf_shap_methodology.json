@@ -1,0 +1,27 @@
+{
+  "step": "28",
+  "purpose": "Explain all 2026-2030 Random Forest future point forecasts using Tree SHAP while preserving the Step 27B NGBoost uncertainty outputs.",
+  "point_forecast_model": "Frozen / saved Step 27 Random Forest models",
+  "uncertainty_model": "NGBoost output carried forward from Step 27B",
+  "explainability_method": "Tree SHAP",
+  "explainability_target": "Random Forest point forecast only",
+  "future_period": "2026-01 to 2030-12",
+  "future_actual_targets_used": false,
+  "future_feature_state": "Reconstructed exactly from Step 27 projected predictors and Step 27 H1 recursive RF target state.",
+  "prediction_reproduction_required": true,
+  "prediction_reproduction_tolerance": 1e-06,
+  "shap_additivity_required": true,
+  "shap_additivity_tolerance": 1e-05,
+  "local_driver_count": 5,
+  "important_interpretation": "Positive SHAP values push the Random Forest prediction above its baseline; negative SHAP values push it below the baseline. SHAP explains model behaviour and does not establish causality.",
+  "main_output": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_explainable_forecasts_2026_2030.csv",
+  "detailed_outputs": {
+    "prediction_reproduction": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_shap_prediction_reproduction.csv",
+    "all_shap_values": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_shap_values_long.csv",
+    "local_top_drivers": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_local_top_drivers.csv",
+    "global_feature_importance": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_global_feature_importance.csv",
+    "district_shap_summary": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_district_shap_summary.csv",
+    "district_top10_drivers": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_district_top10_drivers.csv",
+    "audit": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_shap_audit.csv"
+  }
+}

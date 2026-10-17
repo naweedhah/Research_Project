@@ -1,0 +1,56 @@
+{
+  "step": "29E",
+  "name": "DMBI TOPSIS 2025 Retrospective Validation",
+  "validation_type": "Retrospective 2025 DMBI validation. Do not claim pristine prospective unseen DMBI validation.",
+  "frozen_critic_weights_from_2024": {
+    "C1": 0.3922058327854648,
+    "C2": 0.2592156903194405,
+    "C3": 0.3485784768950947
+  },
+  "2025_used_for_weight_development": false,
+  "manual_weights": false,
+  "decision_matrix": "One matrix per target month x horizon: 25 districts x 3 burden criteria.",
+  "criteria": {
+    "C1": {
+      "predicted": "C1_Forecasted_Malnutrition_Cases",
+      "realized": "Actual_Malnutrition_Cases",
+      "direction": "higher = higher planning priority"
+    },
+    "C2": {
+      "predicted": "C2_Forecasted_Cases_per_1000_U5",
+      "realized": "Actual_Cases_per_1000_U5",
+      "direction": "higher = higher planning priority"
+    },
+    "C3": {
+      "predicted": "C3_Forecasted_YoY_Burden_Growth_Percent",
+      "realized": "Actual_YoY_Burden_Growth_Percent",
+      "direction": "higher = higher planning priority"
+    }
+  },
+  "normalization": "Min-max normalization to [0,1] inside each 25-district decision matrix.",
+  "topsis": {
+    "positive_ideal": "maximum weighted normalized value for each criterion",
+    "negative_ideal": "minimum weighted normalized value for each criterion",
+    "distance": "Euclidean",
+    "closeness": "D_minus / (D_plus + D_minus)",
+    "dmbi_score": "TOPSIS closeness x 100",
+    "ranking": "descending closeness; rank 1 = highest relative priority"
+  },
+  "priority_tiers": {
+    "basis": "within-matrix percentile of TOPSIS closeness",
+    "Low": "<25",
+    "Medium": "25 to <50",
+    "High": "50 to <75",
+    "Critical": ">=75; relative planning priority only"
+  },
+  "validation_metrics": [
+    "Spearman priority correlation",
+    "Priority-rank MAE",
+    "Top-5 overlap",
+    "Exact priority-tier agreement",
+    "Within-one-tier agreement",
+    "Realized Critical-tier recall"
+  ],
+  "important_interpretation": "DMBI is a relative district planning-priority score, not a malnutrition probability, clinical diagnosis, or official emergency threshold.",
+  "next_step": "Step 29F applies the same frozen 2024 CRITIC weights and TOPSIS method to 2026-2030 future criteria."
+}

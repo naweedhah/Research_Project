@@ -1,0 +1,28 @@
+{
+    "step": 25,
+    "purpose": "Triposha resource demand planning estimation",
+    "interpretation": "Operational planning estimate only; not a clinical dosage recommendation",
+    "historical_period": "2015-2023",
+    "resource_column": "Triposha_Packets_Distributed",
+    "target_column": "Malnutrition_Cases",
+    "valid_historical_rows": 2663,
+    "minimum_district_history_rows": 12,
+    "districts_using_national_fallback": 0,
+    "national_ratios": {
+        "q25": 6.835200250312891,
+        "median": 9.630252100840336,
+        "q75": 14.19326030235592
+    },
+    "formula": "Estimated packets = Predicted malnutrition cases x historical packets-per-case ratio",
+    "lower_estimate": "District historical Q25 ratio",
+    "base_estimate": "District historical median ratio",
+    "upper_estimate": "District historical Q75 ratio",
+    "methodology_protection": [
+        "2025 actual malnutrition outcomes were not used to define resource ratios",
+        "2025 actual Triposha distribution was not used",
+        "Step 23 predictions were used unchanged",
+        "No model training was performed",
+        "No tuning was performed",
+        "No model selection was performed"
+    ]
+}

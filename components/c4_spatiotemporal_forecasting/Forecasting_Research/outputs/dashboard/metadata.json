@@ -1,0 +1,67 @@
+{
+  "component": "Explainable AI Framework for Early Detection and Personalized Childhood Malnutrition Intervention - District Forecasting Component",
+  "point_forecast_model": "Random Forest",
+  "uncertainty_model": "NGBoost",
+  "explainability": "SHAP",
+  "priority_method": "CRITIC-TOPSIS DMBI",
+  "resource_planning": "Triposha packet planning demand",
+  "forecast_horizons_months": [
+    1,
+    3,
+    6
+  ],
+  "district_count": 25,
+  "districts": [
+    "Ampara",
+    "Anuradhapura",
+    "Badulla",
+    "Batticaloa",
+    "Colombo",
+    "Galle",
+    "Gampaha",
+    "Hambantota",
+    "Jaffna",
+    "Kalutara",
+    "Kandy",
+    "Kegalle",
+    "Kilinochchi",
+    "Kurunegala",
+    "Mannar",
+    "Matale",
+    "Matara",
+    "Monaragala",
+    "Mullaitivu",
+    "Nuwara Eliya",
+    "Polonnaruwa",
+    "Puttalam",
+    "Ratnapura",
+    "Trincomalee",
+    "Vavuniya"
+  ],
+  "forecast_origin_start": "2025-12-01",
+  "forecast_origin_end": "2030-11-01",
+  "forecast_target_start": "2026-01-01",
+  "forecast_target_end": "2030-12-01",
+  "forecast_page_contract": {
+    "user_inputs": [
+      "year",
+      "month",
+      "district"
+    ],
+    "automatic_outputs": [
+      "H1",
+      "H3",
+      "H6"
+    ],
+    "horizon_selector_required": false,
+    "model_selector_required": false
+  },
+  "warning_contract": {
+    "active_levels": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "combined_per_district": true,
+    "dashboard_preview_limit": 5
+  }
+}

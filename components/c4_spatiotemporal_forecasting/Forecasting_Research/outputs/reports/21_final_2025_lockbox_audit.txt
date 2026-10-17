@@ -1,0 +1,21 @@
+STEP 21 - FINAL 2025 LOCKBOX TEST
+========================================================================
+
+Frozen strategy source:
+C:\Users\NIMSARA\Desktop\Research Github\Research_Project\components\c4_spatiotemporal_forecasting\Forecasting_Research\outputs\reports\20_final_forecasting_strategy.json
+
+Methodology:
+- Step 20 strategy used without retuning or reselection.
+- Strict rolling-origin evaluation was used.
+- Training labels satisfied Forecast_Target_Date <= Forecast_Origin_Date.
+- Imputation was fitted separately at each origin.
+- District encoding was fitted separately at each origin.
+- The 2025 test set was used only for final evaluation.
+
+Final 2025 metrics:
+- H1: MAE=11.4275, RMSE=17.0635, WAPE=10.0893%, sMAPE=11.9165%, R2=0.9155
+- H3: MAE=13.2217, RMSE=18.2874, WAPE=11.6734%, sMAPE=13.4836%, R2=0.9029
+- H6: MAE=15.2272, RMSE=20.0875, WAPE=13.4441%, sMAPE=14.9384%, R2=0.8829
+
+FINAL LOCKBOX POLICY:
+These 2025 results are final test evidence. Do not change the frozen H1/H3/H6 model family or hyperparameters based on these results.
