@@ -1,0 +1,168 @@
+{
+  "mode": "simulated",
+  "method": "bounded_search",
+  "simulator_case": "favorable",
+  "snapshot": {
+    "contract_version": "c2-c1-snapshot-v1",
+    "child_pseudonymous_id": "SYNTHETIC-SUPERVISOR-001",
+    "visit_number": 1,
+    "visit_date": "2026-10-22",
+    "anthropometric": {},
+    "socioeconomic": {},
+    "dietary": {},
+    "maternal_child_health": {},
+    "historical_baseline": {
+      "source": "baseline_assessment",
+      "age_months": 24,
+      "height_cm": 80,
+      "weight_kg": 10
+    },
+    "ga_rgca_context": {
+      "meal_frequency": "4+ meals/day",
+      "dietary_diversity": "More than 5 varieties"
+    },
+    "model_version": "GA-RGCA-v3",
+    "feature_schema_version": "ga-rgca-v3-current-visit-baseline",
+    "provenance": "fully synthetic October 22 software fixture"
+  },
+  "context": {
+    "budget_units": 10,
+    "supplement_access": null,
+    "supplement_programme_eligible": null,
+    "supplement_clinically_suitable": null,
+    "available": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    },
+    "practical": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    },
+    "age_suitable": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    },
+    "eligible": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    },
+    "clinically_suitable": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    },
+    "transition_justified": {
+      "meals_per_day": true,
+      "dietary_diversity": true
+    }
+  },
+  "policy": {
+    "policy_id": "SUPERVISOR-FIXTURE-ONLY",
+    "approved_for_research": true,
+    "allowed_type_transitions": [
+      [
+        "Underweight",
+        "Normal"
+      ],
+      [
+        "MAM",
+        "Underweight"
+      ],
+      [
+        "MAM",
+        "Normal"
+      ],
+      [
+        "SAM",
+        "MAM"
+      ],
+      [
+        "Stunting",
+        "MAM"
+      ]
+    ],
+    "allow_severity_improvement": false,
+    "require_condition_nonworsening": true,
+    "reject_uncertainty": true,
+    "minimum_probability_change": null
+  },
+  "food_planning": {
+    "catalog": [
+      {
+        "food_id": "test-food",
+        "name": "Synthetic fixture food",
+        "food_group": "synthetic test group",
+        "price": {
+          "amount_lkr": "60",
+          "quantity": "2",
+          "unit": "piece",
+          "evidence": {
+            "kind": "synthetic_test",
+            "source": "Phase 5 software demonstration",
+            "observed_on": "2026-01-01"
+          },
+          "reference_kind": null,
+          "market_coverage": null,
+          "source_locator": null,
+          "reference_status": null
+        },
+        "locally_available": true,
+        "availability_evidence": {
+          "kind": "synthetic_test",
+          "source": "Phase 5 software demonstration",
+          "observed_on": "2026-01-01"
+        }
+      }
+    ],
+    "budget": {
+      "amount_lkr": "100",
+      "period": "day",
+      "evidence": {
+        "kind": "synthetic_test",
+        "source": "Phase 5 software demonstration",
+        "observed_on": "2026-01-01"
+      }
+    },
+    "alternatives": [
+      {
+        "alternative_id": "test-option",
+        "title": "Synthetic feeding-practice option",
+        "reason": "Software fixture matching a permitted feature transition",
+        "changes": [
+          {
+            "feature": "meals_per_day",
+            "from_value": 3,
+            "to_value": 4
+          }
+        ],
+        "foods": [
+          {
+            "food_id": "test-food",
+            "quantity": "2",
+            "unit": "piece",
+            "serving_assumption": "synthetic one-day incremental amount"
+          }
+        ],
+        "period": "day",
+        "practice_evidence": {
+          "kind": "synthetic_test",
+          "source": "Phase 5 software demonstration",
+          "observed_on": "2026-01-01"
+        },
+        "practice_reviewed": true,
+        "suitability_evidence": {
+          "kind": "synthetic_test",
+          "source": "Phase 5 software demonstration",
+          "observed_on": "2026-01-01"
+        },
+        "age_suitable": true,
+        "clinically_suitable": true,
+        "programme_eligible": null,
+        "programme_required": false,
+        "programme_evidence": null,
+        "caregiver_practical": true
+      }
+    ],
+    "referral_policy": null
+  },
+  "max_cards": 5
+}
