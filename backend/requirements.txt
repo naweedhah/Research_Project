@@ -1,6 +1,9 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 
+# Component 2 (counterfactual interventions)
+dice-ml==0.12
+
 # Component 3 (model reliability and maintenance)
 numpy>=1.26
 pandas>=2.0
