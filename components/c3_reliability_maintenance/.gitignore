@@ -3,3 +3,9 @@
 !results/**/*.csv
 !tests/fixtures/*.csv
 !component3/context/data/*.csv
+
+# Live service state (models, history, submitted batches): child-level, local only.
+/state/
+
+# Model files received from other components (e.g. C1 GA-RGCA bundle): not ours to publish.
+/external_models/

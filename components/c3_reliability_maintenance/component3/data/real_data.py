@@ -29,6 +29,9 @@ CATEGORICAL = [
     "Vitamin_Supplementation_2025",
 ]
 TARGETS = {"underweight": "Underweight_2026", "stunting": "Stunting_2026", "wasting": "Wasting_2026"}
+# Model inputs as the stand-in model (and the live API) expect them.
+SCHEMA = FeatureSchema(tuple([FeatureSpec(c, "numeric") for c in NUMERIC] +
+                             [FeatureSpec(c, "categorical", "object") for c in CATEGORICAL]))
 
 
 def data_dir() -> Path:
@@ -58,6 +61,4 @@ def load_prediction_data(target: str = "underweight", path: Path | None = None) 
     for c in CATEGORICAL:
         X[c] = X[c].astype(object).where(X[c].notna(), np.nan)
     y = d[TARGETS[target]].isin(["Moderate", "Severe"]).astype(int).to_numpy()
-    schema = FeatureSchema(tuple([FeatureSpec(c, "numeric") for c in NUMERIC] +
-                                 [FeatureSpec(c, "categorical", "object") for c in CATEGORICAL]))
-    return RealData(X=X, y=y, phm=d["PHM"].to_numpy(), person_id=d["Person_ID"].to_numpy(), schema=schema, target=target)
+    return RealData(X=X, y=y, phm=d["PHM"].to_numpy(), person_id=d["Person_ID"].to_numpy(), schema=SCHEMA, target=target)

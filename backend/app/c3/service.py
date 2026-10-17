@@ -55,6 +55,49 @@ def scenarios() -> list[dict]:
             for s in shift_grid()]
 
 
+def context_report(start: date, end: date, offline: bool):
+    """Offline mode uses the bundled real GDACS/WFP samples, so demos work without internet."""
+    kwargs = {}
+    if offline:
+        kwargs = {"events": context_sources.parse_gdacs(json.loads((FIXTURES / "gdacs_sri_lanka_2025.json").read_text())),
+                  "prices": context_sources.parse_wfp_prices(FIXTURES / "wfp_food_prices_lka_east_sample.csv"),
+                  "fetch": False}
+    return build_context_report(start, end, **kwargs)
+
+
+def history_rows(registry) -> list[dict]:
+    return [{"version": h.version, "action": h.action, "parent": h.parent_version,
+             "time": h.timestamp.isoformat(timespec="seconds"), "reason": h.reason,
+             "verification_passed": None if h.verification is None else h.verification.passed}
+            for h in registry.history]
+
+
+def cycle_summary(cycle, *, scenario: str | None, labels_available: bool, model_before: str, registry,
+                  test_after: dict | None = None) -> dict:
+    """One maintenance cycle as JSON: decisions, aggregate metrics and evidence only, never child records."""
+    return jsonable({
+        "scenario": scenario, "labels_available": labels_available, "model_before": model_before,
+        "model_after": registry.active_model.version,
+        "decision": cycle.decision.action.value, "reason": cycle.decision.reason,
+        "drift": {"any_flagged": cycle.monitoring.any_flagged,
+                  "prediction_psi": cycle.monitoring.prediction_psi,
+                  "flagged_features": [{"feature": r.feature, "reasons": list(r.reasons)}
+                                       for r in cycle.monitoring.feature_results if r.flagged]},
+        "reliability": {"status": cycle.reliability.status, "reliable": cycle.reliability.reliable,
+                        "metrics": {k: v for k, v in (cycle.reliability.metrics or {}).items()
+                                    if k in ("recall_macro", "auroc", "ece", "recall_per_class", "subgroups")}},
+        "candidate": None if cycle.candidate is None else cycle.candidate.version,
+        "verification": None if cycle.verification is None else {
+            "passed": cycle.verification.passed, "failures": list(cycle.verification.failures)},
+        "promoted": cycle.promoted, "pending_approval": cycle.pending_approval, "shadow": cycle.shadow,
+        "label_free_warning": cycle.decision.evidence.get("label_free_warning"),
+        "validation": cycle.decision.evidence.get("validation"),
+        "context": cycle.decision.evidence.get("context"),
+        "possible_causes": cycle.decision.evidence.get("possible_causes"),
+        "test_after_cycle": test_after,
+    })
+
+
 class C3Service:
     def __init__(self, target: str = "underweight", seed: int = 0):
         self.target, self.seed = target, seed
@@ -103,23 +146,10 @@ class C3Service:
 
     def history(self) -> list[dict]:
         self._ensure_ready()
-        return [{"version": h.version, "action": h.action, "parent": h.parent_version,
-                 "time": h.timestamp.isoformat(timespec="seconds"), "reason": h.reason,
-                 "verification_passed": None if h.verification is None else h.verification.passed}
-                for h in self.registry.history]
-
-    @staticmethod
-    def _context_report(start: date, end: date, offline: bool):
-        """Offline mode uses the bundled real GDACS/WFP samples, so demos work without internet."""
-        kwargs = {}
-        if offline:
-            kwargs = {"events": context_sources.parse_gdacs(json.loads((FIXTURES / "gdacs_sri_lanka_2025.json").read_text())),
-                      "prices": context_sources.parse_wfp_prices(FIXTURES / "wfp_food_prices_lka_east_sample.csv"),
-                      "fetch": False}
-        return build_context_report(start, end, **kwargs)
+        return history_rows(self.registry)
 
     def context(self, start: date, end: date, offline: bool = False) -> dict:
-        report = self._context_report(start, end, offline)
+        report = context_report(start, end, offline)
         return {**jsonable(report.as_evidence()), "explanation": report.explanation(), "area": report.area.name}
 
     # ------------------------------------------------------------ actions
@@ -133,7 +163,7 @@ class C3Service:
                 raise ValueError(f"unknown scenario {family} / {strength}")
             rng = np.random.default_rng(len(self.registry.history))
             parts = {k: shift.apply(X, y, rng) for k, (X, y) in self.setting.parts.items()}
-            context = (self._context_report(context_start, context_end, offline_context)
+            context = (context_report(context_start, context_end, offline_context)
                        if context_start and context_end else None)
             before = self.registry.active_model.version
             cycle = self.orchestrator.run_cycle(
@@ -143,27 +173,9 @@ class C3Service:
                 verify_data=parts["verify"][0], verify_labels=parts["verify"][1],
                 model_factory=self.factory, retrain_history=(self.setting.X_ref, self.setting.y_ref), context=context)
             test_X, test_y = parts["test"]
-            self.last_cycle = jsonable({
-                "scenario": shift.label, "labels_available": with_labels, "model_before": before,
-                "model_after": self.registry.active_model.version,
-                "decision": cycle.decision.action.value, "reason": cycle.decision.reason,
-                "drift": {"any_flagged": cycle.monitoring.any_flagged,
-                          "prediction_psi": cycle.monitoring.prediction_psi,
-                          "flagged_features": [{"feature": r.feature, "reasons": list(r.reasons)}
-                                               for r in cycle.monitoring.feature_results if r.flagged]},
-                "reliability": {"status": cycle.reliability.status, "reliable": cycle.reliability.reliable,
-                                "metrics": {k: v for k, v in (cycle.reliability.metrics or {}).items()
-                                            if k in ("recall_macro", "auroc", "ece", "recall_per_class", "subgroups")}},
-                "candidate": None if cycle.candidate is None else cycle.candidate.version,
-                "verification": None if cycle.verification is None else {
-                    "passed": cycle.verification.passed, "failures": list(cycle.verification.failures)},
-                "promoted": cycle.promoted, "pending_approval": cycle.pending_approval, "shadow": cycle.shadow,
-                "label_free_warning": cycle.decision.evidence.get("label_free_warning"),
-                "validation": cycle.decision.evidence.get("validation"),
-                "context": cycle.decision.evidence.get("context"),
-                "possible_causes": cycle.decision.evidence.get("possible_causes"),
-                "test_after_cycle": evaluate(self.registry.active_model, test_X, test_y),
-            })
+            self.last_cycle = cycle_summary(cycle, scenario=shift.label, labels_available=with_labels,
+                                            model_before=before, registry=self.registry,
+                                            test_after=evaluate(self.registry.active_model, test_X, test_y))
             return self.last_cycle
 
     def approve(self, approver: str = "reviewer") -> dict:
