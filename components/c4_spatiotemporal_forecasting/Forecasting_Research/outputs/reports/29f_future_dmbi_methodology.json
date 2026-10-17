@@ -1,0 +1,33 @@
+{
+  "step": "29F",
+  "name": "Future DMBI CRITIC-TOPSIS Prioritization 2026-2030",
+  "frozen_critic_weights_from_2024": {
+    "C1": 0.3922058327854648,
+    "C2": 0.2592156903194405,
+    "C3": 0.3485784768950947
+  },
+  "future_weight_recalculation": false,
+  "future_actual_outcomes_used": false,
+  "decision_matrix": "One target-month x horizon matrix; 25 districts x 3 burden criteria.",
+  "normalization": "Min-max normalization within each 25-district matrix.",
+  "topsis": {
+    "criterion_direction": "All criteria are benefit-type for planning priority.",
+    "positive_ideal": "Maximum weighted normalized criterion value.",
+    "negative_ideal": "Minimum weighted normalized criterion value.",
+    "distance": "Euclidean",
+    "closeness": "D_minus/(D_plus+D_minus)",
+    "dmbi_score": "TOPSIS closeness x 100",
+    "ranking": "Descending; rank 1 = highest relative planning priority."
+  },
+  "priority_levels": {
+    "Low": "<25th percentile",
+    "Medium": "25th to <50th percentile",
+    "High": "50th to <75th percentile",
+    "Critical": ">=75th percentile; highest relative planning priority only"
+  },
+  "next_steps": [
+    "Step 30 GIS priority map",
+    "Step 31 resource demand estimation",
+    "Step 32 early-warning alerts"
+  ]
+}

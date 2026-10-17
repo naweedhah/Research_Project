@@ -1,0 +1,1013 @@
+[
+  {
+    "district": "Anuradhapura",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3
+    ],
+    "message": "Critical future malnutrition planning risk detected for Anuradhapura.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 143,
+        "dmbi_score": 54.77080173225089,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 986
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 143,
+        "dmbi_score": 46.52778541212667,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 985
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 132,
+        "dmbi_score": 44.38612690083029,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 907
+      }
+    }
+  },
+  {
+    "district": "Badulla",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Badulla.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 149,
+        "dmbi_score": 57.22256587010782,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1007
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 147,
+        "dmbi_score": 44.31439269270698,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 998
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 140,
+        "dmbi_score": 49.44771687074004,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 950
+      }
+    }
+  },
+  {
+    "district": "Batticaloa",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3
+    ],
+    "message": "Critical future malnutrition planning risk detected for Batticaloa.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 109,
+        "dmbi_score": 48.17236476201936,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1630
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 104,
+        "dmbi_score": 61.91387740834202,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1564
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 90,
+        "dmbi_score": 39.22507241726571,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1345
+      }
+    }
+  },
+  {
+    "district": "Gampaha",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Gampaha.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 207,
+        "dmbi_score": 55.56267382121518,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 2020
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 211,
+        "dmbi_score": 58.53660780600848,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 2058
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 189,
+        "dmbi_score": 52.72128543203998,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1845
+      }
+    }
+  },
+  {
+    "district": "Kandy",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Kandy.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 196,
+        "dmbi_score": 58.814463453802325,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1297
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 195,
+        "dmbi_score": 55.79375092244244,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1291
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 173,
+        "dmbi_score": 46.34532478597574,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1144
+      }
+    }
+  },
+  {
+    "district": "Kurunegala",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Kurunegala.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 226,
+        "dmbi_score": 66.16650179752286,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1481
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 229,
+        "dmbi_score": 62.61781667569175,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1505
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 209,
+        "dmbi_score": 55.43524956800808,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1370
+      }
+    }
+  },
+  {
+    "district": "Monaragala",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Monaragala.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 83,
+        "dmbi_score": 51.24212065854932,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 767
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 91,
+        "dmbi_score": 54.744751319722205,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 847
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 82,
+        "dmbi_score": 54.99727253260528,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 762
+      }
+    }
+  },
+  {
+    "district": "Nuwara Eliya",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Nuwara Eliya.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 174,
+        "dmbi_score": 63.25027636400985,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1427
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 171,
+        "dmbi_score": 52.79783367614308,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1403
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 156,
+        "dmbi_score": 56.544692991664135,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1285
+      }
+    }
+  },
+  {
+    "district": "Polonnaruwa",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Polonnaruwa.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 72,
+        "dmbi_score": 54.843591547498285,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 807
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 73,
+        "dmbi_score": 43.8085279659944,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 823
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 73,
+        "dmbi_score": 48.67380871264916,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 824
+      }
+    }
+  },
+  {
+    "district": "Ratnapura",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Ratnapura.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 163,
+        "dmbi_score": 47.60635308505361,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1583
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 157,
+        "dmbi_score": 42.93839375709613,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1524
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 153,
+        "dmbi_score": 50.33629936511853,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1486
+      }
+    }
+  },
+  {
+    "district": "Trincomalee",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Trincomalee.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 95,
+        "dmbi_score": 48.47587928992333,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 682
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 94,
+        "dmbi_score": 63.09274069482008,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 673
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 82,
+        "dmbi_score": 45.984312917980006,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 588
+      }
+    }
+  },
+  {
+    "district": "Colombo",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 3,
+    "nearest_warning_month": "2027-01",
+    "nearest_warning_month_display": "January 2027",
+    "triggered_horizons": [
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Colombo.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 153,
+        "dmbi_score": 47.31627143883061,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1893
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 154,
+        "dmbi_score": 46.691979874164495,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1901
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 151,
+        "dmbi_score": 54.97574837688567,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1869
+      }
+    }
+  },
+  {
+    "district": "Matale",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "CRITICAL",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 3,
+    "nearest_warning_month": "2027-01",
+    "nearest_warning_month_display": "January 2027",
+    "triggered_horizons": [
+      3,
+      6
+    ],
+    "message": "Critical future malnutrition planning risk detected for Matale.",
+    "action": "Immediate district-level planning attention is recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 79,
+        "dmbi_score": 45.347272025525285,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 646
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 82,
+        "dmbi_score": 47.001980410416095,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 670
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "CRITICAL",
+        "warning_triggered": true,
+        "predicted_cases": 82,
+        "dmbi_score": 51.06269970076964,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 667
+      }
+    }
+  },
+  {
+    "district": "Ampara",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "HIGH",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3
+    ],
+    "message": "High future malnutrition planning risk detected for Ampara.",
+    "action": "Early planning attention and resource preparedness are recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 118,
+        "dmbi_score": 47.43322522007302,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1736
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 115,
+        "dmbi_score": 45.29590312495035,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1701
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 99,
+        "dmbi_score": 32.447732705270674,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1456
+      }
+    }
+  },
+  {
+    "district": "Puttalam",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "HIGH",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 1,
+    "nearest_warning_month": "2026-11",
+    "nearest_warning_month_display": "November 2026",
+    "triggered_horizons": [
+      1,
+      3
+    ],
+    "message": "High future malnutrition planning risk detected for Puttalam.",
+    "action": "Early planning attention and resource preparedness are recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 122,
+        "dmbi_score": 49.051939746304,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1212
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 123,
+        "dmbi_score": 51.71839169222405,
+        "uncertainty_level": "Low Uncertainty",
+        "confidence_label": "Higher Confidence",
+        "triposha_packets": 1227
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 110,
+        "dmbi_score": 37.43788701134385,
+        "uncertainty_level": "Moderate Uncertainty",
+        "confidence_label": "Moderate Confidence",
+        "triposha_packets": 1092
+      }
+    }
+  },
+  {
+    "district": "Mannar",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "HIGH",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 3,
+    "nearest_warning_month": "2027-01",
+    "nearest_warning_month_display": "January 2027",
+    "triggered_horizons": [
+      3
+    ],
+    "message": "High future malnutrition planning risk detected for Mannar.",
+    "action": "Early planning attention and resource preparedness are recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 23,
+        "dmbi_score": 37.83520269914838,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 523
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 22,
+        "dmbi_score": 45.56357122137156,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 494
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "MEDIUM",
+        "warning_triggered": false,
+        "predicted_cases": 21,
+        "dmbi_score": 36.11346258118965,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 468
+      }
+    }
+  },
+  {
+    "district": "Kilinochchi",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "HIGH",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 6,
+    "nearest_warning_month": "2027-04",
+    "nearest_warning_month_display": "April 2027",
+    "triggered_horizons": [
+      6
+    ],
+    "message": "High future malnutrition planning risk detected for Kilinochchi.",
+    "action": "Early planning attention and resource preparedness are recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 23,
+        "dmbi_score": 29.160130616013696,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 249
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 21,
+        "dmbi_score": 25.78754917329949,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 225
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 20,
+        "dmbi_score": 47.823936029400286,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 214
+      }
+    }
+  },
+  {
+    "district": "Mullaitivu",
+    "forecast_origin": "2026-10-01",
+    "overall_severity": "HIGH",
+    "warning_triggered": true,
+    "nearest_warning_horizon": 6,
+    "nearest_warning_month": "2027-04",
+    "nearest_warning_month_display": "April 2027",
+    "triggered_horizons": [
+      6
+    ],
+    "message": "High future malnutrition planning risk detected for Mullaitivu.",
+    "action": "Early planning attention and resource preparedness are recommended.",
+    "horizons": {
+      "h1": {
+        "horizon": 1,
+        "target_date": "2026-11-01",
+        "target_month": "2026-11",
+        "target_month_display": "November 2026",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 24,
+        "dmbi_score": 26.7557525993324,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 238
+      },
+      "h3": {
+        "horizon": 3,
+        "target_date": "2027-01-01",
+        "target_month": "2027-01",
+        "target_month_display": "January 2027",
+        "priority": "LOW",
+        "warning_triggered": false,
+        "predicted_cases": 19,
+        "dmbi_score": 34.82361300106708,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 188
+      },
+      "h6": {
+        "horizon": 6,
+        "target_date": "2027-04-01",
+        "target_month": "2027-04",
+        "target_month_display": "April 2027",
+        "priority": "HIGH",
+        "warning_triggered": true,
+        "predicted_cases": 19,
+        "dmbi_score": 45.32169486496728,
+        "uncertainty_level": "High Uncertainty",
+        "confidence_label": "Lower Confidence",
+        "triposha_packets": 187
+      }
+    }
+  }
+]

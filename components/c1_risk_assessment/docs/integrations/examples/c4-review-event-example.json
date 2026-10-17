@@ -1,0 +1,18 @@
+{
+  "contract_version": "1.0",
+  "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  "event_type": "c1.clinician_review.completed",
+  "occurred_at": "2026-08-26T10:10:00+00:00",
+  "correlation_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  "prediction_id": "55555555-5555-4555-8555-555555555555",
+  "visit_id": "44444444-4444-4444-8444-444444444444",
+  "pseudonymous_child_id": "C-1005",
+  "clinician_review": {
+    "assessment": "AGREE",
+    "clinician_status": null,
+    "clinician_severity": null,
+    "workflow_action": "REQUEST_INTERVENTION_REASSESSMENT",
+    "reviewed_at": "2026-08-26T10:10:00+00:00"
+  },
+  "model_version": "MCA-DEMO-1.0"
+}

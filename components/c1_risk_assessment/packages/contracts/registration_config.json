@@ -1,0 +1,43 @@
+{
+  "disclaimer": "Synthetic Demonstration Data — demo care teams and districts for prototype only.",
+  "care_teams": [
+    "Paediatric Clinic",
+    "Nutrition Clinic",
+    "Child Health Clinic",
+    "Community Nutrition Unit"
+  ],
+  "caregiver_relationships": ["Mother", "Father", "Guardian", "Other"],
+  "districts": [
+    "Colombo",
+    "Gampaha",
+    "Kalutara",
+    "Kandy",
+    "Matale",
+    "Nuwara Eliya",
+    "Galle",
+    "Matara",
+    "Hambantota",
+    "Jaffna",
+    "Kilinochchi",
+    "Mannar",
+    "Vavuniya",
+    "Mullaitivu",
+    "Batticaloa",
+    "Ampara",
+    "Trincomalee",
+    "Kurunegala",
+    "Puttalam",
+    "Anuradhapura",
+    "Polonnaruwa",
+    "Badulla",
+    "Monaragala",
+    "Ratnapura",
+    "Kegalle"
+  ],
+  "moh_areas": {
+    "Colombo": ["Colombo MOH-01", "Colombo MOH-02", "Colombo MOH-03"],
+    "Kandy": ["Kandy MOH-01", "Kandy MOH-02"],
+    "Galle": ["Galle MOH-01", "Galle MOH-02"],
+    "default": ["MOH Area — configure in deployment"]
+  }
+}

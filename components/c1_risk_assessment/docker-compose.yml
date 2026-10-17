@@ -1,0 +1,138 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cnip-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cnip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cnip_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-cnip}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cnip} -d ${POSTGRES_DB:-cnip}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cnip-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    container_name: cnip-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://cnip:cnip_dev_password@postgres:5432/cnip
+      REDIS_URL: redis://redis:6379/0
+      INFERENCE_URL: http://inference:8001
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./packages/contracts:/contracts:ro
+      - ./services/api/app:/app/app:ro
+      - ./services/inference/app/malnutrition_type.py:/opt/ga_rgca/malnutrition_type.py:ro
+      - ./ml:/ml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  inference:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/inference.Dockerfile
+    container_name: cnip-inference
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MODEL_MODE: ${MODEL_MODE:-demo}
+      MODEL_ARTIFACT_PATH: /artifacts/active
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./packages/contracts:/contracts:ro
+      - ./services/inference/app:/app/app:ro
+      - ./ml:/ml:ro
+      - ./ml/artifacts/ga_rgca_v3:/artifacts/ga-rgca:ro
+      - inference_artifacts:/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    container_name: cnip-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://cnip:cnip_dev_password@postgres:5432/cnip
+      REDIS_URL: redis://redis:6379/0
+      INFERENCE_URL: http://inference:8001
+    command: celery -A workers.alerts.celery_app worker -B --loglevel=info
+    volumes:
+      - ./packages/contracts:/contracts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "workers.alerts.celery_app", "inspect", "ping"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
+    container_name: cnip-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  inference_artifacts:

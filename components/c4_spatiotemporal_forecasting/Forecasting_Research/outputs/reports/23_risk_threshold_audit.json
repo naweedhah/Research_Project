@@ -1,0 +1,24 @@
+{
+    "step": 23,
+    "purpose": "District risk classification and prioritization",
+    "historical_threshold_period": "2015-2023",
+    "historical_target": "Malnutrition_Cases",
+    "historical_rows_used": 2664,
+    "low_quantile": 0.33,
+    "high_quantile": 0.67,
+    "low_threshold": 113.0,
+    "high_threshold": 201.0,
+    "risk_rule": {
+        "LOW": "Prediction <= 113.000000",
+        "MEDIUM": "113.000000 < Prediction <= 201.000000",
+        "HIGH": "Prediction > 201.000000"
+    },
+    "priority_rule": "Rank districts within each horizon and target month by descending predicted malnutrition count",
+    "methodology_protection": [
+        "2025 actual targets were not used to calculate thresholds",
+        "Step 21 predictions were used unchanged",
+        "No model training was performed",
+        "No tuning was performed",
+        "No model reselection was performed"
+    ]
+}

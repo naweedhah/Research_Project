@@ -36,6 +36,30 @@ maternal-and-child-health workflow (MOH / PHM). The project has four complementa
   [component3/interfaces.py](components/c3_reliability_maintenance/component3/interfaces.py).
 - **C4** forecasts area-level burden from the same data sources.
 
+## Running the integrated system
+
+One API server holds every component's backend (58 endpoints; docs at http://localhost:8000/docs):
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export C3_DATA_DIR=/path/to/clean_malnutrition_data   # Component 3's real data (never committed)
+uvicorn app.main:app --reload --port 8000
+```
+
+| Prefix | Component | Status endpoint |
+|---|---|---|
+| `/risk` | C1 risk assessment | `/risk/status` |
+| `/interventions` | C2 counterfactual interventions | `/interventions/status` |
+| `/maintenance` | C3 reliability monitoring and maintenance | `/maintenance/status`, `/maintenance/live/status` |
+| `/forecast` | C4 burden forecasting | `/forecast/status` |
+| `/auth`, `/email`, `/ai` | Shared login, warning e-mails, assistant | — |
+
+User accounts and sent-email logs are created in `backend/data/` at runtime and are not committed.
+Component 1's clinical app (Next.js web app + its own API) lives in `components/c1_risk_assessment/` and runs
+separately (see its README); its API defaults to port 8000 too, so run it on another port alongside this server.
+
 ## Working in this repo
 
 - Work inside your own component folder, plus your own router in `backend/` and page in `frontend/`. Do not edit another member's part without agreeing first.

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cnip.local/contracts/integrations/c1-c4-clinician-review-observation.v1.json",
+  "title": "C1→C4 Clinician Review Observation v1",
+  "type": "object",
+  "required": ["contract_version", "event_id", "event_type", "occurred_at", "prediction_id", "visit_id", "pseudonymous_child_id", "clinician_review", "model_version"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "const": "c1.clinician_review.completed" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "prediction_id": { "type": "string", "format": "uuid" },
+    "visit_id": { "type": "string", "format": "uuid" },
+    "pseudonymous_child_id": { "type": "string" },
+    "clinician_review": { "type": "object" },
+    "model_version": { "type": "string" }
+  },
+  "additionalProperties": false
+}

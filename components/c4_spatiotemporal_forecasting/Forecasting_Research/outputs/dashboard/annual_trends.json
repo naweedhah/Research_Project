@@ -1,0 +1,68 @@
+[
+  {
+    "year": 2015,
+    "total_cases": 55230.0,
+    "mean_district_month_cases": 184.1,
+    "available_observations": 300
+  },
+  {
+    "year": 2016,
+    "total_cases": 54330.0,
+    "mean_district_month_cases": 181.1,
+    "available_observations": 300
+  },
+  {
+    "year": 2017,
+    "total_cases": 52671.0,
+    "mean_district_month_cases": 175.57,
+    "available_observations": 300
+  },
+  {
+    "year": 2018,
+    "total_cases": 51637.0,
+    "mean_district_month_cases": 172.12333333333333,
+    "available_observations": 300
+  },
+  {
+    "year": 2019,
+    "total_cases": 49497.0,
+    "mean_district_month_cases": 171.86458333333334,
+    "available_observations": 288
+  },
+  {
+    "year": 2020,
+    "total_cases": 45837.0,
+    "mean_district_month_cases": 159.15625,
+    "available_observations": 288
+  },
+  {
+    "year": 2021,
+    "total_cases": 41845.0,
+    "mean_district_month_cases": 145.29513888888889,
+    "available_observations": 288
+  },
+  {
+    "year": 2022,
+    "total_cases": 39281.0,
+    "mean_district_month_cases": 130.93666666666667,
+    "available_observations": 300
+  },
+  {
+    "year": 2023,
+    "total_cases": 42366.0,
+    "mean_district_month_cases": 141.22,
+    "available_observations": 300
+  },
+  {
+    "year": 2024,
+    "total_cases": 38908.0,
+    "mean_district_month_cases": 129.69333333333333,
+    "available_observations": 300
+  },
+  {
+    "year": 2025,
+    "total_cases": 33979.0,
+    "mean_district_month_cases": 113.26333333333334,
+    "available_observations": 300
+  }
+]

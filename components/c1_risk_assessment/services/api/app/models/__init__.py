@@ -1,0 +1,52 @@
+from app.models.identity import Facility, LoginAttempt, Organization, RefreshToken, User
+from app.models.intelligence import (
+    CalibrationVersion,
+    ClinicalPolicyVersion,
+    ExperimentRun,
+    LatentEmbedding,
+    ModelVersion,
+    Prediction,
+    ProjectionVersion,
+    TrajectoryMetric,
+)
+from app.models.operations import Alert, AuditLog, ClinicalNote, ClinicianReview, C3ReassessmentRequest, FollowUpSchedule, IntegrationEvent, Notification
+from app.models.paediatric import (
+    AnthropometricRecord,
+    Caregiver,
+    Child,
+    DietaryRecord,
+    MaternalChildHealthRecord,
+    SocioeconomicRecord,
+    Visit,
+)
+
+__all__ = [
+    "Organization",
+    "Facility",
+    "User",
+    "RefreshToken",
+    "LoginAttempt",
+    "Child",
+    "Caregiver",
+    "Visit",
+    "AnthropometricRecord",
+    "SocioeconomicRecord",
+    "DietaryRecord",
+    "MaternalChildHealthRecord",
+    "ModelVersion",
+    "CalibrationVersion",
+    "ProjectionVersion",
+    "ClinicalPolicyVersion",
+    "Prediction",
+    "LatentEmbedding",
+    "TrajectoryMetric",
+    "ExperimentRun",
+    "Alert",
+    "FollowUpSchedule",
+    "ClinicalNote",
+    "ClinicianReview",
+    "C3ReassessmentRequest",
+    "AuditLog",
+    "Notification",
+    "IntegrationEvent",
+]

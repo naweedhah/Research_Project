@@ -1,0 +1,27 @@
+{
+  "step": "31",
+  "name": "Future GIS District Priority Mapping",
+  "future_period": "2026-01 to 2030-12",
+  "boundary_input": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\data\\raw\\boundary\\geoBoundaries-LKA-ADM2.geojson",
+  "forecast_input": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\30_future_district_risk_prioritization.csv",
+  "boundary_level": "Sri Lanka ADM2 / district",
+  "expected_districts": 25,
+  "output_crs": "EPSG:4326",
+  "dashboard_design": "Use the standardized 25-district boundary GeoJSON once, then dynamically join/filter the 4325-row forecast CSV by District + Forecast_Target_Date + Horizon_Months.",
+  "semantics": {
+    "RF_Predicted_Cases": "Final Random Forest point forecast",
+    "DMBI_Score": "Relative forecast-derived planning priority",
+    "Priority_Level": "Low/Medium/High/Critical relative planning-priority tier; not clinical emergency classification",
+    "NGBoost_95_range": "Probabilistic NGBoost 95% prediction interval; not 95% accuracy/certainty",
+    "Uncertainty_Level": "Low/Moderate/High forecast uncertainty"
+  },
+  "recalculation_policy": {
+    "random_forest_retrained": false,
+    "ngboost_recalibrated": false,
+    "critic_recalculated": false,
+    "topsis_rerun": false,
+    "dmbi_recalculated": false,
+    "priority_recalculated": false
+  },
+  "next_step": "Step 32 Resource Demand Estimation"
+}

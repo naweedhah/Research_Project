@@ -1,0 +1,59 @@
+{
+  "disclaimer": "Synthetic Demonstration Data. Not for clinical use.",
+  "organizations": [
+    {
+      "code": "MOH-DEMO",
+      "name": "Ministry of Health Demonstration Network",
+      "type": "government"
+    }
+  ],
+  "facilities": [
+    {
+      "code": "CCHC-04",
+      "name": "Colombo Child Health Clinic",
+      "district": "Colombo",
+      "type": "clinic",
+      "organization_code": "MOH-DEMO"
+    },
+    {
+      "code": "KMCC-01",
+      "name": "Kandy Maternal and Child Clinic",
+      "district": "Kandy",
+      "type": "clinic",
+      "organization_code": "MOH-DEMO"
+    },
+    {
+      "code": "GCNU-02",
+      "name": "Galle Community Nutrition Unit",
+      "district": "Galle",
+      "type": "community_unit",
+      "organization_code": "MOH-DEMO"
+    }
+  ],
+  "users": [
+    {
+      "email": "doctor@demo.local",
+      "full_name": "Prof. Pujitha Wickramasinghe",
+      "qualifications": "MBBS(Col), DCH(Col), MD(Paed), PhD(Col)",
+      "experience": "Senior Professor in Paediatrics, University of Colombo, and Honorary Consultant Paediatrician at Lady Ridgeway Hospital for Children. Trained in paediatric gastroenterology and clinical nutrition at the Royal Children's Hospital and Children's Nutrition Research Centre, Brisbane.",
+      "role": "doctor",
+      "facility_code": "CCHC-04"
+    },
+    {
+      "email": "doctor@gmail.com",
+      "full_name": "Prof. Shamya de Silva",
+      "qualifications": "MBBS(Col), MD(Paed), DCH(Col), FSLCP, FCCP, FSLCE",
+      "experience": "Professor in Paediatrics, University of Colombo, and Honorary Consultant Paediatrician at the University Unit, Lady Ridgeway Hospital since 1991. Established the first Endocrine Clinic at Lady Ridgeway Hospital in 2001 and the Obesity and Diabetes Clinic in 2004.",
+      "role": "doctor",
+      "facility_code": "CCHC-04"
+    },
+    {
+      "email": "doctor.kandy@demo.local",
+      "full_name": "Prof. A.H.H.M. Jayaweera",
+      "qualifications": "MBBS(SL), MD(Col), DCH(Col), FRCPCH(UK)",
+      "experience": "Professor in Paediatrics, University of Peradeniya, and Consultant Paediatrician at the Teaching Hospital, Peradeniya. Board certified in 2011, with a special interest in growth, nutrition, gastroenterology, and renal disorders.",
+      "role": "doctor",
+      "facility_code": "KMCC-01"
+    }
+  ]
+}

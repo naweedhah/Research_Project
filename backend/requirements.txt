@@ -1,2 +1,19 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
+python-dotenv>=1.0
+
+# Shared: login (Component 4's auth service) and warning-report PDFs/emails
+pwdlib[argon2]>=0.2
+PyJWT>=2.8
+email-validator>=2.0
+reportlab>=4.0
+
+# Component 2 (counterfactual interventions)
+dice-ml==0.12
+httpx>=0.27
+
+# Component 3 (model reliability and maintenance)
+numpy>=1.26
+pandas>=2.0
+scikit-learn>=1.3
+scipy>=1.11

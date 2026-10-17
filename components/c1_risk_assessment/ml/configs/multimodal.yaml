@@ -1,0 +1,73 @@
+experiment_name: multimodal_cross_attention
+seed: 42
+task: current_status
+feature_set: current_status
+label_schema: packages/contracts/label_schema.yaml
+embedding_dim: 128  # configurable: 64 | 128
+num_heads: 4
+dropout: 0.1
+
+data:
+  path: ml/data/synthetic/visits.csv
+  group_column: child_id
+  time_column: visit_date
+
+split:
+  strategy: group_aware
+  test_size: 0.2
+  val_size: 0.15
+  stratified: true
+
+modalities:
+  anthropometric:
+    encoder: mlp
+    input_dim: 7
+  socioeconomic:
+    encoder: mlp
+    input_dim: 8
+  dietary:
+    encoder: mlp  # mlp | tabnet_style
+    input_dim: 10
+  maternal_child_health:
+    encoder: mlp
+    input_dim: 7
+
+fusion:
+  type: learnable_query_cross_attention
+  notes: >
+    Learnable fusion token attends over four modality embeddings.
+    This is a technically defensible cross-modal design; superiority
+    vs concatenation MLP is an empirical question, not a claim.
+
+heads:
+  status: 4
+  severity: 4
+  risk: 1
+
+training:
+  epochs: 40
+  batch_size: 32
+  lr: 0.0008
+  weight_decay: 0.0001
+  loss:
+    status: weighted_cross_entropy
+    severity: weighted_cross_entropy
+    risk: bce
+    focal_gamma: 2.0
+    use_focal: false
+
+imbalance:
+  strategy: class_weight
+
+calibration:
+  method: temperature_scaling
+
+ablation:
+  - full
+  - no_anthropometric
+  - no_socioeconomic
+  - no_dietary
+  - no_maternal_health
+  - no_cross_attention
+
+output_dir: ml/artifacts/multimodal

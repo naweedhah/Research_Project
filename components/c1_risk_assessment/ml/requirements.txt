@@ -1,0 +1,13 @@
+numpy>=2.0
+pandas>=2.2
+scikit-learn>=1.5
+xgboost>=2.1
+lightgbm>=4.5
+torch>=2.4
+umap-learn>=0.5.7
+joblib>=1.4
+pyyaml>=6.0
+matplotlib>=3.9
+imbalanced-learn>=0.13
+pytest>=8.3
+ruff>=0.8

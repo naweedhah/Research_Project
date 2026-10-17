@@ -1,0 +1,35 @@
+# Development default label schema.
+# Dependent on the final research label definition. Not clinically validated.
+schema_version: "dev-2026-001"
+status: research_development
+notes: >
+  These classes are a configurable development default.
+  They must not be treated as WHO diagnostic categories.
+
+status_classes:
+  - id: normal
+    label: Normal
+  - id: stunting
+    label: Stunting
+  - id: wasting
+    label: Wasting
+  - id: underweight
+    label: Underweight
+
+severity_classes:
+  - id: none
+    label: None
+  - id: mild
+    label: Mild
+  - id: moderate
+    label: Moderate
+  - id: severe
+    label: Severe
+
+confidence_classes:
+  - id: low
+    label: Low
+  - id: moderate
+    label: Moderate
+  - id: high
+    label: High

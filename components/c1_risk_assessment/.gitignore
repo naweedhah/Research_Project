@@ -1,0 +1,56 @@
+# Secrets
+.env
+.env.local
+.env.production
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+yarn-error.log*
+
+# ML artifacts (keep directory, ignore weights)
+ml/artifacts/**
+!ml/artifacts/.gitkeep
+services/inference/artifacts/**
+!services/inference/artifacts/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test
+playwright-report/
+test-results/
+coverage/
+
+# Generated
+*.onnx
+*.pt
+*.pth
+*.joblib
+!ml/experiments/.gitkeep

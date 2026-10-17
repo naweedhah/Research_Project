@@ -1,0 +1,39 @@
+{
+  "step": "28B",
+  "name": "Future SHAP domain-level explanation",
+  "period": "2026-2030",
+  "purpose": "Convert existing feature-level Random Forest SHAP values into doctor-friendly domain-level explanations.",
+  "input_files": {
+    "feature_level_shap": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_rf_shap_values_long.csv",
+    "explainable_forecasts": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28_future_explainable_forecasts_2026_2030.csv"
+  },
+  "model_retraining": false,
+  "ngboost_retraining": false,
+  "shap_recalculation": false,
+  "domain_aggregation": {
+    "net_contribution": "sum of signed SHAP values inside each domain",
+    "absolute_influence": "sum of absolute SHAP values inside each domain",
+    "positive_component": "sum of positive SHAP values inside each domain",
+    "negative_component": "sum of negative SHAP values inside each domain"
+  },
+  "domains": [
+    "Historical Malnutrition Burden",
+    "Child Nutrition Status",
+    "Child & Demographic Health",
+    "Maternal Health",
+    "Nutrition Programmes & Services",
+    "Climate & Environment",
+    "Socioeconomic Conditions",
+    "District & Geographic Context",
+    "Seasonality & Time",
+    "Other Model Inputs"
+  ],
+  "interpretation": "Positive domain net SHAP pushes the Random Forest prediction above its SHAP baseline; negative domain net SHAP pushes it below the baseline. These values describe model behaviour and do not establish causality. The 25 one-hot encoded district indicators are grouped under District & Geographic Context and must not be interpreted as modifiable causal risk factors.",
+  "backend_month_selection_note": "Doctor-selected month should be treated as the H1 target month. Backend derives common origin = selected month - 1 month, then returns H1=origin+1, H3=origin+3 and H6=origin+6. Step 28B itself does not change forecast dates.",
+  "outputs": {
+    "domain_contributions_long": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28b_future_shap_domain_contributions_long.csv",
+    "forecast_explanations": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28b_future_shap_domain_explanations_2026_2030.csv",
+    "feature_domain_mapping": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28b_shap_feature_domain_mapping.csv",
+    "audit": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\28b_future_shap_domain_audit.csv"
+  }
+}
