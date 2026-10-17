@@ -10,6 +10,7 @@ reportlab>=4.0
 
 # Component 2 (counterfactual interventions)
 dice-ml==0.12
+httpx>=0.27
 
 # Component 3 (model reliability and maintenance)
 numpy>=1.26
