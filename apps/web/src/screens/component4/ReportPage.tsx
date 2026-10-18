@@ -84,14 +84,16 @@ function progressLabel(state?: string) {
 }
 
 export default function ReportPage() {
-  const { childId } = useParams<{ childId: string }>();
+  const childId = useParams<{ childId: string }>()?.childId ?? "";
   const { data, isLoading, error } = useQuery({
     queryKey: ["report", childId],
     queryFn: () => api<Report>(`/children/${childId}/report`),
+    enabled: childId.length > 0,
   });
   const profile = useQuery({
     queryKey: ["child", childId],
     queryFn: () => api<ChildProfile>(`/children/${childId}`),
+    enabled: childId.length > 0,
   });
 
   if (isLoading) return <Skeleton className="h-96" />;

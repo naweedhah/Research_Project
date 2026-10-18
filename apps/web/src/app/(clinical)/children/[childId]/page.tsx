@@ -1,1 +1,1 @@
-export { default } from "@/pages/component4/ChildProfilePage";
+export { default } from "@/screens/component4/ChildProfilePage";

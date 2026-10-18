@@ -1,1 +1,1 @@
-export { default } from "@/pages/component4/NotificationsPage";
+export { default } from "@/screens/component4/NotificationsPage";

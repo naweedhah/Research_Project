@@ -32,7 +32,7 @@ def system_health(db: Session = Depends(get_db), current=Depends(require_permiss
     try:
         import redis
 
-        redis_ok = redis.Redis.from_url(settings.redis_url).ping()
+        redis_ok = bool(redis.Redis.from_url(settings.redis_url, socket_connect_timeout=0.5).ping())
     except Exception:  # noqa: BLE001
         redis_ok = False
 
@@ -47,9 +47,9 @@ def system_health(db: Session = Depends(get_db), current=Depends(require_permiss
     return {
         "api": "ok",
         "database": "ok" if db_ok else "error",
-        "redis": "ok" if redis_ok else "error",
+        "redis": "ok" if redis_ok else "optional",
         "inference": inference,
-        "worker": "configured",
+        "worker": "optional",
         "active_model": None
         if not active
         else {

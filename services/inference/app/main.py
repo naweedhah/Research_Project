@@ -235,8 +235,18 @@ class OnnxModelAdapter:
 GA_MODEL, GA_LOAD_ERROR = load_ga_rgca()
 
 
+def _model_family() -> str:
+    """Accept only the two explicit trained versions. Anything else stays unloaded."""
+    key = settings.c1_model_version.strip().lower()
+    if key == "ga_rgca_v4_rsl":
+        return "v4"
+    if key == "ga_rgca_v3":
+        return "v3"
+    return "invalid"
+
+
 def _v4_selected() -> bool:
-    return settings.c1_model_version.strip().lower() in {"ga_rgca_v4_rsl", "ga-rgca-v4-rolling-rsl"}
+    return _model_family() == "v4"
 
 
 V4_MODEL, V4_LOAD_ERROR = load_ga_rgca_v4() if _v4_selected() else (None, None)
@@ -403,25 +413,55 @@ class GaRgcaV4Adapter:
         )
 
 
+class UnavailableModelAdapter:
+    """Fail closed. Unknown versions never fall back to v3 or the demo scorer."""
+
+    name = "UNCONFIGURED"
+
+    def predict(self, req: PredictRequest) -> PredictionResult:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "MODEL_NOT_AVAILABLE",
+                "message": (
+                    "C1_MODEL_VERSION must be ga_rgca_v4_rsl or ga_rgca_v3. "
+                    f"Received {settings.c1_model_version!r}. No demo score was substituted."
+                ),
+                "prediction_source": None,
+            },
+        )
+
+
 def get_adapter():
-    if _v4_selected():
+    family = _model_family()
+    if family == "v4":
         return GaRgcaV4Adapter()
-    mode = settings.model_mode.lower()
-    path = settings.model_artifact_path
-    if mode == "sklearn":
-        return SklearnModelAdapter(path)
-    if mode == "onnx":
-        return OnnxModelAdapter(path)
-    if mode == "pytorch" and GA_MODEL is None:
-        return PyTorchMultimodalAdapter(path)
-    return GaRgcaAdapter()
+    if family == "v3":
+        return GaRgcaAdapter()
+    return UnavailableModelAdapter()
 
 
 ADAPTER = get_adapter()
 
 
+def _invalid_model_payload() -> dict:
+    return {
+        "status": "misconfigured",
+        "service": "inference",
+        "c1_model_version": settings.c1_model_version,
+        "mode": "invalid",
+        "active_model": None,
+        "model_loaded": False,
+        "ga_rgca_loaded": False,
+        "demo": False,
+        "error": "C1_MODEL_VERSION must be ga_rgca_v4_rsl or ga_rgca_v3",
+    }
+
+
 @app.get("/health")
 def health():
+    if _model_family() == "invalid":
+        return _invalid_model_payload()
     if _v4_selected():
         loaded = V4_MODEL is not None
         return {
@@ -449,6 +489,8 @@ def health():
 
 @app.get("/model-info")
 def model_info():
+    if _model_family() == "invalid":
+        return _invalid_model_payload()
     if _v4_selected():
         loaded = V4_MODEL is not None
         weights = V4_MODEL.policy["stack_weights"] if loaded else None

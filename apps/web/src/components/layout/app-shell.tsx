@@ -92,10 +92,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ul className="space-y-1">
             {NAV.map((item) => {
               const href = item.href;
+              const currentPath = pathname ?? "";
               const active =
                 item.href === "/children"
-                  ? pathname.startsWith("/children")
-                  : pathname.startsWith(item.href);
+                  ? currentPath.startsWith("/children")
+                  : currentPath.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <li key={item.href}>

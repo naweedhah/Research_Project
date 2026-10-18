@@ -39,6 +39,21 @@ describe("clinic board grouping", () => {
     expect(groups.undernourishedTodayDifferentPrediction).toHaveLength(0);
   });
 
+  it("uses the latest visit age, not today's age, for the WHO assessment", () => {
+    const groups = classifyClinicBoard([
+      child({
+        id: "age",
+        pseudonymous_id: "C-AGE",
+        age_months: 60,
+        latest_visit_age_months: 24,
+        predicted_malnutrition_type: "Stunting",
+        measurements: { weight_kg: 11.8, height_cm: 78 },
+      }),
+    ]);
+    expect(groups.undernourishedTodayDifferentPrediction).toHaveLength(0);
+    expect(groups.wellTodayPredictedRisk).toHaveLength(0);
+  });
+
   it("does not list agreement between current stunting and predicted stunting", () => {
     const groups = classifyClinicBoard([
       child({

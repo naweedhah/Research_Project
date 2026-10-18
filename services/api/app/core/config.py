@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def _repo_root() -> Path:
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / "packages" / "contracts").is_dir() or (parent / "docker-compose.yml").is_file():
+        if (parent / "packages" / "contracts").is_dir() or (parent / "START_PROJECT.ps1").is_file():
             return parent
     if Path("/contracts").exists():
         return Path("/app")
@@ -29,10 +29,10 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     cors_extra_origins: str = ""
     api_url: str = "http://localhost:8000"
-    inference_url: str = "http://localhost:8001"
+    inference_url: str = "http://127.0.0.1:8001"
 
-    database_url: str = "postgresql+psycopg://cnip:cnip_dev_password@localhost:5432/cnip"
-    redis_url: str = "redis://localhost:6379/0"
+    database_url: str = "postgresql+psycopg://cnip:cnip_dev_password@127.0.0.1:5432/cnip"
+    redis_url: str = "redis://127.0.0.1:6379/0"
 
     jwt_secret: str = "change-me-access-secret-dev-only"
     jwt_refresh_secret: str = "change-me-refresh-secret-dev-only"

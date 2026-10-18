@@ -5,20 +5,21 @@ Component 1 of *Explainable AI Framework for Early Detection and Personalized In
 ## Services
 
 ```
-Browser (Next.js)
-    → FastAPI API (auth, RBAC, domain, audit)
-        → PostgreSQL
-        → Redis
-        → Inference service (adapters)
-        → Celery alert worker
+Browser (Next.js on http://localhost:3000)
+    → FastAPI API (http://127.0.0.1:8000)
+        → Local PostgreSQL (127.0.0.1:5432, database cnip)
+        → GA-RGCA v4 inference (http://127.0.0.1:8001)
         → C2 / C3 / C4 integration adapters (mock unless URL configured)
+
+Redis and the Celery alert worker are optional and are not required for the clinic demonstration.
+Start with START_PROJECT.ps1. Docker is not required.
 ```
 
 ## Clinical data flow
 
 1. Health worker records a multimodal visit (anthropometry, socioeconomic, dietary, maternal/child health).
 2. Data-quality validation uses the versioned clinical policy — not invented WHO cut-offs.
-3. Inference runs four modality encoders and multi-head cross-attention (or the demo adapter).
+3. The GA-RGCA v4 Rolling SuperLearner scores the current visit as a new 12-month origin.
 4. Heads emit status, severity and a **calibrated** risk probability.
 5. Latent vector `e_t` is stored with `embedding_space_id`.
 6. Risk Velocity and baseline recovery rate are computed against Vt-1 and V0.

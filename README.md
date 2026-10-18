@@ -1,162 +1,116 @@
 # Child Nutrition Intelligence Platform
 
-**AI-Assisted Malnutrition Risk & Progress Monitoring**
+Research decision-support prototype for a university demonstration.
+A clinician must confirm every result. This is not a medical device.
 
-Undergraduate research prototype (Component 1 · J26-IT-399).  
-**AI-assisted decision support. Clinical review required.**  
-When the demo adapter is active the UI shows **DEMO MODEL — NOT FOR CLINICAL USE**.
+Active model: **GA-RGCA-v4-Rolling-RSL**
+Prediction: rolling 12-month nutritional risk
 
-Product name lives in `packages/contracts/product.json`.
+## QUICK START
 
----
+### First time only
 
-## Architecture
+1. Install Python 3.12 from [python.org](https://www.python.org/downloads/). Tick **Add python.exe to PATH**.
+2. Install Node.js LTS from [nodejs.org](https://nodejs.org/).
+3. Install PostgreSQL 16. It is already used on this computer if the PostgreSQL service is running.
+4. In this folder, run:
 
-| Service | Role |
+```powershell
+.\SETUP_PROJECT.ps1
+```
+
+### Normal use
+
+```powershell
+.\START_PROJECT.ps1
+```
+
+Or double-click `START_PROJECT.bat`.
+
+Wait until the window says **SYSTEM READY**. The browser opens at http://localhost:3000.
+
+### Stop
+
+```powershell
+.\STOP_PROJECT.ps1
+```
+
+This stops the website, the clinical API, and the prediction service. It does not stop PostgreSQL, and it does not delete visits.
+
+### Check status
+
+```powershell
+.\CHECK_PROJECT.ps1
+```
+
+## Addresses
+
+| Part | Address |
 |---|---|
-| `apps/web` | Next.js clinical / research UI |
-| `services/api` | FastAPI domain API, auth, RBAC, audit |
-| `services/inference` | Model adapters (demo / sklearn / pytorch / onnx) |
-| `workers/alerts` | Celery beat + worker for missed follow-ups |
-| `ml/` | Training, evaluation, calibration, trajectory projection |
-| PostgreSQL + Redis | Persistence and queue |
+| Website | http://localhost:3000 |
+| Clinical API | http://127.0.0.1:8000 |
+| Prediction service | http://127.0.0.1:8001 |
+| Database | PostgreSQL on 127.0.0.1 port 5432, database `cnip` |
 
-See `docs/ARCHITECTURE.md` for data flow.
-See `docs/COMPONENT1_CONTEXT.md` for authoritative Component 1 research, clinical UX, and component-boundary specification (J26-IT-399).
+Docker is not required. Older container files are kept only as an archive in `legacy/docker` and are not used to start the project.
 
----
+## If something fails
 
-## Prerequisites
+Run `.\CHECK_PROJECT.ps1`.
 
-- Docker and Docker Compose (recommended), or
-- Node.js 22, Python 3.12, PostgreSQL 16, Redis 7
+Log files are in the `logs` folder:
 
----
+- `launcher.log`
+- `inference.log` and `inference.err.log`
+- `api.log` and `api.err.log`
+- `frontend.log` and `frontend.err.log`
 
-## Quick start (Docker)
+A short demonstration checklist is in `docs/VIVA_LAUNCH_GUIDE.md`.
 
-```bash
-cp .env.example .env
-docker compose up --build
-```
+## What starts
 
-- Web: http://localhost:3000
-- API + OpenAPI: http://localhost:8000/docs
-- Inference: http://localhost:8001/health
+Required:
 
-First boot runs `alembic upgrade head` and seeds demonstration data.
+- PostgreSQL
+- GA-RGCA v4 prediction service
+- Clinical API
+- Website
 
-### Local web dev (without rebuilding Docker web)
+Optional, and not started by the launcher:
 
-From the **repository root**:
+- Redis
+- Background alert worker
 
-```bash
-npm run dev
-```
+The clinic demonstration works when Redis and the worker are absent.
 
-Or from `apps/web` directly. The Next.js app lives in `apps/web` — there is no separate frontend at the root except the convenience scripts in root `package.json`.
+## Model files
 
-API and database should still be running via Docker:
+The active weights stay in `ml/artifacts/ga_rgca_v4_rsl/`.
+Older v3 weights stay in `ml/artifacts/ga_rgca_v3/` for rollback only.
+The launcher does not retrain the model and does not change thresholds.
 
-```bash
-docker compose up -d postgres redis api
-```
+`C1_MODEL_VERSION` must be `ga_rgca_v4_rsl` or `ga_rgca_v3`. Any other value is rejected. The default is `ga_rgca_v4_rsl`.
 
----
+## For developers
 
-## Demo accounts (development only)
+```powershell
+cd services\api
+.\.venv\Scripts\python.exe -m pytest -q
 
-Password for all seed users: `doctor123`
+cd ..\inference
+.\.venv\Scripts\python.exe -m pytest -q
 
-| Role | Email | Name |
-|---|---|---|
-| Doctor (Colombo) | doctor@demo.local | Prof. Pujitha Wickramasinghe |
-| Doctor (Colombo) | doctor@gmail.com | Prof. Shamya de Silva |
-| Doctor (Kandy) | doctor.kandy@demo.local | Prof. A.H.H.M. Jayaweera |
-
-Only doctor accounts can sign in. Non-doctor seed roles are not created in new installs.
-
-Never use these passwords in production.
-
-The seed includes **25 synthetic demonstration children** across Colombo, Kandy, and Galle facilities.
-
-Canonical demonstration child: **C-1042** (risk 82% → 61% → 59%, stagnating).
-
----
-
-## Environment
-
-Copy `.env.example`. Important keys:
-
-- `DATABASE_URL`, `REDIS_URL`
-- `JWT_SECRET`, `JWT_REFRESH_SECRET`
-- `MODEL_MODE=demo` (or `pytorch` / `sklearn` / `onnx`)
-- `MODEL_ARTIFACT_PATH`
-- `FRONTEND_URL`
-- `NOTIFICATION_PROVIDER=mock`
-
----
-
-## Database
-
-```bash
-cd services/api
-alembic upgrade head
-python -m app.seed
-```
-
----
-
-## Tests
-
-```bash
-# API
-cd services/api && pytest -q
-
-# ML
-cd ../.. && PYTHONPATH=. pytest -q ml/tests
-
-# Frontend
-npm run test
+cd ..\..\apps\web
+npm run typecheck
+npm test
 npm run build
 ```
 
-(`npm run dev`, `npm test`, etc. work from the repository root and delegate to `apps/web`.)
+Database schema updates, without deleting data:
 
----
-
-## Train models
-
-From the repository root:
-
-```bash
-python -m ml.data.make_synthetic
-python -m ml.training.train_baselines
-python -m ml.training.train_multimodal
-python -m ml.evaluation.compare_models
-python -m ml.trajectory.fit_projection
+```powershell
+cd services\api
+.\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-Configs: `ml/configs/baseline.yaml`, `multimodal.yaml`, `longitudinal.yaml`.
-
-If no experiment has been run, research pages show **No experimental result available**. Metrics are never fabricated.
-
----
-
-## Switch Demo → real model
-
-1. Train and place an artifact under `MODEL_ARTIFACT_PATH`.
-2. Set in `.env`:
-
-```text
-MODEL_MODE=pytorch
-MODEL_ARTIFACT_PATH=/artifacts/active/multimodal.pt
-```
-
-3. Restart the inference service. The frontend does not need changes. Demo badge disappears only when `mode` is not `DEMO`.
-
----
-
-## Production
-
-See `docs/DEPLOYMENT.md` and `docker-compose.prod.yml`.
+The one-time demonstration seed runs only from `SETUP_PROJECT.ps1` when the users table is empty. Starting the project does not seed again.

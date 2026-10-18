@@ -39,9 +39,11 @@ services/inference/artifacts/**
 *.swp
 .DS_Store
 
-# Logs
+# Logs, launcher process ids, and database backups
 *.log
 logs/
+.run/
+backups/
 
 # Test
 playwright-report/

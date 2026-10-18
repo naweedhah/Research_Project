@@ -657,8 +657,9 @@ def _child_profile(db: Session, child: Child) -> dict:
         if not latest_model
         else {
             "key": latest_model.model_key,
-            "version": latest_model.version,
-            "label": f"{latest_model.model_key}-{latest_model.version}",
+            "version": (_profile_ga_block(latest) or {}).get("model_version") or latest_model.version,
+            "label": (_profile_ga_block(latest) or {}).get("model_version")
+            or f"{latest_model.model_key}-{latest_model.version}",
             "architecture": latest_model.architecture,
             "embedding_dimension": latest_model.embedding_dimension,
             "embedding_space_id": latest_model.embedding_space_id,

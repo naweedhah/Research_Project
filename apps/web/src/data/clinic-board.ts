@@ -25,6 +25,7 @@ export type ClinicChildInput = {
   pseudonymous_id: string;
   full_name?: string | null;
   age_months: number;
+  latest_visit_age_months?: number | null;
   sex: string;
   last_visit?: string;
   has_assessment?: boolean;
@@ -85,7 +86,7 @@ export function predictedTypeLabel(child: ClinicChildInput): string | null {
 
 export function currentWhoAssessment(child: ClinicChildInput): WhoUndernutritionStatus | null {
   return assessWhoUndernutrition({
-    ageMonths: child.age_months,
+    ageMonths: child.latest_visit_age_months ?? child.age_months,
     sex: child.sex,
     weightKg: child.measurements?.weight_kg,
     heightCm: child.measurements?.height_cm,

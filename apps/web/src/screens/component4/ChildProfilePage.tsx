@@ -45,30 +45,32 @@ function isProfileTab(value: string | null): value is ProfileTab {
 }
 
 function ChildProfileContent() {
-  const params = useParams<{ childId: string }>();
+  const childId = useParams<{ childId: string }>()?.childId ?? "";
   const searchParams = useSearchParams();
   const router = useRouter();
   const qc = useQueryClient();
-  const justRegistered = searchParams.get("registered") === "1";
-  const focus = searchParams.get("focus");
-  const tab: ProfileTab = isProfileTab(searchParams.get("tab")) ? (searchParams.get("tab") as ProfileTab) : "overview";
+  const justRegistered = searchParams?.get("registered") === "1";
+  const focus = searchParams?.get("focus") ?? null;
+  const tabQuery = searchParams?.get("tab") ?? null;
+  const tab: ProfileTab = isProfileTab(tabQuery) ? tabQuery : "overview";
 
   const profile = useQuery({
-    queryKey: ["child", params.childId],
-    queryFn: () => api<ChildProfile>(`/children/${params.childId}`),
+    queryKey: ["child", childId],
+    queryFn: () => api<ChildProfile>(`/children/${childId}`),
+    enabled: childId.length > 0,
   });
 
   const acknowledge = useMutation({
     mutationFn: (id: string) => api(`/alerts/${id}/acknowledge`, { method: "PATCH", body: JSON.stringify({}) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["child", params.childId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["child", childId] }),
   });
   const addNote = useMutation({
     mutationFn: (payload: { body: string; visit_id?: string }) =>
-      api(`/children/${params.childId}/notes`, {
+      api(`/children/${childId}/notes`, {
         method: "POST",
         body: JSON.stringify({ body: payload.body, visit_id: payload.visit_id ?? null }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["child", params.childId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["child", childId] }),
   });
   const saveReview = useMutation({
     mutationFn: (payload: { assessment: string; workflow: string; note: string }) => {
@@ -86,8 +88,8 @@ function ChildProfileContent() {
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["child", params.childId] });
-      qc.invalidateQueries({ queryKey: ["c3-reassessment", params.childId] });
+      qc.invalidateQueries({ queryKey: ["child", childId] });
+      qc.invalidateQueries({ queryKey: ["c3-reassessment", childId] });
       toast.success("Clinician review saved. The AI prediction was not changed.");
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Unable to save clinician review"),
@@ -104,10 +106,10 @@ function ChildProfileContent() {
   }, [profile.data, focus]);
 
   function setTab(next: ProfileTab) {
-    const q = new URLSearchParams(searchParams.toString());
+    const q = new URLSearchParams(searchParams?.toString() ?? "");
     if (next === "overview") q.delete("tab");
     else q.set("tab", next);
-    router.replace(`/children/${params.childId}?${q.toString()}`, { scroll: false });
+    router.replace(`/children/${childId}?${q.toString()}`, { scroll: false });
   }
 
   if (profile.isLoading) {

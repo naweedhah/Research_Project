@@ -1,1 +1,1 @@
-export { default } from "@/pages/component4/SecurityPage";
+export { default } from "@/screens/component4/SecurityPage";

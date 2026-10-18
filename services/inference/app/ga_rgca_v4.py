@@ -159,15 +159,23 @@ class IncompleteVisit(Exception):
 
 
 def artifact_dir() -> Path | None:
+    """Resolve v4 weights from the repository, then an optional override.
+
+    A blank GA_RGCA_V4_DIR uses <repo>/ml/artifacts/ga_rgca_v4_rsl so the same
+    checkout works for any Windows user. Relative overrides are also from the
+    repository root, not the current working directory.
+    """
     import os
 
-    configured = os.environ.get("GA_RGCA_V4_DIR", "").strip()
-    candidates: list[Path] = []
-    if configured:
-        candidates.append(Path(configured))
-    candidates.append(Path("/artifacts/ga-rgca-v4"))
     here = Path(__file__).resolve()
-    candidates.append(here.parents[3] / "ml" / "artifacts" / "ga_rgca_v4_rsl")
+    repo = here.parents[3]
+    candidates: list[Path] = []
+    configured = os.environ.get("GA_RGCA_V4_DIR", "").strip()
+    if configured:
+        override = Path(configured)
+        candidates.append(override if override.is_absolute() else repo / override)
+    candidates.append(repo / "ml" / "artifacts" / "ga_rgca_v4_rsl")
+    candidates.append(Path("/artifacts/ga-rgca-v4"))
     for path in candidates:
         if path.is_dir() and all((path / name).is_file() for name in REQUIRED_FILES):
             return path

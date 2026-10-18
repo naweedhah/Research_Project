@@ -244,10 +244,8 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
             "previous_muac_cm": prev_anthro.muac_cm if prev_anthro else None,
         }
 
-    model_version = db.get(ModelVersion, last.model_version_id) if last and last.model_version_id else None
     fac = db.get(Facility, child.facility_id)
-    demo_flag = model_is_demo or (bool(model_version.is_demo) if model_version else False)
-    semantics = semantics_for_prediction(pred, is_demo=True)
+    semantics = semantics_for_prediction(pred)
     displayed_status, displayed_ga = (
         resolve_display(pred.status_prediction, pred.calibrated_probabilities) if pred else (None, None)
     )
@@ -257,6 +255,7 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
         "pseudonymous_id": child.pseudonymous_id,
         "full_name": FieldEncryptor(get_settings().encryption_key).decrypt(child.full_name_encrypted) if child.full_name_encrypted else None,
         "age_months": age_months(child.date_of_birth),
+        "latest_visit_age_months": last.anthropometry.age_months if last and last.anthropometry else None,
         "sex": child.sex.value,
         "responsible_team": child.responsible_team,
         "facility_code": fac.code if fac else None,

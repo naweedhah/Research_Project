@@ -1,1 +1,1 @@
-export { default } from "@/pages/ResearchHome";
+export { default } from "@/screens/ResearchHome";

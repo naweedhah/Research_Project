@@ -370,11 +370,12 @@ function FieldPanel({ label, hint, children }: { label: string; hint?: ReactNode
 }
 
 export default function NewVisitPage() {
-  const { childId } = useParams<{ childId: string }>();
+  const childId = useParams<{ childId: string }>()?.childId ?? "";
   const router = useRouter();
   const prefillQ = useQuery({
     queryKey: ["visit-prefill", childId],
     queryFn: () => api<Prefill>(`/children/${childId}/visits/prefill`),
+    enabled: childId.length > 0,
   });
 
   const [step, setStep] = useState(0);

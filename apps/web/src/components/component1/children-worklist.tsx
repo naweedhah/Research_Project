@@ -19,6 +19,7 @@ import {
   primaryTypeProbabilityLabel,
 } from "@/data/child-profile";
 import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn, displayPredictedSeverity } from "@/utils/utils";
+import { assessWhoUndernutrition } from "@/data/who-growth-standards";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 
 type ClinicalAttention = { type: string; label: string; severity?: string; status?: string };
@@ -28,6 +29,7 @@ type Item = {
   pseudonymous_id: string;
   full_name?: string | null;
   age_months: number;
+  latest_visit_age_months?: number | null;
   sex: string;
   responsible_team?: string | null;
   last_visit?: string;
@@ -264,8 +266,8 @@ function WorklistContent() {
           <Search className="absolute left-3 top-3 h-4 w-4 text-[#94a3b8]" />
           <Input className="pl-9" placeholder="Search child ID" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         </div>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} aria-label="Nutritional status">
-          <option value="">All nutritional statuses</option>
+        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} aria-label="Predicted 12-month type">
+          <option value="">All predicted 12-month types</option>
           <option value="normal">Normal</option>
           <option value="mam">MAM</option>
           <option value="sam">SAM</option>
@@ -310,8 +312,8 @@ function WorklistContent() {
               <thead>
                 <tr className="border-b border-[#e8eef5] text-[10px] uppercase tracking-wide text-[#64748b]">
                   <th className="px-4 py-3 font-semibold">Child name</th>
-                  <th className="px-3 py-3 font-semibold">Latest Assessment</th>
-                  <th className="px-3 py-3 font-semibold">AI-Assisted Assessment</th>
+                  <th className="px-3 py-3 font-semibold">Latest WHO assessment</th>
+                  <th className="px-3 py-3 font-semibold">12-month GA-RGCA prediction</th>
                   <th className="px-3 py-3 font-semibold">Longitudinal Progress</th>
                   <th className="px-3 py-3 font-semibold">Clinical Attention</th>
                   <th className="px-3 py-3 font-semibold">Next Follow-Up</th>
@@ -417,6 +419,7 @@ function WorklistRow({
               <p className="text-xs text-[#64748b]">
                 V{row.latest_visit_number ?? row.visit_count} · {row.assessment_count} assessment{row.assessment_count === 1 ? "" : "s"}
               </p>
+              <WhoCell row={row} />
             </>
           ) : (
             <span className="text-[#64748b]">No assessments yet</span>
@@ -468,6 +471,19 @@ function WorklistRow({
       ) : null}
     </>
   );
+}
+
+function WhoCell({ row }: { row: Item }) {
+  const who = assessWhoUndernutrition({
+    ageMonths: row.latest_visit_age_months ?? row.age_months,
+    sex: row.sex,
+    weightKg: row.measurements?.weight_kg,
+    heightCm: row.measurements?.height_cm,
+  });
+  if (!who) {
+    return <p className="mt-1 text-xs text-[#64748b]">WHO not assessed</p>;
+  }
+  return <p className="mt-1 text-xs font-medium text-[#0f2744]">{who.label}</p>;
 }
 
 function AssessmentCell({ row }: { row: Item }) {
