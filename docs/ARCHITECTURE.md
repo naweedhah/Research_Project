@@ -19,7 +19,7 @@ Start with START_PROJECT.ps1. Docker is not required.
 
 1. Health worker records a multimodal visit (anthropometry, socioeconomic, dietary, maternal/child health).
 2. Data-quality validation uses the versioned clinical policy — not invented WHO cut-offs.
-3. The GA-RGCA v4 Rolling SuperLearner scores the current visit as a new 12-month origin.
+3. The only prediction model, GA-RGCA v4 Rolling SuperLearner (`GA-RGCA-v4-Rolling-RSL`), scores the current visit as a new 12-month origin. A different `C1_MODEL_VERSION` stops the service. There is no fallback model.
 4. Heads emit status, severity and a **calibrated** risk probability.
 5. Latent vector `e_t` is stored with `embedding_space_id`.
 6. Risk Velocity and baseline recovery rate are computed against Vt-1 and V0.

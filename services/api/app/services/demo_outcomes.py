@@ -1,6 +1,6 @@
 """Load canonical demo outcomes (1-based visit_number).
 
-Shared by seed and DemoModelAdapter so seeded predictions match re-inference.
+Demonstration case lookup for sample measurements. It is not a clinical prediction model.
 """
 
 from __future__ import annotations

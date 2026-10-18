@@ -16,27 +16,23 @@ export default function ModelsPage() {
   const rows = data?.models ? Object.entries(data.models) : [];
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Model evaluation</h1>
+      <h1 className="text-2xl font-semibold">Model</h1>
       <Card>
-        <CardHeader><CardTitle>GA-RGCA v3</CardTitle></CardHeader>
+        <CardHeader><CardTitle>GA-RGCA v4 Rolling SuperLearner</CardTitle></CardHeader>
         <CardBody className="space-y-2 text-sm">
           {ga.isLoading ? (
-            <p>Checking whether GA-RGCA v3 is loaded.</p>
+            <p>Checking whether GA-RGCA-v4-Rolling-RSL is loaded.</p>
           ) : ga.data?.ga_rgca_loaded ? (
-            <p>
-              Active model: {ga.data.active_model ?? ga.data.model_version ?? "GA-RGCA-v3"}
-              {ga.data.prediction_source ? ` · source ${ga.data.prediction_source}` : ""}.
-              The visit being entered is the baseline for a 12-month nutritional-risk prediction.
-              Research decision-support model — clinical confirmation required.
-            </p>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              <div><dt className="text-xs text-[#64748b]">Version</dt><dd>GA-RGCA-v4-Rolling-RSL</dd></div>
+              <div><dt className="text-xs text-[#64748b]">Rolling origin</dt><dd>Yes</dd></div>
+              <div><dt className="text-xs text-[#64748b]">Horizon</dt><dd>12 months</dd></div>
+              <div><dt className="text-xs text-[#64748b]">Neural ensemble members</dt><dd>3</dd></div>
+              <div className="sm:col-span-2"><dt className="text-xs text-[#64748b]">Experts</dt><dd>Logistic Regression, Random Forest, XGBoost, LightGBM, GA-RGCA v4</dd></div>
+              <div className="sm:col-span-2"><dt className="text-xs text-[#64748b]">Clinical use</dt><dd>Research decision-support prototype</dd></div>
+            </dl>
           ) : (
-            <>
-              <p>{ga.data?.ga_rgca_error ?? "GA-RGCA v3 is not loaded. New visits cannot be scored until the model is available."}</p>
-              <p className="text-xs text-[#64748b]">
-                Copy these files from the Colab folder `/content/Chanodya_Component1_v3_Artifacts` into `ml/artifacts/ga_rgca_v3`, then restart the inference service:
-                {" "}{(ga.data?.ga_rgca_required_files ?? ["ga_rgca_v3_states.pt", "multimodal_preprocessor.joblib", "binary_calibrators.joblib"]).join(", ")}.
-              </p>
-            </>
+            <p>{ga.data?.ga_rgca_error ?? "GA-RGCA-v4-Rolling-RSL is not loaded. New visits cannot be scored until the model is available."}</p>
           )}
         </CardBody>
       </Card>
@@ -47,7 +43,7 @@ export default function ModelsPage() {
           <table className="w-full text-left text-sm">
             <thead><tr><th>Model</th><th>Architecture</th><th>Status</th><th>Notes</th></tr></thead>
             <tbody>
-              {(models.data ?? []).map((m) => (
+              {(models.data ?? []).filter((m) => !m.is_demo && m.version === "GA-RGCA-v4-Rolling-RSL").map((m) => (
                 <tr key={m.model_key + m.version} className="border-t border-line">
                   <td className="py-2">{m.model_key}-{m.version}</td>
                   <td>{m.architecture}</td>
@@ -68,7 +64,7 @@ export default function ModelsPage() {
         </CardBody>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Baseline comparison</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Historical research comparison</CardTitle></CardHeader>
         <CardBody>
           {rows.length === 0 ? <EmptyState title="No experimental result available" body="Run python -m ml.training.train_baselines to generate metrics. Numbers are never fabricated." /> : (
             <table className="w-full text-left text-sm">

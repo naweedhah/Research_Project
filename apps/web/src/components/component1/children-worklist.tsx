@@ -509,7 +509,7 @@ function AssessmentCell({ row }: { row: Item }) {
       </div>
       <p className="mt-1.5 text-lg font-semibold tabular-nums text-[#0f2744]">{formatPercent(primaryTypeProbability(row))}</p>
       <p className="flex items-center gap-1 text-[10px] text-[#64748b]">
-        {isConditionModel ? primaryTypeProbabilityLabel(row) : clinicalPhrase(row.probability_label, "Model-assessed probability")}
+        {isConditionModel ? primaryTypeProbabilityLabel(row) : clinicalPhrase(row.probability_label, "12-month GA-RGCA prediction")}
         <InfoTip
           text={
             isConditionModel
@@ -682,7 +682,7 @@ function MobileCard({
           <span className="text-[#64748b]">
             {row.score_kind === "highest_condition_probability"
               ? primaryTypeProbabilityLabel(row)
-              : clinicalPhrase(row.probability_label, "Model-assessed probability")}
+              : clinicalPhrase(row.probability_label, "12-month GA-RGCA prediction")}
           </span>
           <p>{row.has_assessment ? formatPercent(primaryTypeProbability(row)) : "—"}</p>
           {row.has_assessment && row.score_kind === "highest_condition_probability" ? (

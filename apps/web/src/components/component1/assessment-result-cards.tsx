@@ -279,7 +279,7 @@ export function PredictionCard({ prediction, className = "", id }: { prediction:
           </div>
         ) : (
           <p className="mt-3 text-sm text-[#475569]">
-            Model-assessed probability <strong className="text-[#0f2744]">{formatPercent(prediction.risk ?? undefined)}</strong>
+            12-month GA-RGCA prediction <strong className="text-[#0f2744]">{formatPercent(prediction.risk ?? undefined)}</strong>
           </p>
         )}
       </div>

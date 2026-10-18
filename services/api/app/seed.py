@@ -21,7 +21,6 @@ from app.models.enums import (
     FollowUpStatus,
     ModelStatus,
     OrganizationType,
-    PredictionMode,
     ProgressState,
     Sex,
     UserRole,
@@ -30,7 +29,7 @@ from app.models.enums import (
     VisitType,
 )
 from app.models.identity import Facility, Organization, User
-from app.models.intelligence import ClinicalPolicyVersion, LatentEmbedding, ModelVersion, Prediction, TrajectoryMetric
+from app.models.intelligence import ClinicalPolicyVersion, ModelVersion, Prediction, TrajectoryMetric
 from app.models.operations import ClinicianReview, FollowUpSchedule, ClinicalNote
 from app.models.paediatric import (
     AnthropometricRecord,
@@ -41,11 +40,8 @@ from app.models.paediatric import (
     SocioeconomicRecord,
     Visit,
 )
-from app.services.longitudinal import classify_progress, elapsed_months
-from app.services.prediction import _maybe_create_alerts, _project
-from app.services.demo_outcomes import demo_confidence, demo_projection_version, get_demo_outcome
-from app.services.model_display import DEMO_PROJECTION_VERSION
-
+from app.services.longitudinal import elapsed_months
+from app.services.demo_outcomes import get_demo_outcome
 DEMO_PASSWORD = "doctor123"
 CONTRACTS = Path("/contracts") if Path("/contracts").exists() else Path(__file__).resolve().parents[3] / "packages" / "contracts"
 
@@ -399,14 +395,6 @@ def _dt(value: str) -> datetime:
     return datetime.fromisoformat(value).replace(tzinfo=UTC)
 
 
-def _embedding(pid: str, visit_number: int, risk: float, dim: int = 128) -> list[float]:
-    seed = sum(ord(c) for c in pid) + visit_number * 17
-    vec = []
-    for i in range(dim):
-        vec.append(round(((seed * (i + 3)) % 1000) / 1000.0 - 0.5 + (1 - risk) * 0.2, 4))
-    return vec
-
-
 def _measurements(sex: str, age: float, risk: float) -> dict:
     base_w = 9.5 if sex == "female" else 10.0
     weight = round(base_w + age * 0.12 - risk * 3.2, 2)
@@ -422,17 +410,8 @@ def _measurements(sex: str, age: float, risk: float) -> dict:
     }
 
 
-def _confidence_for_risk(risk: float) -> str:
-    """Legacy helper retained for non-demo paths. Demo seed uses demo_confidence()."""
-    if risk < 0.35:
-        return "high"
-    if risk < 0.65:
-        return "moderate"
-    return "low"
-
-
 def _resolve_visit_outcome(pid: str, visit_number: int, spec: dict) -> dict:
-    """Prefer shared demo_outcomes.json so seed matches DemoModelAdapter."""
+    """Read the stored demonstration case outcome used only to build sample measurements."""
     canonical = get_demo_outcome(pid, visit_number)
     if canonical is None:
         return {
@@ -528,8 +507,8 @@ def _add_case_visit(
         visit_type=VisitType.ROUTINE if idx == 0 else VisitType.FOLLOW_UP,
         scheduled=True,
         recorded_by=recorder.id,
-        model_version_id=model.id,
-        status=VisitStatus.PREDICTED,
+        model_version_id=None,
+        status=VisitStatus.SUBMITTED,
         confirmation_attested=True,
         data_quality={"complete": True, "optional_missing": 1, "synthetic": True},
     )
@@ -587,101 +566,12 @@ def _add_case_visit(
             recent_hospitalization=outcome["risk"] > 0.8,
             birth_characteristics=(
                 "Synthetic demonstration data: term birth, facility delivery, "
-                "no neonatal complications recorded in demo record."
+                "no neonatal complications recorded in the demonstration record."
             ),
         )
     )
-    status_probs = {k: 0.05 for k in ("normal", "stunting", "wasting", "underweight")}
-    status_probs[outcome["status"]] = max(0.55, outcome["risk"])
-    pred = Prediction(
-        visit_id=visit.id,
-        model_version_id=model.id,
-        run_number=1,
-        is_active=True,
-        mode=PredictionMode.DEMO,
-        status_prediction=outcome["status"],
-        severity_prediction=outcome["severity"],
-        raw_probabilities={"status": status_probs, "risk": outcome["risk"] + 0.03},
-        calibrated_probabilities={"status": status_probs, "risk": outcome["risk"]},
-        primary_risk_score=outcome["risk"],
-        confidence=demo_confidence(),
-        inference_ms=12.0 + idx,
-        input_hash=f"seed-{case['pid']}-{visit_number}",
-        feature_schema_version="fs-2026-001",
-        calibration_version="demo-temp-v1",
-    )
-    db.add(pred)
     db.flush()
-    emb = _embedding(case["pid"], visit_number, outcome["risk"])
-    x, y = _project(emb)
-    db.add(
-        LatentEmbedding(
-            visit_id=visit.id,
-            prediction_id=pred.id,
-            model_version_id=model.id,
-            embedding_space_id=model.embedding_space_id,
-            embedding_dimension=128,
-            embedding=emb,
-            projection_x=x,
-            projection_y=y,
-            projection_version=demo_projection_version() or DEMO_PROJECTION_VERSION,
-        )
-    )
-    if lookup is not None:
-        lookup[(case["pid"], visit_number)] = {
-            "status": outcome["status"],
-            "severity": outcome["severity"],
-            "risk_score": outcome["risk"],
-            "latent_embedding": emb,
-        }
-    months = None
-    months_b = None
-    if previous_pred is not None:
-        months = elapsed_months(predicted_visits[-1].visit_date, visit.visit_date)
-        months_b = elapsed_months(predicted_visits[0].visit_date, visit.visit_date)
-    if outcome["progress"] in {"stagnating", "stable"}:
-        consecutive += 1
-    else:
-        consecutive = 0 if outcome["progress"] != "baseline" else 0
-    evaluation = classify_progress(
-        is_baseline=idx == 0,
-        previous_risk=previous_pred.primary_risk_score if previous_pred else None,
-        current_risk=pred.primary_risk_score,
-        baseline_risk=baseline_pred.primary_risk_score if baseline_pred else pred.primary_risk_score,
-        months=months,
-        months_from_baseline=months_b,
-        stagnation_threshold=policy_cfg.stagnation_threshold,
-        deterioration_delta=policy_cfg.deterioration_delta,
-        consecutive_near_zero=consecutive,
-        consecutive_required=policy_cfg.consecutive_followups,
-        model_compatible=True,
-    )
-    state = ProgressState(outcome["progress"])
-    metric = TrajectoryMetric(
-        child_id=child.id,
-        from_visit_id=predicted_visits[-1].id if predicted_visits else None,
-        to_visit_id=visit.id,
-        baseline_visit_id=predicted_visits[0].id if predicted_visits else visit.id,
-        risk_velocity=evaluation.risk_velocity,
-        baseline_recovery_rate=evaluation.baseline_recovery_rate,
-        elapsed_days=int((months or 0) * 30.4375) if months else None,
-        elapsed_months=evaluation.elapsed_months,
-        previous_risk=previous_pred.primary_risk_score if previous_pred else None,
-        current_risk=pred.primary_risk_score,
-        progress_state=state,
-        model_compatible=True,
-    )
-    db.add(metric)
-    db.flush()
-    evaluation.progress_state = state
-    _maybe_create_alerts(
-        db, child, visit, pred, previous_pred, baseline_pred or pred, evaluation, policy_cfg, consecutive
-    )
-    predicted_visits = predicted_visits + [visit]
-    if baseline_pred is None:
-        baseline_pred = pred
-    previous_pred = pred
-    return visit, pred, baseline_pred, previous_pred, consecutive, prev_meas, predicted_visits
+    return visit, None, baseline_pred, previous_pred, consecutive, prev_meas, predicted_visits + [visit]
 
 
 def _seed_demo_case(
@@ -888,19 +778,19 @@ def seed() -> None:
             db.flush()
 
         model = ModelVersion(
-            model_key="MCA",
-            version="2026-001",
-            architecture="multimodal_cross_attention",
-            feature_schema_version="fs-2026-001",
-            label_schema_version="dev-2026-001",
-            training_dataset_version="synthetic-demo-001",
-            calibration_version="demo-temp-v1",
-            embedding_dimension=128,
-            embedding_space_id="mca-demo-space-v1",
+            model_key="GA-RGCA",
+            version="GA-RGCA-v4-Rolling-RSL",
+            architecture="GA-RGCA v4 Rolling SuperLearner",
+            feature_schema_version="ga-rgca-v4-rolling-current-visit",
+            label_schema_version="ga-rgca-v4-types",
+            training_dataset_version="rolling-2025-2026",
+            calibration_version="ga-rgca-v4-superlearner",
+            embedding_dimension=96,
+            embedding_space_id="ga-rgca-v4-rolling-rsl-fused-latent",
             status=ModelStatus.ACTIVE,
-            is_demo=True,
+            is_demo=False,
             activated_at=datetime.now(UTC),
-            notes="Nutritional risk model. Clinical review required.",
+            notes="Research decision-support prototype. Clinician confirmation required.",
         )
         db.add(model)
         db.flush()

@@ -15,18 +15,22 @@ from app.services.malnutrition_type import (
 )
 
 STUNTING_BLOCK = {
-    "prediction_source": "GA-RGCA-v3",
-    "model_version": "GA-RGCA-v3",
+    "prediction_source": "GA-RGCA-v4-Rolling-RSL",
+    "model_version": "GA-RGCA-v4-Rolling-RSL",
+    "predicted_malnutrition_type": "Stunting",
+    "detected_conditions": ["Stunting"],
     "underweight_probability": 0.00,
     "stunting_probability": 0.66,
     "mam_probability": 0.01,
     "sam_probability": 0.00,
+    "underweight_positive": False,
+    "stunting_positive": True,
     "acute_status": "Normal",
     "severity": "Moderate",
     "severity_probabilities": {"normal": 0.2, "moderate": 0.7, "severe": 0.1},
     "uncertainty_flag": False,
     "triage": "Priority clinical assessment",
-    "binary_thresholds": {"Underweight": 0.09, "Stunting": 0.09},
+    "binary_thresholds": {"Underweight": 0.32, "Stunting": 0.26},
 }
 
 
@@ -49,15 +53,15 @@ def test_new_prediction_stores_overall_type_and_keeps_acute_status():
     assert stored["status"] == ga["predicted_malnutrition_type"]
 
 
-def test_historical_ga_record_is_derived_for_display_without_mutation():
+def test_stored_v4_type_is_displayed_without_rewriting_the_row():
     calibrated = {"ga_rgca": dict(STUNTING_BLOCK)}
-    row = SimpleNamespace(status_prediction="Normal", calibrated_probabilities=calibrated, severity_prediction="Moderate")
+    row = SimpleNamespace(status_prediction="Stunting", calibrated_probabilities=calibrated, severity_prediction="Moderate")
     status, block = resolve_display(row.status_prediction, row.calibrated_probabilities)
     assert status == "Stunting"
     assert block["predicted_malnutrition_type"] == "Stunting"
     assert block["detected_conditions"] == ["Stunting"]
-    assert row.status_prediction == "Normal"
-    assert "predicted_malnutrition_type" not in row.calibrated_probabilities["ga_rgca"]
+    assert row.status_prediction == "Stunting"
+    assert row.calibrated_probabilities["ga_rgca"]["binary_thresholds"] == {"Underweight": 0.32, "Stunting": 0.26}
 
 
 def test_demo_records_keep_their_labelled_status():
@@ -97,14 +101,14 @@ def test_component1_contract_uses_overall_type_and_hides_identity():
     row = SimpleNamespace(
         visit_id="visit-1",
         created_at=None,
-        feature_schema_version="ga-rgca-v3-current-visit-baseline",
-        calibration_version="ga-rgca-v3-binary-calibrators",
+        feature_schema_version="ga-rgca-v4-rolling-current-visit",
+        calibration_version="ga-rgca-v4-superlearner",
         status_prediction="Normal",
         calibrated_probabilities=calibrated,
         severity_prediction="Moderate",
     )
     body = component1_output(row)
-    assert body["schema_version"] == "component1-ga-rgca-v3-1"
+    assert body["schema_version"] == "component1-ga-rgca-v4-1"
     assert body["prediction"]["predicted_malnutrition_type"] == "Stunting"
     assert body["prediction"]["detected_conditions"] == ["Stunting"]
     assert body["observed_outcome"] is None
@@ -114,6 +118,10 @@ def test_component1_contract_uses_overall_type_and_hides_identity():
 
 NORMAL_BLOCK = {
     **STUNTING_BLOCK,
+    "predicted_malnutrition_type": "Normal",
+    "detected_conditions": [],
+    "underweight_positive": False,
+    "stunting_positive": False,
     "underweight_probability": 0.02,
     "stunting_probability": 0.05,
     "mam_probability": 0.01,

@@ -53,7 +53,7 @@ _PUBLIC_KEYS = (
     "applicability",
 )
 
-_GA_SOURCES = {"GA-RGCA-v3", "GA-RGCA-v4-Rolling-RSL"}
+_GA_SOURCES = {"GA-RGCA-v4-Rolling-RSL"}
 
 
 def _load_decision_module():
@@ -95,23 +95,8 @@ def _thresholds_for(block: dict) -> tuple[float, float] | None:
 
 
 def derive_from_ga_block(block: dict) -> dict | None:
-    """Derive a missing overall type from stored GA-RGCA probabilities."""
-    if block.get("prediction_source") != "GA-RGCA-v3":
-        return None
-    required = ("underweight_probability", "stunting_probability", "acute_status")
-    if any(block.get(key) is None for key in required):
-        return None
-    thresholds = _thresholds_for(block)
-    if thresholds is None:
-        return None
-    underweight_threshold, stunting_threshold = thresholds
-    return derive_predicted_malnutrition_type(
-        underweight_probability=block["underweight_probability"],
-        stunting_probability=block["stunting_probability"],
-        underweight_threshold=underweight_threshold,
-        stunting_threshold=stunting_threshold,
-        acute_status=block["acute_status"],
-    )
+    """v4 stores its type with the prediction. Older blocks are not re-derived."""
+    return None
 
 
 def _with_derivation(block: dict) -> dict:
@@ -120,11 +105,6 @@ def _with_derivation(block: dict) -> dict:
     source = copied.get("prediction_source")
     if source not in _GA_SOURCES:
         return copied
-    if source == "GA-RGCA-v3" and not copied.get("predicted_malnutrition_type"):
-        derived = derive_from_ga_block(copied)
-        if derived is not None:
-            for key in _DERIVED_KEYS:
-                copied[key] = derived[key]
     if copied.get("predicted_malnutrition_type") and "output_consistency" not in copied:
         copied["output_consistency"] = check_output_consistency(
             predicted_malnutrition_type=copied["predicted_malnutrition_type"],
@@ -324,7 +304,7 @@ def component1_output(prediction) -> dict:
         "modality_reliability": fields.get("modality_reliability") or block.get("modality_reliability"),
     }
     return {
-        "schema_version": "component1-ga-rgca-v3-1",
+        "schema_version": "component1-ga-rgca-v4-1",
         "visit_id": str(prediction.visit_id),
         "prediction_timestamp": created.isoformat() if created is not None else None,
         "prediction_source": fields.get("prediction_source"),

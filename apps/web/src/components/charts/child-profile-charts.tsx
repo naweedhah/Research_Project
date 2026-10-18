@@ -17,7 +17,7 @@ type Point = TrendPoint;
 export type TrendMetric = "probability" | "weight" | "height";
 
 const METRIC: Record<TrendMetric, { key: keyof Point; label: string; unit: string; color: string; yDomain?: [number, number] }> = {
-  probability: { key: "probability", label: "Model-assessed probability", unit: "%", color: "#2563eb", yDomain: [0, 100] },
+  probability: { key: "probability", label: "12-month GA-RGCA prediction", unit: "%", color: "#2563eb", yDomain: [0, 100] },
   weight: { key: "weight", label: "Weight", unit: "kg", color: "#0f766e" },
   height: { key: "height", label: "Height", unit: "cm", color: "#0ea5e9" },
 };

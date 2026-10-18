@@ -453,13 +453,12 @@ def runtime_model_display(
     """Authoritative display semantics for the active inference mode."""
     from app.services.model_display import get_model_output_display_metadata
 
-    model = db.scalar(select(ModelVersion).where(ModelVersion.status == ModelStatus.ACTIVE).limit(1))
-    return get_model_output_display_metadata(is_demo=bool(model.is_demo) if model else None)
+    return get_model_output_display_metadata()
 
 
 @router.get("/runtime/ga-rgca")
 def runtime_ga_rgca(current=Depends(require_permission("child:read"))):
-    """Whether the GA-RGCA v3 weight files are loaded by the inference service."""
+    """Whether GA-RGCA-v4-Rolling-RSL is loaded by the inference service."""
     import httpx
 
     from app.core.config import get_settings
@@ -473,9 +472,12 @@ def runtime_ga_rgca(current=Depends(require_permission("child:read"))):
             "ga_rgca_loaded": False,
             "ga_rgca_error": "Inference service is not reachable",
             "ga_rgca_required_files": [
-                "ga_rgca_v3_states.pt",
-                "multimodal_preprocessor.joblib",
-                "binary_calibrators.joblib",
+                "ga_rgca_v4_states.pt",
+                "multimodal_preprocessor_v4.joblib",
+                "binary_calibrators_v4.joblib",
+                "rolling_tree_experts_v4.joblib",
+                "superlearner_policy_v4.joblib",
+                "metadata_v4.json",
             ],
         }
     return {

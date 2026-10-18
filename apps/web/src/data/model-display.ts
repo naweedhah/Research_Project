@@ -24,57 +24,30 @@ export type ModelDisplaySemantics = {
   alert_rule_note: string;
 };
 
-export const DEMO_DISPLAY_SEMANTICS: ModelDisplaySemantics = {
-  model_mode: "demo",
-  clinical_use: false,
-  is_demo: true,
-  score_kind: "model_assessed_probability",
-  score_label: "Model-assessed probability",
-  score_description:
-    "Model-assessed probability from the measurements recorded at this visit. Clinical review required.",
-  score_is_probability: true,
-  score_is_calibrated: false,
-  velocity_label: "Risk velocity",
-  velocity_description:
-    "Visit-to-visit change in model-assessed probability, adjusted for elapsed time. Clinical review required.",
-  prediction_task: "current_status",
-  prediction_task_label: "Current nutritional assessment",
-  projection_version: null,
-  projection_label: "Model trajectory",
-  projection_description:
-    "Visit-to-visit model trajectory from recorded assessments. It is not anatomical imaging.",
-  confidence_label: "Model confidence",
-  confidence_is_calibrated: false,
-  banner_title: "Clinical review required",
-  banner_subtitle: "AI-assisted assessment. Clinical review required.",
-  report_disclaimer: "AI-assisted assessment. Clinical review required.",
-  alert_rule_note: "Generated from the model-assessed probability",
-};
-
-export const RESEARCH_DISPLAY_SEMANTICS: ModelDisplaySemantics = {
-  model_mode: "research",
+export const V4_DISPLAY_SEMANTICS: ModelDisplaySemantics = {
+  model_mode: "ga_rgca_v4_rsl",
   clinical_use: false,
   is_demo: false,
-  score_kind: "research_model_score",
-  score_label: "Model-Assessed Probability",
+  score_kind: "highest_condition_probability",
+  score_label: "Highest Predicted Condition Risk",
   score_description:
-    "Research model output. Clinical review required. Not clinically validated for care decisions.",
+    "Highest of the Underweight, Stunting, MAM, and SAM probabilities from the 12-month GA-RGCA prediction. Clinical review required.",
   score_is_probability: true,
-  score_is_calibrated: false,
+  score_is_calibrated: true,
   velocity_label: "Risk Velocity",
   velocity_description:
-    "Visit-to-visit change in model-assessed probability adjusted for elapsed time. Clinical review required.",
-  prediction_task: "current_status",
-  prediction_task_label: "Current-status classification",
-  projection_version: null,
-  projection_label: "Model latent projection",
-  projection_description: "2D projection of the model latent representation. Research visualization only.",
-  confidence_label: "Model confidence",
+    "Visit-to-visit change is shown only when both visits used the same 12-month GA-RGCA prediction.",
+  prediction_task: "twelve_month_nutritional_risk",
+  prediction_task_label: "12-month GA-RGCA prediction",
+  projection_version: "ga-rgca-v4-fused-latent-v1",
+  projection_label: "Fused latent representation",
+  projection_description: "Coordinates from the GA-RGCA v4 fused latent vector. This is not anatomical imaging.",
+  confidence_label: "Ensemble uncertainty",
   confidence_is_calibrated: false,
   banner_title: "RESEARCH MODEL",
-  banner_subtitle: "Clinical review required",
-  report_disclaimer: "RESEARCH MODEL — Clinical review required · Not clinically validated",
-  alert_rule_note: "Research model alert rule",
+  banner_subtitle: "GA-RGCA-v4-Rolling-RSL · Research decision-support prototype — clinician confirmation required.",
+  report_disclaimer: "Research decision-support prototype. Clinician confirmation required.",
+  alert_rule_note: "Generated from the 12-month GA-RGCA prediction",
 };
 
 type SemanticsSource = {
@@ -91,26 +64,27 @@ function clinicLabel(value: string | null | undefined, fallback: string) {
   return value;
 }
 
-/** Prefer backend display_semantics; fall back from is_demo flags. Never invent clinical validation. */
+/** Prefer backend display semantics. The only fallback is the v4 research label set. */
 export function getModelOutputDisplayMetadata(source?: SemanticsSource | null): ModelDisplaySemantics {
   const incoming = source?.display_semantics?.score_label
-    ? ({ ...DEMO_DISPLAY_SEMANTICS, ...source.display_semantics } as ModelDisplaySemantics)
+    ? ({ ...V4_DISPLAY_SEMANTICS, ...source.display_semantics } as ModelDisplaySemantics)
     : null;
-  const demo = Boolean(source?.model_is_demo ?? source?.model?.is_demo ?? true);
-  const base = incoming ?? (demo ? DEMO_DISPLAY_SEMANTICS : RESEARCH_DISPLAY_SEMANTICS);
+  const base = incoming ?? V4_DISPLAY_SEMANTICS;
   return {
     ...base,
-    score_label: clinicLabel(source?.score_label ?? source?.probability_label ?? base.score_label, "Model-assessed probability"),
-    score_description: clinicLabel(base.score_description, "Model-assessed probability from the measurements recorded at this visit. Clinical review required."),
-    velocity_label: clinicLabel(source?.velocity_label ?? base.velocity_label, "Risk velocity"),
-    velocity_description: clinicLabel(base.velocity_description, "Visit-to-visit change in model-assessed probability, adjusted for elapsed time. Clinical review required."),
-    prediction_task_label: clinicLabel(base.prediction_task_label, "Current nutritional assessment"),
-    projection_label: clinicLabel(base.projection_label, "Model trajectory"),
-    projection_description: clinicLabel(base.projection_description, "Visit-to-visit model trajectory from recorded assessments."),
-    confidence_label: clinicLabel(base.confidence_label, "Model confidence"),
-    banner_title: clinicLabel(base.banner_title, "Clinical review required"),
-    banner_subtitle: clinicLabel(base.banner_subtitle, "AI-assisted assessment. Clinical review required."),
-    report_disclaimer: clinicLabel(base.report_disclaimer, "AI-assisted assessment. Clinical review required."),
-    alert_rule_note: clinicLabel(base.alert_rule_note, "Generated from the model-assessed probability"),
+    is_demo: false,
+    clinical_use: false,
+    score_label: clinicLabel(source?.score_label ?? source?.probability_label ?? base.score_label, "12-month GA-RGCA prediction"),
+    score_description: clinicLabel(base.score_description, "12-month GA-RGCA prediction from the measurements recorded at this visit. Clinical review required."),
+    velocity_label: clinicLabel(source?.velocity_label ?? base.velocity_label, "Risk Velocity"),
+    velocity_description: clinicLabel(base.velocity_description, "Visit-to-visit change in the 12-month GA-RGCA prediction."),
+    prediction_task_label: clinicLabel(base.prediction_task_label, "12-month GA-RGCA prediction"),
+    projection_label: clinicLabel(base.projection_label, "Fused latent representation"),
+    projection_description: clinicLabel(base.projection_description, "Coordinates from the GA-RGCA v4 fused latent vector."),
+    confidence_label: clinicLabel(base.confidence_label, "Ensemble uncertainty"),
+    banner_title: clinicLabel(base.banner_title, "RESEARCH MODEL"),
+    banner_subtitle: clinicLabel(base.banner_subtitle, "Research decision-support prototype. Clinician confirmation required."),
+    report_disclaimer: clinicLabel(base.report_disclaimer, "Research decision-support prototype. Clinician confirmation required."),
+    alert_rule_note: clinicLabel(base.alert_rule_note, "Generated from the 12-month GA-RGCA prediction"),
   };
 }

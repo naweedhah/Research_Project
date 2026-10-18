@@ -1,4 +1,4 @@
-"""Authoritative doctor-facing malnutrition type for GA-RGCA v3.
+"""Doctor-facing malnutrition type for a stored GA-RGCA prediction.
 
 Acute status is only the Normal / MAM / SAM head. It must not be copied
 into the overall malnutrition type.
@@ -23,7 +23,7 @@ def derive_predicted_malnutrition_type(
 ) -> dict:
     """Return the single doctor-facing type and the overlapping conditions.
 
-    Thresholds come from the caller (metadata.json or the stored prediction).
+    Thresholds come from the caller (the v4 metadata file or the stored prediction).
     Comparison uses >=. Normal is returned only when acute status is Normal
     and both binary heads are below threshold.
     """
@@ -117,23 +117,26 @@ def check_output_consistency(
 
 
 def load_binary_thresholds() -> tuple[float, float] | None:
-    """Read Underweight and Stunting thresholds from metadata.json."""
+    """Read Underweight and Stunting thresholds from the v4 metadata file."""
     for path in _metadata_candidates():
         if not path.is_file():
             continue
         data = json.loads(path.read_text(encoding="utf-8"))
-        thresholds = data.get("binary_thresholds") or {}
-        if "Underweight" in thresholds and "Stunting" in thresholds:
-            return float(thresholds["Underweight"]), float(thresholds["Stunting"])
+        named = data.get("binary_thresholds") or {}
+        if "Underweight" in named and "Stunting" in named:
+            return float(named["Underweight"]), float(named["Stunting"])
+        outputs = data.get("binary_outputs") or []
+        values = data.get("binary_thresholds_final_superlearner") or []
+        if list(outputs[:2]) == ["Underweight", "Stunting"] and len(values) >= 2:
+            return float(values[0]), float(values[1])
     return None
 
 
 def _metadata_candidates() -> list[Path]:
     here = Path(__file__).resolve()
     candidates = [
-        Path("/ml/artifacts/ga_rgca_v3/metadata.json"),
-        Path("/artifacts/ga-rgca/metadata.json"),
+        Path("/artifacts/ga-rgca-v4/metadata_v4.json"),
     ]
     for parent in here.parents:
-        candidates.append(parent / "ml" / "artifacts" / "ga_rgca_v3" / "metadata.json")
+        candidates.append(parent / "ml" / "artifacts" / "ga_rgca_v4_rsl" / "metadata_v4.json")
     return candidates

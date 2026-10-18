@@ -120,5 +120,5 @@ def test_metadata_thresholds_are_loaded_not_hardcoded():
     loaded = load_binary_thresholds()
     assert loaded is not None
     underweight_threshold, stunting_threshold = loaded
-    assert underweight_threshold == pytest.approx(0.09)
-    assert stunting_threshold == pytest.approx(0.09)
+    assert underweight_threshold == pytest.approx(0.32)
+    assert stunting_threshold == pytest.approx(0.26)

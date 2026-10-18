@@ -47,7 +47,7 @@ const profile: ChildProfile = {
       type: "DETERIORATION",
       severity: "HIGH",
       status: "OPEN",
-      message: "Model-assessed probability increased",
+      message: "12-month GA-RGCA prediction increased",
       headline: "Deterioration detected",
       trigger_value: { previous_risk: 0.33, current_risk: 0.58 },
     },
@@ -234,8 +234,8 @@ describe("child profile page markup contract", () => {
     expect(hud).not.toMatch(/>\s*Assessment\s*</);
     expect(hud).toMatch(/statusLabel = "Status"/);
     expect(hud).toMatch(/scoreLabel/);
-    expect(hud).toMatch(/Model-assessed probability/);
-    expect(hud).toMatch(/Risk velocity/);
+    expect(hud).toMatch(/12-month GA-RGCA prediction/);
+    expect(hud).toMatch(/Risk Velocity/);
     expect(src).toMatch(/getModelOutputDisplayMetadata/);
     expect(src).toMatch(/semantics\.projection_label/);
     expect(src).toMatch(/semantics\.prediction_task_label/);
@@ -244,8 +244,8 @@ describe("child profile page markup contract", () => {
       path.join(path.dirname(fileURLToPath(import.meta.url)), "./model-display.ts"),
       "utf8",
     );
-    expect(display).toMatch(/Model trajectory/);
-    expect(display).toMatch(/Current nutritional assessment/);
+    expect(display).toMatch(/Fused latent representation/);
+    expect(display).toMatch(/12-month GA-RGCA prediction/);
   });
 
   it("does not restore ambiguous visit badges", () => {

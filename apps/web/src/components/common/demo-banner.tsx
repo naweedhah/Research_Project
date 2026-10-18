@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/component4/httpClient";
 import {
-  DEMO_DISPLAY_SEMANTICS,
   getModelOutputDisplayMetadata,
+  V4_DISPLAY_SEMANTICS,
   type ModelDisplaySemantics,
 } from "@/data/model-display";
 import { cn } from "@/utils/utils";
@@ -16,8 +16,7 @@ export function DemoBanner({ compact }: { compact?: boolean }) {
     staleTime: 60_000,
     retry: 1,
   });
-  // Prefer backend semantics; fall back to demo defaults if the route is unavailable.
-  const semantics = data ?? getModelOutputDisplayMetadata({ model_is_demo: true });
+  const semantics = data ?? getModelOutputDisplayMetadata();
 
   if (semantics.clinical_use) return null;
 
@@ -38,7 +37,7 @@ export function DemoBanner({ compact }: { compact?: boolean }) {
 }
 
 export function ResearchDisclaimer({ semantics }: { semantics?: ModelDisplaySemantics }) {
-  const s = semantics ?? DEMO_DISPLAY_SEMANTICS;
+  const s = semantics ?? V4_DISPLAY_SEMANTICS;
   return (
     <p className="text-xs text-muted" data-testid="research-disclaimer">
       {s.report_disclaimer}

@@ -57,7 +57,7 @@ def _profile_model_mode(latest) -> str | None:
         return None
     if block.get("prediction_source") == "GA-RGCA-v4-Rolling-RSL":
         return "ga_rgca_v4_rsl"
-    return "ga_rgca"
+    return None
 
 
 def _next_pseudo(db: Session) -> str:

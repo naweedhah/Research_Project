@@ -31,7 +31,7 @@ from app.services.alerts import deterioration_alert, event_window_key, relapse_a
 from app.services.audit import write_audit
 from app.services.longitudinal import LongitudinalError, classify_progress, elapsed_months
 from app.services.malnutrition_type import apply_new_prediction_interpretation
-from app.services.model_display import DEMO_PROJECTION_VERSION
+from app.services.model_display import V4_PROJECTION_VERSION
 
 
 def _stored_model_version(prediction) -> str | None:
@@ -51,13 +51,17 @@ def _input_hash(payload: dict) -> str:
 
 
 def active_model(db: Session) -> ModelVersion:
-    row = db.scalar(select(ModelVersion).where(ModelVersion.status == ModelStatus.ACTIVE).limit(1))
+    row = db.scalar(
+        select(ModelVersion).where(
+            ModelVersion.model_key == "GA-RGCA",
+            ModelVersion.version == "GA-RGCA-v4-Rolling-RSL",
+            ModelVersion.status == ModelStatus.ACTIVE,
+            ModelVersion.is_demo.is_(False),
+        )
+    )
     if row:
         return row
-    row = db.scalar(select(ModelVersion).where(ModelVersion.is_demo.is_(True)).limit(1))
-    if row:
-        return row
-    raise HTTPException(status_code=503, detail="No model version is registered")
+    raise HTTPException(status_code=503, detail="GA-RGCA-v4-Rolling-RSL is not registered")
 
 
 def current_visit_payload(visit: Visit, child: Child) -> dict:
@@ -291,7 +295,7 @@ def run_inference(db: Session, visit: Visit, child: Child, user_id, ip: str | No
         model_version_id=model.id,
         run_number=run_number,
         is_active=True,
-        mode=result.get("mode", "DEMO"),
+        mode=result.get("mode", "PYTORCH"),
         status_prediction=result["status"],
         severity_prediction=result["severity"],
         raw_probabilities=result["raw_probabilities"],
@@ -300,26 +304,27 @@ def run_inference(db: Session, visit: Visit, child: Child, user_id, ip: str | No
         confidence=result.get("confidence", "moderate"),
         inference_ms=float(result.get("inference_ms") or (datetime.now(UTC) - started).total_seconds() * 1000),
         input_hash=_input_hash(payload),
-        feature_schema_version=result.get("feature_schema_version", "fs-2026-001"),
-        calibration_version=result.get("calibration_version", "demo-temp-v1"),
+        feature_schema_version=result.get("feature_schema_version", "ga-rgca-v4-rolling-current-visit"),
+        calibration_version=result.get("calibration_version", "ga-rgca-v4-superlearner"),
     )
     db.add(prediction)
     db.flush()
 
     embedding = result.get("latent_embedding") or []
     x, y = _project(embedding)
-    v4_embedding = result.get("model_version") == "GA-RGCA-v4-Rolling-RSL"
+    if result.get("model_version") != "GA-RGCA-v4-Rolling-RSL":
+        raise HTTPException(status_code=503, detail="Inference did not return GA-RGCA-v4-Rolling-RSL")
     db.add(
         LatentEmbedding(
             visit_id=visit.id,
             prediction_id=prediction.id,
             model_version_id=model.id,
-            embedding_space_id="ga-rgca-v4-rolling-rsl-fused-latent" if v4_embedding else model.embedding_space_id,
+            embedding_space_id="ga-rgca-v4-rolling-rsl-fused-latent",
             embedding_dimension=len(embedding) or model.embedding_dimension,
             embedding=embedding,
             projection_x=x,
             projection_y=y,
-            projection_version="ga-rgca-v4-fused-latent-v1" if v4_embedding else DEMO_PROJECTION_VERSION,
+            projection_version=V4_PROJECTION_VERSION,
         )
     )
 
@@ -511,10 +516,7 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
         prev = prev_active.primary_risk_score if prev_active else None
         calibrated = prediction.calibrated_probabilities if isinstance(prediction.calibrated_probabilities, dict) else {}
         ga_block = calibrated.get("ga_rgca") if isinstance(calibrated, dict) else None
-        predicted_risk = isinstance(ga_block, dict) and ga_block.get("prediction_source") in {
-            "GA-RGCA-v3",
-            "GA-RGCA-v4-Rolling-RSL",
-        }
+        predicted_risk = isinstance(ga_block, dict) and ga_block.get("prediction_source") == "GA-RGCA-v4-Rolling-RSL"
         message = {
             AlertType.STAGNATION: "Progress stagnation detected",
             AlertType.DETERIORATION: (

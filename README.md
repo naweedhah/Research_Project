@@ -85,11 +85,10 @@ The clinic demonstration works when Redis and the worker are absent.
 
 ## Model files
 
-The active weights stay in `ml/artifacts/ga_rgca_v4_rsl/`.
-Older v3 weights stay in `ml/artifacts/ga_rgca_v3/` for rollback only.
+The only model weights are in `ml/artifacts/ga_rgca_v4_rsl/`.
 The launcher does not retrain the model and does not change thresholds.
 
-`C1_MODEL_VERSION` must be `ga_rgca_v4_rsl` or `ga_rgca_v3`. Any other value is rejected. The default is `ga_rgca_v4_rsl`.
+`C1_MODEL_VERSION` must be `ga_rgca_v4_rsl`. Any other value stops the prediction service. There is no other model.
 
 ## For developers
 

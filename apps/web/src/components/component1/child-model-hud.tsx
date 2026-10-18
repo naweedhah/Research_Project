@@ -162,9 +162,9 @@ export function ChildModelHud({
   probabilityChange,
   progress,
   riskVelocity,
-  scoreLabel = "Model-assessed probability",
-  scoreTip = "Model-assessed probability from the measurements recorded at this visit. Clinical review required.",
-  velocityLabel = "Risk velocity",
+  scoreLabel = "12-month GA-RGCA prediction",
+  scoreTip = "12-month GA-RGCA prediction from the measurements recorded at this visit. Clinical review required.",
+  velocityLabel = "Risk Velocity",
   velocityTip = "Visit-to-visit change in model-assessed probability, adjusted for elapsed time. Clinical review required.",
 }: {
   children: ReactNode;

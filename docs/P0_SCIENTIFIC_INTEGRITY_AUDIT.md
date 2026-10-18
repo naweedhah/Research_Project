@@ -1,5 +1,7 @@
 # P0 Scientific Integrity Audit
 
+Historical research record. The active prediction model is GA-RGCA-v4-Rolling-RSL. The findings below describe an earlier demonstration-scoring pass and are not current runtime options.
+
 Controlled correction pass for CNIP Component 1 (J26-IT-399).  
 Scope: demo-safety and scientifically misleading runtime claims only.
 

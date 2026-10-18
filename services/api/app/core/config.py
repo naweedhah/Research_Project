@@ -44,9 +44,8 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     cookie_domain: str | None = None
 
-    model_mode: str = "demo"
-    model_artifact_path: str = "/artifacts/active"
-    embedding_dim: int = 128
+    c1_model_version: str = "ga_rgca_v4_rsl"
+    embedding_dim: int = 96
 
     notification_provider: str = "mock"
     sms_api_key: str = ""

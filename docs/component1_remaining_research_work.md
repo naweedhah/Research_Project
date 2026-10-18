@@ -8,7 +8,7 @@ The repository does not contain a validated authoritative HAZ / WAZ / WHZ implem
 
 ## External clinical validation
 
-GA-RGCA v3 is a research decision-support prototype. `clinical_use` remains false. External clinical validation is not complete.
+The deployed model is GA-RGCA v4 Rolling SuperLearner. Mentions of GA-RGCA v3 in older research notes are historical comparisons, not a selectable model. `clinical_use` remains false. External clinical validation is not complete.
 
 ## Prospective validation
 

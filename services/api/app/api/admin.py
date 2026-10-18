@@ -42,7 +42,12 @@ def system_health(db: Session = Depends(get_db), current=Depends(require_permiss
     except Exception:  # noqa: BLE001
         db_ok = False
 
-    active = db.scalar(select(ModelVersion).where(ModelVersion.status == ModelStatus.ACTIVE).limit(1))
+    active = db.scalar(
+        select(ModelVersion).where(
+            ModelVersion.version == "GA-RGCA-v4-Rolling-RSL",
+            ModelVersion.status == ModelStatus.ACTIVE,
+        )
+    )
     last_pred = db.scalar(select(Prediction).order_by(Prediction.created_at.desc()).limit(1))
     return {
         "api": "ok",
@@ -58,7 +63,7 @@ def system_health(db: Session = Depends(get_db), current=Depends(require_permiss
             "demo": active.is_demo,
         },
         "last_successful_prediction": last_pred.created_at.isoformat() if last_pred else None,
-        "model_mode": settings.model_mode,
+        "model_version": "GA-RGCA-v4-Rolling-RSL",
     }
 
 

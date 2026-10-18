@@ -102,8 +102,8 @@ export default function ReportPage() {
   const latest = data.risk_history.at(-1);
   const previous = data.risk_history.length > 1 ? data.risk_history.at(-2) : undefined;
   const first = data.risk_history[0];
-  const scoreLabel = clinicalPhrase(data.score_label ?? data.ai_assessment?.score_label, "Model-assessed probability");
-  const velocityLabel = clinicalPhrase(data.velocity_label, "Risk velocity");
+  const scoreLabel = clinicalPhrase(data.score_label ?? data.ai_assessment?.score_label, "12-month GA-RGCA prediction");
+  const velocityLabel = clinicalPhrase(data.velocity_label, "Risk Velocity");
   const meas = data.measurements ?? {
     weight_kg: latest?.weight_kg,
     height_cm: latest?.height_cm,

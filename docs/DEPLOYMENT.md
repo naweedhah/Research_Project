@@ -27,6 +27,8 @@ Local services:
 
 `SEED_ON_START` stays false. Schema updates are `alembic upgrade head` from `services/api`. They do not drop tables.
 
+Startup requires the prediction service to report `GA-RGCA-v4-Rolling-RSL`. Another model version fails startup.
+
 Do not enable live SMS/email unless `NOTIFICATION_PROVIDER` and API keys are explicitly configured.
 
 Archived container files, if still present, are not part of normal startup.
