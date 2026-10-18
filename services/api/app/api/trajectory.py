@@ -11,7 +11,7 @@ from app.core.deps import require_permission
 from app.models.intelligence import LatentEmbedding, Prediction, TrajectoryMetric
 from app.models.paediatric import Child, Visit
 from app.security.rbac import assert_child_access
-from app.services.malnutrition_type import resolve_display
+from app.services.malnutrition_type import display_probability_fields, resolve_display
 
 router = APIRouter(tags=["trajectory"])
 
@@ -74,13 +74,15 @@ def risk_history(child_id: UUID, db: Session = Depends(get_db), current=Depends(
         metric = db.scalar(select(TrajectoryMetric).where(TrajectoryMetric.to_visit_id == visit.id))
         anthro = visit.anthropometry
         if pred:
+            displayed_status, displayed_ga = resolve_display(pred.status_prediction, pred.calibrated_probabilities)
             series.append(
                 {
                     "visit_number": visit.visit_number,
                     "date": visit.visit_date.isoformat(),
                     "risk": pred.primary_risk_score,
                     "severity": pred.severity_prediction,
-                    "status": resolve_display(pred.status_prediction, pred.calibrated_probabilities)[0],
+                    "status": displayed_status,
+                    **display_probability_fields(displayed_status, displayed_ga, pred.primary_risk_score),
                     "progress": metric.progress_state.value if metric else None,
                     "risk_velocity": metric.risk_velocity if metric else None,
                     "weight_kg": anthro.weight_kg if anthro else None,
@@ -121,7 +123,7 @@ def report(child_id: UUID, request=None, db: Session = Depends(get_db), current=
     from app.services.audit import write_audit
     from app.services.child_list import active_model_is_demo
     from app.services.clinician_review import get_review_for_visit, serialize_review
-    from app.services.model_display import get_model_output_display_metadata
+    from app.services.model_display import get_model_output_display_metadata, semantics_for_prediction
 
     child = db.get(Child, child_id)
     if not child:
@@ -138,7 +140,6 @@ def report(child_id: UUID, request=None, db: Session = Depends(get_db), current=
     )
     hist = risk_history(child_id, db, current)
     prog = progress(child_id, db, current)
-    semantics = get_model_output_display_metadata(is_demo=active_model_is_demo(db))
     series = hist["series"]
     latest = series[-1] if series else None
     previous = series[-2] if len(series) >= 2 else None
@@ -149,11 +150,19 @@ def report(child_id: UUID, request=None, db: Session = Depends(get_db), current=
     prev_anthro = visits[-2].anthropometry if len(visits) >= 2 else None
 
     review_payload = None
+    pred = None
     if latest_visit:
         review = get_review_for_visit(db, latest_visit.id)
         reviewer = db.get(User, review.reviewer_user_id) if review else None
         pred = db.scalar(select(Prediction).where(Prediction.visit_id == latest_visit.id, Prediction.is_active.is_(True)))
         review_payload = serialize_review(review, reviewer, has_prediction=pred is not None)
+    # Label the report from the stored prediction's own source so a GA-RGCA
+    # score is never described with demo wording (and vice versa).
+    semantics = (
+        semantics_for_prediction(pred, is_demo=active_model_is_demo(db))
+        if pred is not None
+        else get_model_output_display_metadata(is_demo=active_model_is_demo(db))
+    )
 
     alerts = db.scalars(
         select(Alert)
@@ -208,6 +217,11 @@ def report(child_id: UUID, request=None, db: Session = Depends(get_db), current=
             "status": latest.get("status"),
             "severity": latest.get("severity"),
             "score": latest.get("risk"),
+            "risk": latest.get("risk"),
+            "score_label": semantics["score_label"],
+            "predicted_type_probability": latest.get("predicted_type_probability"),
+            "highest_risk_condition": latest.get("highest_risk_condition"),
+            "highest_risk_probability": latest.get("highest_risk_probability"),
             "previous_score": previous.get("risk") if previous else None,
             "visit_date": latest.get("date"),
             "visit_number": latest.get("visit_number"),

@@ -8,8 +8,8 @@ import {
   LayoutDashboard,
   LogOut,
   UserRound,
+  Stethoscope,
   Users,
-  Waypoints,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, PRODUCT } from "@/services/component4/httpClient";
@@ -31,7 +31,7 @@ type User = {
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/children", label: "Children", icon: Users },
-  { href: "/model-trajectory", label: "Model trajectory", icon: Waypoints },
+  { href: "/clinic-board", label: "Clinic board", icon: Stethoscope },
   { href: "/alerts", label: "Alerts", icon: Bell },
 ];
 
@@ -91,14 +91,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <ul className="space-y-1">
             {NAV.map((item) => {
-              const childId = pathname.match(/^\/children\/(?!new(?:\/|$))([^/]+)/)?.[1];
-              const href = item.href === "/model-trajectory" && childId ? `/children/${childId}/trajectory` : item.href;
+              const href = item.href;
               const active =
                 item.href === "/children"
-                  ? pathname.startsWith("/children") && !pathname.includes("/trajectory")
-                  : item.href === "/model-trajectory"
-                    ? pathname.includes("/trajectory")
-                    : pathname.startsWith(item.href);
+                  ? pathname.startsWith("/children")
+                  : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <li key={item.href}>

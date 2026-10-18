@@ -79,6 +79,7 @@ class ChildCreate(BaseModel):
     caregiver_display_name: str | None = None
     caregiver_phone: str | None = None
     reminder_consent: bool = False
+    registration_intake: dict[str, Any] | None = None
 
     @field_validator("date_of_birth")
     @classmethod
@@ -113,6 +114,7 @@ class ChildUpdate(BaseModel):
     caregiver_display_name: str | None = None
     caregiver_phone: str | None = None
     reminder_consent: bool | None = None
+    registration_intake: dict[str, Any] | None = None
 
     @field_validator("date_of_birth")
     @classmethod

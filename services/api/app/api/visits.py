@@ -64,6 +64,8 @@ def visit_prefill(child_id: UUID, db: Session = Depends(get_db), current=Depends
     age_months = (last.visit_date.year - child.date_of_birth.year) * 12 + (last.visit_date.month - child.date_of_birth.month) if last else None
     if last is None:
         age_months = (date.today().year - child.date_of_birth.year) * 12 + (date.today().month - child.date_of_birth.month)
+    intake = child.registration_intake if isinstance(child.registration_intake, dict) else {}
+    last_context = last.data_quality.get("ga_rgca_context") if last and isinstance(last.data_quality, dict) else None
     payload = {
         "child": {
             "id": str(child.id),
@@ -79,13 +81,13 @@ def visit_prefill(child_id: UUID, db: Session = Depends(get_db), current=Depends
             "visit_label": "V1" if last is None else f"V{last.visit_number + 1}",
         },
         "last_visit_id": str(last.id) if last else None,
-        "anthropometric": _row(last.anthropometry) if last else None,
-        "socioeconomic": _row(last.socioeconomic) if last else None,
-        "dietary": _row(last.dietary) if last else None,
-        "maternal_child_health": _row(last.maternal_child_health) if last else None,
-        "ga_rgca_context": last.data_quality.get("ga_rgca_context")
-        if last and isinstance(last.data_quality, dict)
-        else None,
+        "anthropometric": _merge_intake(_row(last.anthropometry) if last else None, intake.get("anthropometric")),
+        "socioeconomic": _row(last.socioeconomic) if last and last.socioeconomic else _as_dict(intake.get("socioeconomic")),
+        "dietary": _row(last.dietary) if last and last.dietary else _as_dict(intake.get("dietary")),
+        "maternal_child_health": _row(last.maternal_child_health)
+        if last and last.maternal_child_health
+        else _as_dict(intake.get("maternal_child_health")),
+        "ga_rgca_context": last_context or _as_dict(intake.get("ga_rgca_context")),
         "historical_growth": _historical_growth(db, child.id),
     }
     return payload
@@ -483,6 +485,23 @@ def get_prediction(visit_id: UUID, db: Session = Depends(get_db), current=Depend
         }
         for p in preds
     ]
+
+
+def _as_dict(value) -> dict | None:
+    return value if isinstance(value, dict) else None
+
+
+def _merge_intake(recorded: dict | None, intake) -> dict | None:
+    background = _as_dict(intake)
+    if recorded is None:
+        return background
+    if not background:
+        return recorded
+    merged = dict(recorded)
+    for key, value in background.items():
+        if merged.get(key) in (None, "") and value not in (None, ""):
+            merged[key] = value
+    return merged
 
 
 def _row(obj):

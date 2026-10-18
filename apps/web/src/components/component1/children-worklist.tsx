@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Info, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardPlus, Info, Search } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { api } from "@/services/component4/httpClient";
 import { Button } from "@/components/common/button";
@@ -11,8 +11,14 @@ import { Input, Select } from "@/components/common/field";
 import { RegisterChildModal } from "@/components/component1/register-child-modal";
 import { ConfirmAction, RecordActions } from "@/components/component1/record-actions";
 import { toast } from "sonner";
-import { displayedConditionList, displayedMalnutritionType } from "@/data/child-profile";
-import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn } from "@/utils/utils";
+import {
+  displayedConditionList,
+  displayedMalnutritionType,
+  formatHighestConditionRisk,
+  primaryTypeProbability,
+  primaryTypeProbabilityLabel,
+} from "@/data/child-profile";
+import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn, displayPredictedSeverity } from "@/utils/utils";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 
 type ClinicalAttention = { type: string; label: string; severity?: string; status?: string };
@@ -34,9 +40,14 @@ type Item = {
   detected_conditions?: string[] | null;
   score_kind?: string;
   severity?: string;
+  /** Highest of the four condition probabilities (drives alerts, velocity, sorting). */
   current_risk?: number;
   previous_risk?: number | null;
   risk_change_pp?: number | null;
+  /** Probability paired with the predicted type (Normal = 1 − current_risk). */
+  predicted_type_probability?: number | null;
+  highest_risk_condition?: string | null;
+  highest_risk_probability?: number | null;
   probability_label?: string;
   prediction_confidence?: string | null;
   risk_velocity_pp_month?: number | null;
@@ -173,7 +184,7 @@ function WorklistContent() {
   const canRegister = user.data?.permissions?.includes("child:write") ?? false;
 
   useEffect(() => {
-    setRegisterOpen(params.get("register") === "1");
+    if (params.get("register") === "1") setRegisterOpen(true);
   }, [params]);
 
   const queryString = useMemo(() => {
@@ -377,7 +388,7 @@ function WorklistRow({
   const progressLabel = PROGRESS_LABELS[row.progress_display ?? ""] ?? formatStatus(row.progress_display);
   const reviewLabel = REVIEW_LABELS[row.clinician_review_status ?? ""] ?? row.clinician_review_status;
   const needsReview = row.clinician_review_status === "AWAITING_REVIEW" || row.clinician_review_status === "IN_REVIEW";
-  const actionLabel = !row.has_assessment ? "Start baseline" : needsReview ? "Review" : "Open";
+  const actionLabel = needsReview ? "Review" : "Open";
   const href = !row.has_assessment
     ? `/children/${row.id}/visits/new`
     : needsReview
@@ -426,8 +437,24 @@ function WorklistRow({
         <td className="px-4 py-3 text-right align-top">
           <div className="inline-flex items-center justify-end gap-2">
             {canWrite ? <RecordActions onEdit={onEdit} onDelete={onDelete} editLabel={`Edit ${row.pseudonymous_id}`} deleteLabel={`Remove ${row.pseudonymous_id}`} /> : null}
-            <Link href={href} className="inline-flex items-center gap-1 text-sm font-medium text-[#2563eb] hover:underline">
-              {actionLabel} <ChevronRight className="h-4 w-4" />
+            <Link
+              href={href}
+              className={
+                !row.has_assessment
+                  ? "inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#0E3A67] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0A2748]"
+                  : "inline-flex items-center gap-1 text-sm font-medium text-[#2563eb] hover:underline"
+              }
+            >
+              {!row.has_assessment ? (
+                <>
+                  <ClipboardPlus className="h-3.5 w-3.5" />
+                  Record visit
+                </>
+              ) : (
+                <>
+                  {actionLabel} <ChevronRight className="h-4 w-4" />
+                </>
+              )}
             </Link>
           </div>
         </td>
@@ -447,30 +474,42 @@ function AssessmentCell({ row }: { row: Item }) {
   if (!row.has_assessment) {
     return <p className="text-sm text-[#64748b]">Not assessed</p>;
   }
-  const showSeverity = row.severity && row.severity !== "none";
+  const typeLabel = formatNutritionalStatus(displayedMalnutritionType(row), row.severity);
+  const severityLabel = !["MAM", "SAM"].includes(typeLabel) ? displayPredictedSeverity(displayedMalnutritionType(row), row.severity) : null;
+  const isConditionModel = row.score_kind === "highest_condition_probability";
   const delta = row.risk_change_pp;
   const prevPct = row.previous_risk != null ? Math.round(row.previous_risk * 100) : null;
+  const highestRiskLabel = clinicalPhrase(row.probability_label, "Highest predicted condition risk");
 
   return (
     <div>
       <div className="flex flex-wrap gap-1">
         <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#1e40af]">
-          {row.score_kind === "highest_condition_probability"
-            ? displayedConditionList(row).join(", ") || "—"
-            : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
+          {isConditionModel ? displayedConditionList(row).join(", ") || "—" : typeLabel}
         </span>
-        {showSeverity && !["MAM", "SAM"].includes(formatNutritionalStatus(displayedMalnutritionType(row), row.severity)) ? (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{formatStatus(row.severity)}</span>
+        {severityLabel ? (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{severityLabel}</span>
         ) : null}
       </div>
-      <p className="mt-1.5 text-lg font-semibold tabular-nums text-[#0f2744]">{formatPercent(row.current_risk)}</p>
+      <p className="mt-1.5 text-lg font-semibold tabular-nums text-[#0f2744]">{formatPercent(primaryTypeProbability(row))}</p>
       <p className="flex items-center gap-1 text-[10px] text-[#64748b]">
-        {clinicalPhrase(row.probability_label, "Model-assessed probability")}
-        <InfoTip text="Generated by the active model. Interpretation depends on the configured prediction task and does not replace clinical assessment." />
+        {isConditionModel ? primaryTypeProbabilityLabel(row) : clinicalPhrase(row.probability_label, "Model-assessed probability")}
+        <InfoTip
+          text={
+            isConditionModel
+              ? "Probability of the predicted type shown above. Normal is 1 minus the highest condition risk. Clinical review required."
+              : "Generated by the active model. Interpretation depends on the configured prediction task and does not replace clinical assessment."
+          }
+        />
       </p>
+      {isConditionModel ? (
+        <p className="mt-1 text-xs text-[#475569]">
+          {highestRiskLabel}: <span className="font-medium tabular-nums text-[#0f2744]">{formatHighestConditionRisk(row)}</span>
+        </p>
+      ) : null}
       {prevPct != null && delta != null ? (
         <p className="mt-0.5 text-xs text-[#64748b]">
-          Previous {prevPct}% ·{" "}
+          {isConditionModel ? "Previous highest risk" : "Previous"} {prevPct}% ·{" "}
           <span className={delta > 0 ? "text-clinical-warning" : delta < 0 ? "text-emerald-700" : ""}>
             {delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)} pp
           </span>
@@ -496,7 +535,9 @@ function ProgressCell({ row, progressLabel }: { row: Item; progressLabel: string
         <p className="mt-1 flex items-center gap-1 text-xs text-[#475569]">
           RV {row.risk_velocity_pp_month > 0 ? "+" : ""}
           {row.risk_velocity_pp_month} pp/month
-          <InfoTip text="Visit-to-visit change in model-assessed probability, adjusted for elapsed time. Clinical review required." />
+          <InfoTip
+            text={`Visit-to-visit change in ${clinicalPhrase(row.probability_label, "model-assessed probability").toLowerCase()}, adjusted for elapsed time. Clinical review required.`}
+          />
         </p>
       ) : row.progress_display === "insufficient_history" || !row.has_assessment ? (
         <p className="mt-1 text-xs text-[#64748b]">RV not available</p>
@@ -557,7 +598,9 @@ function ExpandedDetail({ row, progressLabel, reviewLabel }: { row: Item; progre
         )}
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase text-[#64748b]">Probability history</p>
+        <p className="text-xs font-semibold uppercase text-[#64748b]">
+          {clinicalPhrase(row.probability_label, "Probability")} history
+        </p>
         <p className="mt-2 text-sm">{hist.length ? hist.map((v) => `${v}%`).join(" → ") : "—"}</p>
         <p className="mt-2 text-xs text-[#64748b]">Progress: {progressLabel}</p>
         {row.risk_velocity_available ? <p className="text-xs">RV {row.risk_velocity_pp_month} pp/month</p> : null}
@@ -597,11 +640,39 @@ function MobileCard({
         </div>
         <div className="flex items-center gap-1">
           {canWrite ? <RecordActions onEdit={onEdit} onDelete={onDelete} editLabel={`Edit ${row.pseudonymous_id}`} deleteLabel={`Remove ${row.pseudonymous_id}`} /> : null}
-          <Link href={href} className="text-sm font-medium text-[#2563eb]">{needsReview ? "Review" : "Open"}</Link>
+          <Link
+            href={href}
+            className={
+              !row.has_assessment
+                ? "inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#0E3A67] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0A2748]"
+                : "text-sm font-medium text-[#2563eb]"
+            }
+          >
+            {!row.has_assessment ? (
+              <>
+                <ClipboardPlus className="h-3.5 w-3.5" />
+                Record visit
+              </>
+            ) : needsReview ? (
+              "Review"
+            ) : (
+              "Open"
+            )}
+          </Link>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div><span className="text-[#64748b]">Assessment</span><p>{formatPercent(row.current_risk)}</p></div>
+        <div>
+          <span className="text-[#64748b]">
+            {row.score_kind === "highest_condition_probability"
+              ? primaryTypeProbabilityLabel(row)
+              : clinicalPhrase(row.probability_label, "Model-assessed probability")}
+          </span>
+          <p>{row.has_assessment ? formatPercent(primaryTypeProbability(row)) : "—"}</p>
+          {row.has_assessment && row.score_kind === "highest_condition_probability" ? (
+            <p className="text-[#64748b]">Highest risk: {formatHighestConditionRisk(row)}</p>
+          ) : null}
+        </div>
         <div><span className="text-[#64748b]">Progress</span><p>{PROGRESS_LABELS[row.progress_display ?? ""] ?? "—"}</p></div>
       </div>
     </article>

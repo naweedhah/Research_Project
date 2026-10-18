@@ -34,6 +34,17 @@ from app.services.malnutrition_type import apply_new_prediction_interpretation
 from app.services.model_display import DEMO_PROJECTION_VERSION
 
 
+def _stored_model_version(prediction) -> str | None:
+    calibrated = getattr(prediction, "calibrated_probabilities", None)
+    if not isinstance(calibrated, dict):
+        return None
+    block = calibrated.get("ga_rgca")
+    if not isinstance(block, dict):
+        return None
+    version = block.get("model_version") or block.get("prediction_source")
+    return str(version) if version else None
+
+
 def _input_hash(payload: dict) -> str:
     canonical = json.dumps(payload, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()
@@ -250,7 +261,7 @@ def run_inference(db: Session, visit: Visit, child: Child, user_id, ip: str | No
     payload = build_inference_payload(db, visit, child)
     started = datetime.now(UTC)
     try:
-        with httpx.Client(timeout=30.0) as client:
+        with httpx.Client(timeout=120.0) as client:
             response = client.post(f"{settings.inference_url}/predict", json=payload)
             response.raise_for_status()
             result = apply_new_prediction_interpretation(response.json())
@@ -297,17 +308,18 @@ def run_inference(db: Session, visit: Visit, child: Child, user_id, ip: str | No
 
     embedding = result.get("latent_embedding") or []
     x, y = _project(embedding)
+    v4_embedding = result.get("model_version") == "GA-RGCA-v4-Rolling-RSL"
     db.add(
         LatentEmbedding(
             visit_id=visit.id,
             prediction_id=prediction.id,
             model_version_id=model.id,
-            embedding_space_id=model.embedding_space_id,
+            embedding_space_id="ga-rgca-v4-rolling-rsl-fused-latent" if v4_embedding else model.embedding_space_id,
             embedding_dimension=len(embedding) or model.embedding_dimension,
             embedding=embedding,
             projection_x=x,
             projection_y=y,
-            projection_version=DEMO_PROJECTION_VERSION,
+            projection_version="ga-rgca-v4-fused-latent-v1" if v4_embedding else DEMO_PROJECTION_VERSION,
         )
     )
 
@@ -364,6 +376,10 @@ def _update_trajectory(db: Session, child: Child, visit: Visit, prediction: Pred
         prev_mode = prev_active.mode.value if hasattr(prev_active.mode, "value") else prev_active.mode
         new_mode = prediction.mode.value if hasattr(prediction.mode, "value") else prediction.mode
         if str(prev_mode) != str(new_mode):
+            compatible = False
+        previous_version = _stored_model_version(prev_active)
+        current_version = _stored_model_version(prediction)
+        if previous_version and current_version and previous_version != current_version:
             compatible = False
 
     months = None
@@ -495,7 +511,10 @@ def _maybe_create_alerts(db, child, visit, prediction, prev_active, base_active,
         prev = prev_active.primary_risk_score if prev_active else None
         calibrated = prediction.calibrated_probabilities if isinstance(prediction.calibrated_probabilities, dict) else {}
         ga_block = calibrated.get("ga_rgca") if isinstance(calibrated, dict) else None
-        predicted_risk = isinstance(ga_block, dict) and ga_block.get("prediction_source") == "GA-RGCA-v3"
+        predicted_risk = isinstance(ga_block, dict) and ga_block.get("prediction_source") in {
+            "GA-RGCA-v3",
+            "GA-RGCA-v4-Rolling-RSL",
+        }
         message = {
             AlertType.STAGNATION: "Progress stagnation detected",
             AlertType.DETERIORATION: (

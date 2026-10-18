@@ -20,7 +20,7 @@ from app.models.paediatric import Child, Visit
 from app.security.rbac import facility_scope_ids
 from app.services.child_list import child_is_synthetic
 from app.services.longitudinal import monthly_velocity_available
-from app.services.malnutrition_type import resolve_display
+from app.services.malnutrition_type import display_probability_fields, resolve_display
 from app.services.model_display import get_model_output_display_metadata, semantics_for_prediction
 
 router = APIRouter(tags=["dashboard"])
@@ -257,6 +257,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             "predicted_malnutrition_type": displayed_ga.get("predicted_malnutrition_type") if displayed_ga else None,
             "detected_conditions": displayed_ga.get("detected_conditions") if displayed_ga else None,
             "severity": pred.severity_prediction if pred else None,
+            **display_probability_fields(displayed_status, displayed_ga, current_risk),
             "probability_label": semantics["score_label"],
             "score_kind": semantics["score_kind"],
             "score_is_probability": semantics["score_is_probability"],
@@ -353,6 +354,8 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             continue
         author = db.get(User, row.reviewer_user_id)
         parsed = serialize_review(row, author, has_prediction=True)
+        parsed["note_id"] = parsed["id"]
+        parsed["child_id"] = str(child.id)
         parsed["pseudonymous_id"] = child.pseudonymous_id
         parsed["full_name"] = _child_full_name(child)
         recent_reviews.append(parsed)

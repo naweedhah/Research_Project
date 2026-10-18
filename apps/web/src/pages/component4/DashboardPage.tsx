@@ -27,7 +27,7 @@ import { api } from "@/services/component4/httpClient";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { Button } from "@/components/common/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
-import { displayedMalnutritionType } from "@/data/child-profile";
+import { displayedMalnutritionType, formatHighestConditionRisk, primaryTypeProbability } from "@/data/child-profile";
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
@@ -52,9 +52,14 @@ type PriorityPatient = {
   score_kind?: string;
   severity?: string | null;
   probability_label: string;
+  /** Highest of the four condition probabilities (backend primary risk score). */
   current_probability?: number | null;
   previous_probability?: number | null;
   probability_delta_pp?: number | null;
+  /** Probability paired with the predicted type (Normal = 1 − highest condition risk). */
+  predicted_type_probability?: number | null;
+  highest_risk_condition?: string | null;
+  highest_risk_probability?: number | null;
   risk_velocity?: number | null;
   progress_state?: string | null;
   alerts: PriorityAlert[];
@@ -95,7 +100,8 @@ type Dashboard = {
     total_scheduled: number;
   };
   recent_clinical_reviews: {
-    note_id: string;
+    id?: string | null;
+    note_id?: string | null;
     child_id: string;
     pseudonymous_id?: string | null;
     full_name?: string | null;
@@ -383,13 +389,13 @@ function RecentClinicalReviewsSection({
           role="region"
           aria-label="Recent clinical reviews carousel"
         >
-          {reviews.map((review) => {
+          {reviews.map((review, index) => {
             const style = REVIEW_ASSESSMENT_STYLES[review.assessment_key ?? "reviewed"] ?? REVIEW_ASSESSMENT_STYLES.reviewed;
             const Icon = style.icon;
 
             return (
               <article
-                key={review.note_id}
+                key={review.note_id ?? review.id ?? `${review.child_id}-${review.created_at}-${index}`}
                 className="flex w-[min(100%,320px)] shrink-0 snap-start flex-col rounded-2xl border border-[#e8eef5] bg-white p-4 shadow-sm transition hover:border-[#cbd5e1] hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -470,6 +476,9 @@ function RecentClinicalReviewsSection({
 
 function PriorityPatientRow({ row }: { row: PriorityPatient }) {
   const delta = row.probability_delta_pp;
+  const isConditionModel = row.score_kind === "highest_condition_probability";
+  const probabilitySource = { ...row, current_risk: row.current_probability };
+  const typeProbability = primaryTypeProbability(probabilitySource);
   const DeltaIcon = delta == null ? Minus : delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : Minus;
   const deltaTone =
     delta == null ? "text-[#64748b]" : delta > 0 ? "text-[#dc2626]" : delta < 0 ? "text-[#059669]" : "text-[#64748b]";
@@ -506,8 +515,8 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           </div>
           {row.current_status ? (
             <p className="mt-2 inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-[#0f2744]">
-              {row.score_kind === "highest_condition_probability"
-                ? `Predicted type: ${displayedMalnutritionType(row) || "—"}`
+              {isConditionModel
+                ? `Predicted type: ${displayedMalnutritionType(row) || "—"}${typeProbability != null ? ` · ${formatPercent(typeProbability)}` : ""}`
                 : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
             </p>
           ) : null}
@@ -537,12 +546,15 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
                 current={row.current_probability}
                 previous={row.previous_probability}
                 deltaPp={row.probability_delta_pp}
-                twelveMonthRisk={row.score_kind === "highest_condition_probability"}
+                twelveMonthRisk={isConditionModel}
               />
             </span>
           }
         >
           <span className="text-xl font-semibold tabular-nums tracking-tight">{formatPercent(row.current_probability)}</span>
+          {isConditionModel && row.highest_risk_condition ? (
+            <span className="block text-xs text-[#475569]">{formatHighestConditionRisk(probabilitySource)}</span>
+          ) : null}
           {row.previous_probability != null ? (
             <span className="block text-xs text-[#64748b]">{formatPercent(row.previous_probability)} previous</span>
           ) : null}

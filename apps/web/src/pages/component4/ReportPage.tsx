@@ -7,8 +7,17 @@ import { api, PRODUCT } from "@/services/component4/httpClient";
 import { Button } from "@/components/common/button";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { ErrorState, Skeleton } from "@/components/common/states";
-import { clinicalPhrase, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
-import { formatPp, formatRv, progressLabel as profileProgressLabel, reviewLabel, type ChildProfile } from "@/data/child-profile";
+import { clinicalPhrase, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus, malnutritionSeverityApplies } from "@/utils/utils";
+import {
+  formatHighestConditionRisk,
+  formatPp,
+  formatRv,
+  primaryTypeProbability,
+  primaryTypeProbabilityLabel,
+  progressLabel as profileProgressLabel,
+  reviewLabel,
+  type ChildProfile,
+} from "@/data/child-profile";
 
 type Report = {
   pseudonymous_id: string;
@@ -27,9 +36,13 @@ type Report = {
   risk_history: {
     visit_number: number;
     date: string;
+    /** Highest of the four condition probabilities (backend primary risk score). */
     risk: number;
     severity: string;
     status: string;
+    predicted_type_probability?: number | null;
+    highest_risk_condition?: string | null;
+    highest_risk_probability?: number | null;
     progress?: string | null;
     weight_kg?: number | null;
     height_cm?: number | null;
@@ -44,7 +57,11 @@ type Report = {
     status?: string | null;
     severity?: string | null;
     risk?: number | null;
+    score?: number | null;
     score_label?: string | null;
+    predicted_type_probability?: number | null;
+    highest_risk_condition?: string | null;
+    highest_risk_probability?: number | null;
   } | null;
   alerts?: { type: string; status: string; message: string; headline?: string }[] | null;
   clinician_review?: {
@@ -98,7 +115,19 @@ export default function ReportPage() {
   };
   const aiStatus = data.ai_assessment?.status ?? latest?.status;
   const aiSeverity = data.ai_assessment?.severity ?? latest?.severity;
-  const aiRisk = data.ai_assessment?.risk ?? latest?.risk ?? data.progress.current_risk;
+  const aiRisk = data.ai_assessment?.risk ?? data.ai_assessment?.score ?? latest?.risk ?? data.progress.current_risk;
+  const latestPrediction = profile.data?.current?.prediction ?? profile.data?.visits.at(-1)?.prediction ?? null;
+  // Pair the predicted type with its own probability; the report score stays the highest condition risk.
+  const aiSource = {
+    status: aiStatus,
+    risk: aiRisk,
+    predicted_type_probability: data.ai_assessment?.predicted_type_probability ?? latest?.predicted_type_probability,
+    highest_risk_condition: data.ai_assessment?.highest_risk_condition ?? latest?.highest_risk_condition,
+    highest_risk_probability: data.ai_assessment?.highest_risk_probability ?? latest?.highest_risk_probability,
+    ga_rgca: latestPrediction?.ga_rgca ?? null,
+  };
+  const isConditionModel = Boolean(aiSource.ga_rgca || aiSource.highest_risk_condition);
+  const aiTypeProbability = primaryTypeProbability(aiSource);
   const comparable = profile.data?.longitudinal_comparable !== false;
 
   return (
@@ -132,13 +161,21 @@ export default function ReportPage() {
         <h2 className="text-lg font-semibold">AI-assisted assessment</h2>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Latest predicted status</p>
+            <p className="text-xs text-muted">Latest predicted type</p>
             <p className="mt-1 text-xl font-semibold">{formatNutritionalStatus(aiStatus, aiSeverity)}</p>
-            <StatusBadge value={aiSeverity} />
+            {malnutritionSeverityApplies(aiStatus) ? <StatusBadge value={aiSeverity} /> : null}
+            {isConditionModel && aiTypeProbability != null ? (
+              <p className="mt-1 text-xs text-muted">
+                {primaryTypeProbabilityLabel(aiSource)}: <strong className="text-[#0f2744]">{formatPercent(aiTypeProbability)}</strong>
+              </p>
+            ) : null}
           </div>
           <div className="rounded-xl bg-canvas p-4">
             <p className="text-xs text-muted">{scoreLabel}</p>
             <p className="mt-1 text-xl font-semibold">{formatPercent(aiRisk)}</p>
+            {isConditionModel ? (
+              <p className="text-xs text-muted">Leading condition: {formatHighestConditionRisk(aiSource)}</p>
+            ) : null}
             <p className="text-xs text-muted">AI-assisted assessment. Clinical review required.</p>
           </div>
         </div>
@@ -166,7 +203,7 @@ export default function ReportPage() {
             </p>
           </div>
           <div className="rounded-xl bg-canvas p-4 sm:col-span-2">
-            <p className="text-xs text-muted">Score sequence</p>
+            <p className="text-xs text-muted">{scoreLabel} sequence</p>
             <p className="mt-1 font-medium">
               {first && latest
                 ? data.risk_history.map((r) => formatPercent(r.risk)).join(" → ")
@@ -231,8 +268,9 @@ export default function ReportPage() {
               <th className="py-2 pr-3">Date</th>
               <th className="py-2 pr-3">Weight</th>
               <th className="py-2 pr-3">Height</th>
-              <th className="py-2 pr-3">Status</th>
-              <th className="py-2">Score</th>
+              <th className="py-2 pr-3">Predicted type</th>
+              {isConditionModel ? <th className="py-2 pr-3">Type probability</th> : null}
+              <th className="py-2">{isConditionModel ? "Highest condition risk" : scoreLabel}</th>
             </tr>
           </thead>
           <tbody>
@@ -243,7 +281,8 @@ export default function ReportPage() {
                 <td className="py-2.5 pr-3">{row.weight_kg ?? "—"}</td>
                 <td className="py-2.5 pr-3">{row.height_cm ?? "—"}</td>
                 <td className="py-2.5 pr-3">{formatNutritionalStatus(row.status, row.severity)}</td>
-                <td className="py-2.5">{formatPercent(row.risk)}</td>
+                {isConditionModel ? <td className="py-2.5 pr-3">{formatPercent(primaryTypeProbability(row))}</td> : null}
+                <td className="py-2.5">{isConditionModel ? formatHighestConditionRisk(row) : formatPercent(row.risk)}</td>
               </tr>
             ))}
           </tbody>

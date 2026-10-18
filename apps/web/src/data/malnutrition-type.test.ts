@@ -3,9 +3,14 @@ import {
   ACUTE_MALNUTRITION_STATUSES,
   PREDICTED_MALNUTRITION_TYPES,
   displayedMalnutritionType,
+  formatHighestConditionRisk,
+  highestConditionRisk,
   primaryTypeProbability,
+  primaryTypeProbabilityLabel,
   probabilitySeries,
+  sameConditionDelta,
   visitBinding,
+  normalCategoryProbability,
   type ChildProfile,
   type PredictedMalnutritionType,
   type AcuteMalnutritionStatus,
@@ -71,6 +76,32 @@ describe("malnutrition type display", () => {
         },
       }),
     ).toBe(0.66);
+    expect(
+      primaryTypeProbability({
+        status: "Normal",
+        risk: 0.05,
+        ga_rgca: {
+          predicted_malnutrition_type: "Normal",
+          underweight_probability: 0.004,
+          stunting_probability: 0.05,
+          mam_probability: 0.03,
+          sam_probability: 0.004,
+        },
+      }),
+    ).toBeCloseTo(0.95, 5);
+  });
+
+  it("shows Normal as the residual of the highest malnutrition head", () => {
+    expect(
+      normalCategoryProbability({
+        underweight_probability: 0.004,
+        stunting_probability: 0.05,
+        mam_probability: 0.03,
+        sam_probability: 0.004,
+      }),
+    ).toBeCloseTo(0.95, 5);
+    expect(normalCategoryProbability({ underweight_probability: 0.33, stunting_probability: 0, mam_probability: 0, sam_probability: 0 })).toBeCloseTo(0.67, 5);
+    expect(normalCategoryProbability(null)).toBeNull();
   });
 
   it("plots the selected condition across visits", () => {
@@ -109,6 +140,77 @@ describe("malnutrition type display", () => {
       weight_kg: 10,
       status: "Stunting",
       age_months: 24,
+    });
+  });
+
+  describe("predicted type probability vs highest condition risk", () => {
+    const normalChild = {
+      risk: 0.05,
+      ga_rgca: {
+        predicted_malnutrition_type: "Normal",
+        underweight_probability: 0.02,
+        stunting_probability: 0.05,
+        mam_probability: 0.01,
+        sam_probability: 0.0,
+      },
+    };
+
+    it("pairs Normal with the residual and names the leading condition for the stored risk", () => {
+      expect(primaryTypeProbability(normalChild)).toBeCloseTo(0.95);
+      expect(primaryTypeProbabilityLabel(normalChild)).toBe("Normal probability");
+      expect(highestConditionRisk(normalChild)).toEqual({ condition: "Stunting", probability: 0.05 });
+      expect(formatHighestConditionRisk(normalChild)).toBe("Stunting 5%");
+    });
+
+    it("the two numbers are complementary for a Normal prediction", () => {
+      const residual = primaryTypeProbability(normalChild)!;
+      const highest = highestConditionRisk(normalChild).probability!;
+      expect(residual + highest).toBeCloseTo(1);
+    });
+
+    it("pairs a condition type with its own head and keeps the highest risk separate", () => {
+      const stunted = {
+        risk: 0.66,
+        ga_rgca: {
+          predicted_malnutrition_type: "Stunting",
+          underweight_probability: 0.7,
+          stunting_probability: 0.66,
+          mam_probability: 0.01,
+          sam_probability: 0,
+        },
+      };
+      expect(primaryTypeProbability(stunted)).toBe(0.66);
+      expect(highestConditionRisk(stunted)).toEqual({ condition: "Underweight", probability: 0.7 });
+    });
+
+    it("uses backend fields when per-condition heads are absent (worklist rows)", () => {
+      const row = {
+        current_status: "Normal",
+        predicted_malnutrition_type: "Normal",
+        current_risk: 0.05,
+        predicted_type_probability: 0.95,
+        highest_risk_condition: "Stunting",
+        highest_risk_probability: 0.05,
+      };
+      expect(primaryTypeProbability(row)).toBe(0.95);
+      expect(formatHighestConditionRisk(row)).toBe("Stunting 5%");
+    });
+
+    it("derives the Normal residual from current_risk when only the leading condition is known", () => {
+      const row = { current_status: "Normal", current_risk: 0.05, highest_risk_condition: "Stunting" };
+      expect(primaryTypeProbability(row)).toBeCloseTo(0.95);
+    });
+
+    it("falls back to the stored score for demo-mode predictions", () => {
+      const demo = { status: "Underweight", risk: 0.42 };
+      expect(primaryTypeProbability(demo)).toBe(0.42);
+      expect(highestConditionRisk(demo)).toEqual({ condition: null, probability: 0.42 });
+      expect(formatHighestConditionRisk(demo)).toBe("42%");
+    });
+
+    it("Normal residual delta is comparable across visits", () => {
+      const previous = { ...normalChild, ga_rgca: { ...normalChild.ga_rgca, stunting_probability: 0.1 } };
+      expect(sameConditionDelta(normalChild, previous)).toBe(5);
     });
   });
 });

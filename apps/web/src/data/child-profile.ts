@@ -1,3 +1,5 @@
+import { formatPercent } from "@/utils/utils";
+
 export const PREDICTED_MALNUTRITION_TYPES = ["Normal", "Underweight", "Stunting", "MAM", "SAM"] as const;
 export type PredictedMalnutritionType = (typeof PREDICTED_MALNUTRITION_TYPES)[number];
 
@@ -14,7 +16,13 @@ export type ProfilePrediction = {
   status?: string;
   predicted_malnutrition_type?: PredictedMalnutritionType | string | null;
   severity?: string;
+  /** Highest of the four condition probabilities (backend primary_risk_score). Not the predicted-type probability. */
   risk?: number;
+  /** Probability that belongs beside the predicted type (Normal = 1 − highest condition risk). */
+  predicted_type_probability?: number | null;
+  /** Name of the condition head that produced `risk`. */
+  highest_risk_condition?: string | null;
+  highest_risk_probability?: number | null;
   confidence?: string;
   mode?: string;
   model?: string | null;
@@ -36,8 +44,20 @@ export type ProfilePrediction = {
     acute_status?: AcuteMalnutritionStatus | string;
     acute_probability?: number;
     severity?: string;
-    severity_probabilities?: { normal?: number; moderate?: number; severe?: number };
+    severity_probabilities?: {
+      normal?: number;
+      moderate?: number;
+      severe?: number;
+      Normal?: number;
+      Moderate?: number;
+      Severe?: number;
+    };
     binary_variance?: number;
+    ensemble_variance?: number;
+    out_of_distribution_flag?: boolean;
+    latent_distance?: number | null;
+    acute_conformal_prediction_set?: string[];
+    prediction_horizon_months?: number;
     uncertainty_flag?: boolean;
     uncertainty_label?: string;
     triage?: string;
@@ -67,6 +87,12 @@ export type ProfileVisit = {
   status?: string;
   data_quality?: Record<string, unknown> | null;
   measurements?: ProfileMeasurements | null;
+  feeding?: {
+    breastfeeding_status?: string | null;
+    complementary_feeding?: boolean | null;
+    meal_frequency?: number | null;
+    micronutrient_supplementation?: boolean | null;
+  } | null;
   prediction?: ProfilePrediction | null;
   progress?: string | null;
   risk_velocity?: number | null;
@@ -120,6 +146,13 @@ export type ChildProfile = {
   district?: string | null;
   moh_area?: string | null;
   phm_area?: string | null;
+  registration_intake?: {
+    anthropometric?: Record<string, unknown> | null;
+    socioeconomic?: Record<string, unknown> | null;
+    dietary?: Record<string, unknown> | null;
+    maternal_child_health?: Record<string, unknown> | null;
+    ga_rgca_context?: Record<string, unknown> | null;
+  } | null;
   assigned_doctor?: { id: string; full_name: string } | null;
   caregiver?: {
     relationship?: string | null;
@@ -282,45 +315,102 @@ export function visitProbabilityDeltaPp(current?: number | null, previous?: numb
 export const TREND_CONDITIONS = ["Underweight", "Stunting", "MAM", "SAM"] as const;
 export type TrendCondition = (typeof TREND_CONDITIONS)[number];
 
-export function conditionProbability(
-  source?: {
-    risk?: number | null;
-    predicted_malnutrition_type?: string | null;
-    ga_rgca?: {
-      underweight_probability?: number;
-      stunting_probability?: number;
-      mam_probability?: number;
-      sam_probability?: number;
-    } | null;
-  } | null,
-  condition?: string | null,
-): number | null {
+export function conditionProbability(source?: ProbabilitySource | null, condition?: string | null): number | null {
   const ga = source?.ga_rgca;
   if (condition === "Underweight") return ga?.underweight_probability ?? null;
   if (condition === "Stunting") return ga?.stunting_probability ?? null;
   if (condition === "MAM") return ga?.mam_probability ?? null;
   if (condition === "SAM") return ga?.sam_probability ?? null;
+  if (condition === "Normal") return normalCategoryProbability(ga);
   return null;
 }
 
-export function primaryTypeProbability(
-  source?: {
-    risk?: number | null;
-    predicted_malnutrition_type?: string | null;
-    status?: string | null;
-    ga_rgca?: {
-      predicted_malnutrition_type?: string | null;
-      underweight_probability?: number;
-      stunting_probability?: number;
-      mam_probability?: number;
-      sam_probability?: number;
-    } | null;
+/**
+ * Display-only Normal category: 1 minus the highest of the four malnutrition
+ * heads. The model has no fifth softmax class; this residual is the probability
+ * that none of Underweight, Stunting, MAM or SAM is the leading risk.
+ */
+export function normalCategoryProbability(
+  ga?: {
+    underweight_probability?: number;
+    stunting_probability?: number;
+    mam_probability?: number;
+    sam_probability?: number;
   } | null,
 ): number | null {
+  if (!ga) return null;
+  const values = [ga.underweight_probability, ga.stunting_probability, ga.mam_probability, ga.sam_probability].filter(
+    (v): v is number => typeof v === "number" && Number.isFinite(v),
+  );
+  if (!values.length) return null;
+  return Math.max(0, Math.min(1, 1 - Math.max(...values)));
+}
+
+type ProbabilitySource = {
+  risk?: number | null;
+  current_risk?: number | null;
+  predicted_type_probability?: number | null;
+  highest_risk_condition?: string | null;
+  highest_risk_probability?: number | null;
+  predicted_malnutrition_type?: string | null;
+  status?: string | null;
+  current_status?: string | null;
+  ga_rgca?: {
+    predicted_malnutrition_type?: string | null;
+    underweight_probability?: number;
+    stunting_probability?: number;
+    mam_probability?: number;
+    sam_probability?: number;
+  } | null;
+};
+
+/**
+ * Probability shown beside the predicted type label.
+ * Normal → 1 − highest condition risk; a condition → that head's probability.
+ * Falls back to the backend field, then to the stored primary risk score (demo mode).
+ */
+export function primaryTypeProbability(source?: ProbabilitySource | null): number | null {
   const type = displayedMalnutritionType(source);
   const matched = conditionProbability(source, type);
   if (matched != null) return matched;
-  return source?.risk ?? null;
+  if (source?.predicted_type_probability != null) return source.predicted_type_probability;
+  const risk = source?.risk ?? source?.current_risk ?? null;
+  // Without per-condition heads, a Normal type can still be paired with the residual of the highest risk.
+  if (risk != null && type === "Normal" && source?.highest_risk_condition) return Math.max(0, Math.min(1, 1 - risk));
+  return risk;
+}
+
+/** Human label for the number beside the predicted type, e.g. "Stunting probability". */
+export function primaryTypeProbabilityLabel(source?: ProbabilitySource | null): string {
+  const type = displayedMalnutritionType(source);
+  return type ? `${type} probability` : "Predicted type probability";
+}
+
+/**
+ * The condition head that produced the stored primary risk score (max of
+ * Underweight, Stunting, MAM, SAM) and that score. This is what alerts,
+ * velocity and sorting use. Normal is never a candidate.
+ */
+export function highestConditionRisk(source?: ProbabilitySource | null): { condition: string | null; probability: number | null } {
+  const ga = source?.ga_rgca;
+  if (ga) {
+    let best: { condition: string; probability: number } | null = null;
+    for (const condition of TREND_CONDITIONS) {
+      const value = conditionProbability(source, condition);
+      if (value == null || !Number.isFinite(value)) continue;
+      if (!best || value > best.probability) best = { condition, probability: value };
+    }
+    if (best) return best;
+  }
+  const probability = source?.highest_risk_probability ?? source?.risk ?? source?.current_risk ?? null;
+  return { condition: source?.highest_risk_condition ?? null, probability };
+}
+
+/** "Stunting 5%" or just "5%" when the leading condition is unknown. */
+export function formatHighestConditionRisk(source?: ProbabilitySource | null): string {
+  const { condition, probability } = highestConditionRisk(source);
+  if (probability == null) return "—";
+  return condition ? `${condition} ${formatPercent(probability)}` : formatPercent(probability);
 }
 
 export function sameConditionDelta(
@@ -329,7 +419,8 @@ export function sameConditionDelta(
   condition?: string | null,
 ): number | null {
   const type = condition || displayedMalnutritionType(current);
-  if (!type || type === "Normal") return null;
+  if (!type) return null;
+  // Normal compares the display-only residual (1 − highest condition risk) between the two visits.
   return visitProbabilityDeltaPp(conditionProbability(current, type), conditionProbability(previous, type));
 }
 
@@ -418,7 +509,7 @@ export function predictedVisits(profile: ChildProfile): ProfileVisit[] {
   return profile.visits.filter((v) => v.prediction?.risk != null);
 }
 
-export function probabilitySeries(profile: ChildProfile, condition?: TrendCondition) {
+export function probabilitySeries(profile: ChildProfile, condition?: TrendCondition | string | null) {
   return predictedVisits(profile).map((v) => {
     const selected = conditionProbability(v.prediction, condition) ?? (condition ? null : v.prediction!.risk);
     return {

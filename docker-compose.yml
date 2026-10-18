@@ -71,6 +71,8 @@ services:
     environment:
       MODEL_MODE: ${MODEL_MODE:-demo}
       MODEL_ARTIFACT_PATH: /artifacts/active
+      C1_MODEL_VERSION: ${C1_MODEL_VERSION:-ga_rgca_v4_rsl}
+      GA_RGCA_V4_DIR: /artifacts/ga-rgca-v4
     ports:
       - "8001:8001"
     volumes:
@@ -78,6 +80,7 @@ services:
       - ./services/inference/app:/app/app:ro
       - ./ml:/ml:ro
       - ./ml/artifacts/ga_rgca_v3:/artifacts/ga-rgca:ro
+      - ./ml/artifacts/ga_rgca_v4_rsl:/artifacts/ga-rgca-v4:ro
       - inference_artifacts:/artifacts
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]

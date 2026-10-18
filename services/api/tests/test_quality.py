@@ -64,6 +64,16 @@ def test_height_in_metres_and_invalid_numeric_block():
     assert invalid.complete is False
 
 
+def test_age_specific_implausible_weight_blocks():
+    policy = load_clinical_policy()
+    report = validate_visit_payload(
+        {"anthropometric": {"age_months": 17, "sex": "female", "height_cm": 78, "weight_kg": 20}},
+        policy,
+    )
+    assert report.complete is False
+    assert any("not realistic" in issue.message for issue in report.blocking_errors)
+
+
 def test_complete_visit_passes():
     policy = load_clinical_policy()
     report = validate_visit_payload(

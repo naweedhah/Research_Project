@@ -37,6 +37,11 @@ _PUBLIC_KEYS = (
     "severity_probabilities",
     "uncertainty_flag",
     "binary_variance",
+    "ensemble_variance",
+    "out_of_distribution_flag",
+    "latent_distance",
+    "acute_conformal_prediction_set",
+    "prediction_horizon_months",
     "triage",
     "modality_reliability",
     "model_version",
@@ -47,6 +52,8 @@ _PUBLIC_KEYS = (
     "missing_features",
     "applicability",
 )
+
+_GA_SOURCES = {"GA-RGCA-v3", "GA-RGCA-v4-Rolling-RSL"}
 
 
 def _load_decision_module():
@@ -110,9 +117,10 @@ def derive_from_ga_block(block: dict) -> dict | None:
 def _with_derivation(block: dict) -> dict:
     """Shallow copy. Does not mutate the stored JSON object."""
     copied = dict(block)
-    if copied.get("prediction_source") != "GA-RGCA-v3":
+    source = copied.get("prediction_source")
+    if source not in _GA_SOURCES:
         return copied
-    if not copied.get("predicted_malnutrition_type"):
+    if source == "GA-RGCA-v3" and not copied.get("predicted_malnutrition_type"):
         derived = derive_from_ga_block(copied)
         if derived is not None:
             for key in _DERIVED_KEYS:
@@ -137,7 +145,7 @@ def resolve_display(status_prediction: str | None, calibrated) -> tuple[str | No
     if raw is None:
         return status_prediction, None
     block = _with_derivation(raw)
-    if block.get("prediction_source") == "GA-RGCA-v3" and block.get("predicted_malnutrition_type"):
+    if block.get("prediction_source") in _GA_SOURCES and block.get("predicted_malnutrition_type"):
         return str(block["predicted_malnutrition_type"]), block
     return status_prediction, block
 
@@ -146,7 +154,7 @@ def apply_new_prediction_interpretation(result: dict) -> dict:
     """Set status to the overall type before a new prediction is stored."""
     calibrated = result.get("calibrated_probabilities")
     raw_block = _ga_block(calibrated)
-    if not isinstance(raw_block, dict) or raw_block.get("prediction_source") != "GA-RGCA-v3":
+    if not isinstance(raw_block, dict) or raw_block.get("prediction_source") not in _GA_SOURCES:
         return result
     block = _with_derivation(raw_block)
     predicted = block.get("predicted_malnutrition_type")
@@ -170,6 +178,85 @@ def apply_new_prediction_interpretation(result: dict) -> dict:
     return result
 
 
+_CONDITION_PROBABILITY_KEYS = (
+    ("Underweight", "underweight_probability"),
+    ("Stunting", "stunting_probability"),
+    ("MAM", "mam_probability"),
+    ("SAM", "sam_probability"),
+)
+
+
+def _finite(value) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if number == number else None
+
+
+def highest_risk_condition(block) -> tuple[str, float] | None:
+    """Leading malnutrition condition and its probability from a GA-RGCA block.
+
+    This is what ``Prediction.primary_risk_score`` stores (the maximum of the
+    four condition heads). The Normal acute probability is not a candidate.
+    """
+    if not isinstance(block, dict):
+        return None
+    best: tuple[str, float] | None = None
+    for name, key in _CONDITION_PROBABILITY_KEYS:
+        value = _finite(block.get(key))
+        if value is None:
+            continue
+        if best is None or value > best[1]:
+            best = (name, value)
+    return best
+
+
+def normal_category_probability(block) -> float | None:
+    """Display-only Normal category: 1 minus the highest condition probability.
+
+    GA-RGCA has no fifth softmax class. This is the probability that none of
+    Underweight, Stunting, MAM or SAM is the leading risk.
+    """
+    best = highest_risk_condition(block)
+    if best is None:
+        return None
+    return max(0.0, min(1.0, 1.0 - best[1]))
+
+
+def predicted_type_probability(predicted_type: str | None, block) -> float | None:
+    """Probability that belongs beside the predicted type label.
+
+    Normal -> residual from ``normal_category_probability``; any condition ->
+    that condition's own head probability. None when the block has no
+    probabilities, so callers fall back to ``primary_risk_score``.
+    """
+    if not predicted_type or not isinstance(block, dict):
+        return None
+    if predicted_type == "Normal":
+        return normal_category_probability(block)
+    for name, key in _CONDITION_PROBABILITY_KEYS:
+        if name == predicted_type:
+            return _finite(block.get(key))
+    return None
+
+
+def display_probability_fields(status: str | None, block, fallback_risk) -> dict:
+    """Numbers the UI shows next to a prediction, derived in one place.
+
+    ``predicted_type_probability`` pairs with the predicted type label.
+    ``highest_risk_probability`` is the stored primary risk score (max of the
+    four condition heads) and ``highest_risk_condition`` names that head.
+    """
+    fallback = _finite(fallback_risk)
+    best = highest_risk_condition(block)
+    type_probability = predicted_type_probability(status, block)
+    return {
+        "predicted_type_probability": type_probability if type_probability is not None else fallback,
+        "highest_risk_condition": best[0] if best else None,
+        "highest_risk_probability": best[1] if best else fallback,
+    }
+
+
 def prediction_api_fields(prediction) -> dict:
     """Fields shared by visit, profile, and integration responses."""
     status, block = resolve_display(prediction.status_prediction, prediction.calibrated_probabilities)
@@ -178,7 +265,7 @@ def prediction_api_fields(prediction) -> dict:
         "severity": prediction.severity_prediction,
         "ga_rgca": block,
     }
-    if isinstance(block, dict) and block.get("prediction_source") == "GA-RGCA-v3":
+    if isinstance(block, dict) and block.get("prediction_source") in _GA_SOURCES:
         for key in _PUBLIC_KEYS:
             if key == "severity":
                 fields["severity"] = block.get("severity") or prediction.severity_prediction
@@ -186,6 +273,7 @@ def prediction_api_fields(prediction) -> dict:
             if key in block:
                 fields[key] = block[key]
         fields["predicted_malnutrition_type"] = status
+    fields.update(display_probability_fields(status, block, getattr(prediction, "primary_risk_score", None)))
     return fields
 
 
@@ -195,7 +283,7 @@ def outbound_probabilities(prediction, attr: str):
     if not isinstance(stored, dict) or not isinstance(stored.get("ga_rgca"), dict):
         return stored
     _, block = resolve_display(prediction.status_prediction, prediction.calibrated_probabilities)
-    if not isinstance(block, dict) or block.get("prediction_source") != "GA-RGCA-v3":
+    if not isinstance(block, dict) or block.get("prediction_source") not in _GA_SOURCES:
         return stored
     copied = dict(stored)
     merged = dict(stored["ga_rgca"])
@@ -227,6 +315,11 @@ def component1_output(prediction) -> dict:
         "severity_probabilities": fields.get("severity_probabilities") or block.get("severity_probabilities"),
         "uncertainty_flag": fields.get("uncertainty_flag"),
         "binary_variance": fields.get("binary_variance") or block.get("binary_variance"),
+        "ensemble_variance": fields.get("ensemble_variance") if fields.get("ensemble_variance") is not None else block.get("ensemble_variance"),
+        "out_of_distribution_flag": fields.get("out_of_distribution_flag") if "out_of_distribution_flag" in fields else block.get("out_of_distribution_flag"),
+        "latent_distance": fields.get("latent_distance") if fields.get("latent_distance") is not None else block.get("latent_distance"),
+        "acute_conformal_prediction_set": fields.get("acute_conformal_prediction_set") or block.get("acute_conformal_prediction_set"),
+        "prediction_horizon_months": fields.get("prediction_horizon_months") or block.get("prediction_horizon_months"),
         "triage": fields.get("triage"),
         "modality_reliability": fields.get("modality_reliability") or block.get("modality_reliability"),
     }
@@ -259,7 +352,7 @@ def integration_prediction_fields(prediction) -> dict:
         "status": fields["status"],
         "severity": prediction.severity_prediction,
     }
-    if fields.get("prediction_source") == "GA-RGCA-v3":
+    if fields.get("prediction_source") in _GA_SOURCES:
         for key in _PUBLIC_KEYS:
             if key in fields:
                 body[key] = fields[key]

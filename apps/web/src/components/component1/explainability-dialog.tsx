@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { displayedMalnutritionType, type ChildProfile, type ModalityCount } from "@/data/child-profile";
+import {
+  displayedMalnutritionType,
+  formatHighestConditionRisk,
+  primaryTypeProbability,
+  type ChildProfile,
+  type ModalityCount,
+} from "@/data/child-profile";
 import { cn, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -114,8 +120,13 @@ export function ExplainabilityDialog({
                 <FieldLabel>Prediction being reviewed</FieldLabel>
                 <p className="mt-1 text-sm font-medium text-[#0f2744]">
                   {formatNutritionalStatus(displayedMalnutritionType(prediction), prediction?.severity)}
-                  {prediction?.risk != null ? ` · ${formatPercent(prediction.risk)}` : ""}
+                  {primaryTypeProbability(prediction) != null ? ` · ${formatPercent(primaryTypeProbability(prediction))}` : ""}
                 </p>
+                {prediction?.ga_rgca ? (
+                  <p className="mt-0.5 text-xs text-[#64748b]">
+                    Highest predicted condition risk: {formatHighestConditionRisk(prediction)}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-xs text-[#64748b]">
                   {prediction?.ga_rgca
                     ? "Task: future nutritional-risk prediction from this visit. Research decision-support model — clinical confirmation required."
@@ -133,12 +144,43 @@ export function ExplainabilityDialog({
                 </section>
               ) : null}
 
+              {prediction?.ga_rgca?.model_version ? (
+                <section>
+                  <FieldLabel>Model</FieldLabel>
+                  <p className="mt-1 text-sm font-medium text-[#0f2744]">{prediction.ga_rgca.model_version}</p>
+                  <p className="mt-1 text-xs text-[#64748b]">
+                    {prediction.ga_rgca.prediction_horizon_months
+                      ? `${prediction.ga_rgca.prediction_horizon_months}-month horizon from this visit. `
+                      : ""}
+                    Research decision-support prototype. Clinician confirmation required. Repeated rolling-origin prospective validation and external prospective validation are still required.
+                  </p>
+                  {prediction.ga_rgca.severity_probabilities ? (
+                    <p className="mt-1 text-xs text-[#475569]">
+                      Severity probabilities: Normal {formatPercent(prediction.ga_rgca.severity_probabilities.Normal ?? prediction.ga_rgca.severity_probabilities.normal)} · Moderate {formatPercent(prediction.ga_rgca.severity_probabilities.Moderate ?? prediction.ga_rgca.severity_probabilities.moderate)} · Severe {formatPercent(prediction.ga_rgca.severity_probabilities.Severe ?? prediction.ga_rgca.severity_probabilities.severe)}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-[#475569]">
+                    Uncertainty {prediction.ga_rgca.uncertainty_flag ? "flagged" : "not flagged"}
+                    {prediction.ga_rgca.ensemble_variance != null ? ` · ensemble variance ${Number(prediction.ga_rgca.ensemble_variance).toFixed(4)}` : ""}
+                    {prediction.ga_rgca.out_of_distribution_flag != null
+                      ? ` · applicability ${prediction.ga_rgca.out_of_distribution_flag ? "outside reference" : "inside reference"}`
+                      : ""}
+                    {prediction.ga_rgca.latent_distance != null ? ` · latent distance ${Number(prediction.ga_rgca.latent_distance).toFixed(2)}` : ""}
+                  </p>
+                  {prediction.ga_rgca.acute_conformal_prediction_set ? (
+                    <p className="mt-1 text-xs text-[#475569]">
+                      Acute conformal set: {prediction.ga_rgca.acute_conformal_prediction_set.join(", ")}. This does not replace the acute status.
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
               <section>
                 <FieldLabel>Modality Reliability</FieldLabel>
                 {prediction?.ga_rgca?.modality_reliability ? (
                   <>
                     <ul className="mt-2 space-y-1 text-sm text-[#0f2744]">
-                      <li>Historical growth {formatPercent(prediction.ga_rgca.modality_reliability.history)}</li>
+                      <li>Growth anchor {formatPercent(prediction.ga_rgca.modality_reliability.history)}</li>
                       <li>Socioeconomic {formatPercent(prediction.ga_rgca.modality_reliability.socioeconomic)}</li>
                       <li>Feeding {formatPercent(prediction.ga_rgca.modality_reliability.feeding)}</li>
                       <li>Supplementation {formatPercent(prediction.ga_rgca.modality_reliability.supplementation)}</li>

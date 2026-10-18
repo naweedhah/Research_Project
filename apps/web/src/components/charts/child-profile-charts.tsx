@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import type { TrendPoint } from "@/data/child-profile";
-import { cn, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
+import { cn, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus, malnutritionSeverityApplies } from "@/utils/utils";
 
 type Point = TrendPoint;
 export type TrendMetric = "probability" | "weight" | "height";
@@ -85,7 +85,9 @@ export function TrendChart({
                   {metric === "probability" ? (
                     <>
                       <p className="mt-1 text-[#64748b]">Status: {formatNutritionalStatus(row.status, row.severity)}</p>
-                      <p className="text-[#64748b]">Severity: {formatStatus(row.severity)}</p>
+                      {malnutritionSeverityApplies(row.status) && row.severity ? (
+                        <p className="text-[#64748b]">Severity: {formatStatus(row.severity)}</p>
+                      ) : null}
                       <p className="font-medium text-[#0f2744]">
                         {spec.label}: {formatPercent((row.probability ?? 0) / 100)}
                       </p>

@@ -32,6 +32,20 @@ export function formatNutritionalStatus(status?: string | null, severity?: strin
   return formatStatus(status);
 }
 
+/** Severity only applies when the predicted type is a malnutrition condition, not Normal. */
+export function malnutritionSeverityApplies(type?: string | null): boolean {
+  const key = (type ?? "").trim().toLowerCase().replaceAll(" ", "_");
+  return Boolean(key) && key !== "normal" && key !== "unknown" && key !== "—";
+}
+
+/** Formatted severity, or null when the type is Normal / missing. */
+export function displayPredictedSeverity(status?: string | null, severity?: string | null): string | null {
+  if (!severity || !severity.trim() || severity.trim().toLowerCase() === "none") return null;
+  const type = formatNutritionalStatus(status, severity);
+  if (!malnutritionSeverityApplies(type)) return null;
+  return formatStatus(severity);
+}
+
 export function formatStatus(value?: string | null) {
   if (!value) return "Unknown";
   const key = value.trim().toLowerCase().replaceAll(" ", "_");

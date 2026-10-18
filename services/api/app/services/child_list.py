@@ -15,7 +15,7 @@ from app.models.intelligence import ModelVersion, Prediction, TrajectoryMetric
 from app.models.operations import Alert, FollowUpSchedule
 from app.models.paediatric import Child, Visit
 from app.services.longitudinal import monthly_velocity_available
-from app.services.malnutrition_type import resolve_display
+from app.services.malnutrition_type import display_probability_fields, resolve_display
 from app.services.model_display import semantics_for_prediction
 
 ACTIVE_ALERT_STATUSES = {AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED, AlertStatus.IN_REVIEW}
@@ -272,6 +272,7 @@ def build_list_item(db: Session, child: Child, *, today: date | None = None, mod
         "current_risk": current_risk,
         "previous_risk": previous_risk,
         "risk_change_pp": risk_change_pp,
+        **display_probability_fields(displayed_status, displayed_ga, current_risk),
         "probability_label": semantics["score_label"],
         "score_kind": semantics["score_kind"],
         "score_is_probability": semantics["score_is_probability"],

@@ -5,7 +5,12 @@ from types import SimpleNamespace
 from app.services.malnutrition_type import (
     apply_new_prediction_interpretation,
     component1_output,
+    display_probability_fields,
+    highest_risk_condition,
     integration_prediction_fields,
+    normal_category_probability,
+    predicted_type_probability,
+    prediction_api_fields,
     resolve_display,
 )
 
@@ -105,3 +110,108 @@ def test_component1_contract_uses_overall_type_and_hides_identity():
     assert body["observed_outcome"] is None
     assert "full_name" not in str(body)
     assert "phone" not in str(body)
+
+
+NORMAL_BLOCK = {
+    **STUNTING_BLOCK,
+    "underweight_probability": 0.02,
+    "stunting_probability": 0.05,
+    "mam_probability": 0.01,
+    "sam_probability": 0.00,
+    "severity": "Normal",
+}
+
+
+def test_normal_prediction_pairs_type_with_residual_and_names_leading_condition():
+    assert highest_risk_condition(NORMAL_BLOCK) == ("Stunting", 0.05)
+    assert normal_category_probability(NORMAL_BLOCK) == 0.95
+    assert predicted_type_probability("Normal", NORMAL_BLOCK) == 0.95
+    fields = display_probability_fields("Normal", NORMAL_BLOCK, 0.05)
+    assert fields == {
+        "predicted_type_probability": 0.95,
+        "highest_risk_condition": "Stunting",
+        "highest_risk_probability": 0.05,
+    }
+    # The two numbers are complementary: the 5% risk and the 95% Normal probability describe the same output.
+    assert fields["predicted_type_probability"] + fields["highest_risk_probability"] == 1.0
+
+
+def test_condition_prediction_keeps_its_own_probability_separate_from_highest_risk():
+    block = {**STUNTING_BLOCK, "underweight_probability": 0.70}
+    assert predicted_type_probability("Stunting", block) == 0.66
+    assert highest_risk_condition(block) == ("Underweight", 0.70)
+
+
+def test_demo_prediction_falls_back_to_the_stored_score():
+    fields = display_probability_fields("wasting", None, 0.42)
+    assert fields == {
+        "predicted_type_probability": 0.42,
+        "highest_risk_condition": None,
+        "highest_risk_probability": 0.42,
+    }
+
+
+def test_prediction_api_fields_include_display_probabilities():
+    row = SimpleNamespace(
+        status_prediction="Normal",
+        calibrated_probabilities={"ga_rgca": dict(NORMAL_BLOCK)},
+        severity_prediction="Normal",
+        primary_risk_score=0.05,
+    )
+    fields = prediction_api_fields(row)
+    assert fields["predicted_malnutrition_type"] == "Normal"
+    assert fields["predicted_type_probability"] == 0.95
+    assert fields["highest_risk_condition"] == "Stunting"
+    assert fields["highest_risk_probability"] == 0.05
+    # Integration contracts are unchanged.
+    assert "predicted_type_probability" not in integration_prediction_fields(row)
+
+
+def test_v4_prediction_is_returned_without_reapplying_v3_thresholds():
+    block = {
+        "prediction_source": "GA-RGCA-v4-Rolling-RSL",
+        "model_version": "GA-RGCA-v4-Rolling-RSL",
+        "predicted_malnutrition_type": "SAM",
+        "detected_conditions": ["SAM", "Underweight"],
+        "underweight_probability": 0.40,
+        "stunting_probability": 0.10,
+        "mam_probability": 0.20,
+        "sam_probability": 0.70,
+        "underweight_positive": True,
+        "stunting_positive": False,
+        "acute_status": "SAM",
+        "severity": "Severe",
+        "severity_probabilities": {"Normal": 0.05, "Moderate": 0.15, "Severe": 0.80},
+        "uncertainty_flag": False,
+        "ensemble_variance": 0.001,
+        "binary_variance": 0.001,
+        "triage": "Priority clinical assessment — SAM risk",
+        "binary_thresholds": {"Underweight": 0.32, "Stunting": 0.26},
+        "prediction_horizon_months": 12,
+    }
+    result = apply_new_prediction_interpretation(
+        {
+            "status": "SAM",
+            "severity": "Severe",
+            "raw_probabilities": {"ga_rgca": dict(block)},
+            "calibrated_probabilities": {"ga_rgca": dict(block), "risk": 0.70},
+        }
+    )
+    assert result["status"] == "SAM"
+    assert result["calibrated_probabilities"]["ga_rgca"]["binary_thresholds"]["Underweight"] == 0.32
+    row = SimpleNamespace(
+        visit_id="visit-1",
+        created_at=None,
+        status_prediction="SAM",
+        severity_prediction="Severe",
+        calibrated_probabilities=result["calibrated_probabilities"],
+        feature_schema_version="ga-rgca-v4-rolling-current-visit",
+        calibration_version="ga-rgca-v4-superlearner",
+        primary_risk_score=0.70,
+    )
+    contract = component1_output(row)
+    assert contract["model_version"] == "GA-RGCA-v4-Rolling-RSL"
+    assert contract["prediction"]["predicted_malnutrition_type"] == "SAM"
+    assert contract["prediction"]["sam_probability"] == 0.70
+    assert contract["prediction"]["ensemble_variance"] == 0.001
+    assert "child_pseudonymous_id" not in contract

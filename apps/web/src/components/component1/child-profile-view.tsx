@@ -17,6 +17,7 @@ import {
   Info,
   Minus,
 } from "lucide-react";
+import { CurrentConditionCard, PredictionCard } from "@/components/component1/assessment-result-cards";
 import { ChildModelHud } from "@/components/component1/child-model-hud";
 import { ChildModelViewer } from "@/components/component1/child-model/ChildModelViewer";
 import { LatentTrajectory, TrendChart, type TrendMetric } from "@/components/charts/child-profile-charts";
@@ -34,16 +35,16 @@ import {
   alertTone,
   emptyAssessmentMessage,
   formatPp,
-  measurementDelta,
   openAlert,
   probabilitySeries,
   progressLabel,
   reviewLabel,
-  displayedConditionList,
   displayedMalnutritionType,
   conditionProbability,
   defaultTrendCondition,
+  formatHighestConditionRisk,
   primaryTypeProbability,
+  primaryTypeProbabilityLabel,
   sameConditionDelta,
   TREND_CONDITIONS,
   visitProbabilityDeltaPp,
@@ -54,7 +55,7 @@ import {
   type ProfileVisit,
 } from "@/data/child-profile";
 import { getModelOutputDisplayMetadata } from "@/data/model-display";
-import { clinicalPhrase, cn, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
+import { clinicalPhrase, cn, displayPredictedSeverity, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 
 function InfoTip({ text, label }: { text: string; label: string }) {
   const [open, setOpen] = useState(false);
@@ -485,6 +486,12 @@ function Overview({
   const [trendCondition, setTrendCondition] = useState(() => defaultTrendCondition(pred));
   const hasConditionProbabilities = visits.some((visit) => visit.prediction?.ga_rgca?.stunting_probability != null);
   const conditionSeries = useMemo(() => probabilitySeries(profile, trendCondition), [profile, trendCondition]);
+  const predictedType = displayedMalnutritionType(pred);
+  // Sparkline behind the HUD probability chip follows the same quantity as the chip (the predicted type's probability).
+  const typeSeries = useMemo(
+    () => (hasConditionProbabilities && predictedType ? probabilitySeries(profile, predictedType) : null),
+    [profile, hasConditionProbabilities, predictedType],
+  );
   const change = comparable
     ? pred?.ga_rgca
       ? sameConditionDelta(pred, prevPred)
@@ -517,7 +524,6 @@ function Overview({
   }
 
   const clinicName = profile.facility?.name || profile.facility?.code;
-  const assessmentCount = profile.assessment_count ?? profile.visits.length;
 
   return (
     <div className="space-y-4">
@@ -539,12 +545,12 @@ function Overview({
           <p className="mt-1 text-sm leading-relaxed text-[#3f3f46]">{alert.message}</p>
           {alert.trigger_value?.basis === "predicted_risk_change" ? (
             <p className="mt-1 text-sm text-[#3f3f46]">
-              Predicted risk changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
+              Highest predicted condition risk changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
               {formatPercent(alert.trigger_value.current_risk)}. Weight and height changes are shown separately and were not used for this alert.
             </p>
           ) : alert.trigger_value?.previous_risk != null && alert.trigger_value?.current_risk != null ? (
             <p className="mt-1 text-sm text-[#3f3f46]">
-              Model score changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
+              {semantics.score_label} changed from {formatPercent(alert.trigger_value.previous_risk)} to{" "}
               {formatPercent(alert.trigger_value.current_risk)} since the previous assessment.
             </p>
           ) : null}
@@ -570,124 +576,29 @@ function Overview({
       ) : null}
 
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        <Section
+        <CurrentConditionCard
           id="clinical-snapshot"
-          className="flex h-full flex-col"
-          bodyClassName="flex flex-1 flex-col"
-          title="Since the previous visit"
-          subtitle={`${selected ? formatClinicalDate(selected.visit_date) : "—"}${clinicName ? ` · ${clinicName}` : ""}`}
-        >
-          {prior ? (
-            <div className="grid flex-1 content-center grid-cols-3 gap-3">
-              {(
-                [
-                  changeTile("Weight", measurementDelta(meas?.weight_kg, prevMeas?.weight_kg), "kg", prevMeas?.weight_kg, meas?.weight_kg),
-                  changeTile("Height", measurementDelta(meas?.height_cm, prevMeas?.height_cm), "cm", prevMeas?.height_cm, meas?.height_cm),
-                  {
-                    label: pred?.ga_rgca ? `${displayedMalnutritionType(pred) ?? "Predicted"} risk` : "Probability",
-                    amount: change == null ? "—" : formatPp(change).replace(/ pp$/, ""),
-                    unit: change == null ? "" : "pp",
-                    note:
-                      pred?.ga_rgca && change != null
-                        ? `${formatPercent(conditionProbability(prevPred, displayedMalnutritionType(pred)))} → ${formatPercent(conditionProbability(pred, displayedMalnutritionType(pred)))}`
-                        : !pred?.ga_rgca && change != null && prevPred?.risk != null && pred?.risk != null
-                          ? `${formatPercent(prevPred.risk)} → ${formatPercent(pred.risk)}`
-                          : pred?.ga_rgca
-                            ? "Same-condition change is not available"
-                            : "Not available",
-                  },
-                ] as const
-              ).map((item) => (
-                <div key={item.label} className="rounded-2xl bg-[#f7f9fc] px-3 py-5 text-center ring-1 ring-[#e7eef6]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">{item.label}</p>
-                  <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-[#0f2744]">{item.amount}</p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.08em] text-[#64748b]">{item.unit || "—"}</p>
-                  <p className="mt-2 min-h-4 text-xs text-[#64748b]">{item.note}</p>
-                </div>
-              ))}
-            </div>
+          eyebrow={`${isLatest ? "Latest visit" : `Visit ${selected?.visit_number ?? "—"}`} · ${selected ? formatClinicalDate(selected.visit_date) : "—"}${clinicName ? ` · ${clinicName}` : ""}`}
+          title={isLatest ? "Current condition" : "Condition at this visit"}
+          weightKg={meas?.weight_kg}
+          heightCm={meas?.height_cm}
+          ageMonths={ageAtVisit}
+          sex={profile.sex}
+          previous={prior ? { weightKg: prevMeas?.weight_kg, heightCm: prevMeas?.height_cm } : null}
+          feeding={selected?.feeding}
+        />
+        <div id="ai-assessment" className="flex h-full flex-col scroll-mt-20">
+          {pred ? (
+            <PredictionCard prediction={pred} className="h-full" />
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-[#f7f9fc] px-6 py-8 text-center ring-1 ring-[#e7eef6]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">Comparison</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-[#0f2744]">First assessment</p>
-              <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#64748b]">
-                Weight, height, and the model-assessed probability can be compared after the next visit.
-              </p>
-            </div>
-          )}
-          <p className="mt-4 border-t border-[#eef2f6] pt-3 text-sm text-[#64748b]">
-            {selected ? `Visit ${selected.visit_number}` : "—"}
-            {` · ${assessmentCount} assessment${assessmentCount === 1 ? "" : "s"}`}
-          </p>
-        </Section>
-
-        <Section
-          id="ai-assessment"
-          className="flex h-full flex-col"
-          title={pred?.ga_rgca ? "Future Nutritional Risk Prediction" : "AI-assisted assessment"}
-          subtitle="Clinical review required."
-        >
-          {pred?.ga_rgca ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <FieldLabel>Predicted Malnutrition Type</FieldLabel>
-                  <p className="mt-1 text-3xl font-semibold tracking-tight text-[#0f2744]">
-                    {formatNutritionalStatus(displayedMalnutritionType(pred), pred.ga_rgca.severity)}
-                  </p>
-                  {displayedConditionList(pred).length > 1 ? (
-                    <p className="mt-1 text-sm text-[#64748b]">Detected conditions: {displayedConditionList(pred).join(", ")}</p>
-                  ) : null}
-                  <p className="mt-1 text-sm text-[#64748b]">
-                    Research decision-support model — clinical confirmation required. Overall severity {pred.ga_rgca.severity ?? "—"}.
-                  </p>
-                  <p className="mt-1 text-sm text-[#64748b]">
-                    Model uncertainty {pred.ga_rgca.uncertainty_flag ? "Elevated" : "Low"}
-                  </p>
-                </div>
-                {pred.ga_rgca.triage ? (
-                  <p className="rounded-full bg-[#eef3f8] px-3 py-1.5 text-sm font-medium text-[#0E3A67]">{pred.ga_rgca.triage}</p>
-                ) : null}
+            <Section className="flex h-full flex-col" title="AI-assisted assessment" subtitle="Clinical review required.">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MetricTile label="Nutritional status" value="—" hint="No prediction stored for this visit." />
+                <MetricTile label="Data quality" value={profile.data_quality_label ? formatStatus(profile.data_quality_label) : "—"} />
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {(
-                  [
-                    ["Underweight", pred.ga_rgca.underweight_probability],
-                    ["Stunting", pred.ga_rgca.stunting_probability],
-                    ["MAM", pred.ga_rgca.mam_probability],
-                    ["SAM", pred.ga_rgca.sam_probability],
-                  ] as const
-                ).map(([label, value]) => {
-                  const highest =
-                    pred.risk != null && value != null && Math.abs(value - pred.risk) < 0.0005;
-                  return (
-                    <div
-                      key={label}
-                      className={cn(
-                        "rounded-xl px-3 py-3 ring-1",
-                        highest ? "bg-white ring-[#0E3A67]" : "bg-[#f8fafc] ring-line/70",
-                      )}
-                    >
-                      <FieldLabel>{label}</FieldLabel>
-                      <p className="mt-1 text-xl font-semibold tabular-nums text-[#0f2744]">{formatPercent(value)}</p>
-                      {highest ? <p className="mt-1 text-[11px] font-medium text-[#0E3A67]">Highest</p> : null}
-                    </div>
-                  );
-                })}
-              </div>
-              {pred.ga_rgca.uncertainty_flag ? (
-                <p className="text-sm text-[#92400e]">Uncertainty is elevated. Clinical review recommended.</p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MetricTile label="Nutritional status" value={formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)} hint="From the recorded visit. Clinical review required." />
-              <MetricTile label="Model-assessed probability" value={formatPercent(pred?.risk)} hint="Clinical review required." />
-              <MetricTile label="Confidence" value={pred?.confidence ? formatStatus(pred.confidence) : "—"} />
-              <MetricTile label="Data quality" value={profile.data_quality_label ? formatStatus(profile.data_quality_label) : "—"} />
-            </div>
+            </Section>
           )}
-        </Section>
+        </div>
       </div>
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.8fr)]">
@@ -702,7 +613,7 @@ function Overview({
             previousHeight={prevMeas?.height_cm}
             weightHistory={weightHist}
             heightHistory={heightHist}
-            probabilityHistory={(hasConditionProbabilities ? conditionSeries : series)
+            probabilityHistory={(typeSeries ?? series)
               .map((s) => s.probability)
               .filter((value): value is number => value != null)}
             ageMonths={ageAtVisit}
@@ -711,7 +622,7 @@ function Overview({
             assessmentLabel={isLatest ? "Latest assessment date" : "Assessment date"}
             status={formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)}
             statusLabel="Status"
-            severity={pred?.severity ? formatStatus(pred.severity) : "—"}
+            severity={displayPredictedSeverity(displayedMalnutritionType(pred), pred?.severity) ?? undefined}
             probability={formatPercent(primaryTypeProbability(pred))}
             previousProbability={
               comparable ? formatPercent(conditionProbability(prevPred, displayedMalnutritionType(pred))) : null
@@ -719,8 +630,12 @@ function Overview({
             probabilityChange={comparable ? change : null}
             progress={progressLabel(visitProgress, comparable)}
             riskVelocity={visitVelocity.value}
-            scoreLabel={semantics.score_label}
-            scoreTip={semantics.score_description}
+            scoreLabel={pred?.ga_rgca ? primaryTypeProbabilityLabel(pred) : semantics.score_label}
+            scoreTip={
+              pred?.ga_rgca
+                ? `Probability of the predicted type shown beside it. Normal is 1 minus the highest condition risk. ${semantics.score_label}: ${formatHighestConditionRisk(pred)}.`
+                : semantics.score_description
+            }
             velocityLabel={semantics.velocity_label}
             velocityTip={semantics.velocity_description}
             stageFooter={
@@ -811,6 +726,7 @@ function Overview({
           <MetricTile
             label="Since baseline"
             value={comparable ? formatPp(profile.since_baseline_pp) : "Not available"}
+            hint={semantics.score_label}
           />
         </div>
         <button type="button" className="mt-4 border-t border-[#eef2f6] pt-3 text-right text-sm font-medium text-[#2563eb]" onClick={() => onTab("progress")}>
@@ -831,8 +747,14 @@ function Overview({
             {reviewLabel(isLatest ? profile.clinician_review?.status : selected?.review_status)}
           </p>
           <p className="mt-2 text-sm text-[#475569]">
-            {formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)} {formatPercent(pred?.risk)}
+            Predicted type: <span className="font-medium text-[#0f2744]">{formatNutritionalStatus(predictedType, pred?.severity)}</span>{" "}
+            {formatPercent(primaryTypeProbability(pred))}
           </p>
+          {pred?.ga_rgca ? (
+            <p className="mt-0.5 text-xs text-[#64748b]">
+              {semantics.score_label}: {formatHighestConditionRisk(pred)}
+            </p>
+          ) : null}
           {isLatest &&
           (profile.clinician_review?.status === "REVIEWED" ||
             profile.clinician_review?.status === "DISAGREED" ||
@@ -882,8 +804,8 @@ function Overview({
               <thead className="sticky top-0 z-10 bg-[#f8fafc]">
                 <tr className="border-b border-line bg-[#f8fafc] text-[#64748b]">
                   <th className="px-5 py-2.5 font-medium">Visit</th>
-                  <th className="px-5 py-2.5 font-medium">Status</th>
-                  <th className="px-5 py-2.5 font-medium">Probability</th>
+                  <th className="px-5 py-2.5 font-medium">Predicted type</th>
+                  <th className="px-5 py-2.5 font-medium">Type probability</th>
                   <th className="px-5 py-2.5 font-medium">Review</th>
                   <th className="px-5 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -905,7 +827,7 @@ function Overview({
                     <td className="px-5 py-2.5 text-[#475569]">
                       {formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity)}
                     </td>
-                    <td className="px-5 py-2.5 tabular-nums">{v.prediction?.risk != null ? formatPercent(v.prediction.risk) : "—"}</td>
+                    <td className="px-5 py-2.5 tabular-nums">{formatPercent(primaryTypeProbability(v.prediction))}</td>
                     <td className="px-5 py-2.5 text-xs text-[#64748b]">
                       {v.review_status === "AWAITING_REVIEW" ? (
                         <button
@@ -945,21 +867,6 @@ function Overview({
 
     </div>
   );
-}
-
-function changeTile(label: string, delta: number | null, unit: string, previous?: number | null, current?: number | null) {
-  if (delta == null || previous == null || current == null) {
-    return { label, amount: "—", unit: "", note: "Not available" };
-  }
-  const sign = delta > 0 ? "+" : delta < 0 ? "−" : "";
-  const abs = Math.abs(delta);
-  const text = Number.isInteger(abs) ? String(abs) : abs.toFixed(1);
-  return {
-    label,
-    amount: `${sign}${text}`,
-    unit,
-    note: `${previous.toFixed(1)} → ${current.toFixed(1)} ${unit}`,
-  };
 }
 
 export function AdvancedAiSummary({
@@ -1230,9 +1137,10 @@ function VisitsTab({
               <th className="px-5 py-2.5 font-medium">Date</th>
               <th className="px-5 py-2.5 font-medium">Weight</th>
               <th className="px-5 py-2.5 font-medium">Height</th>
-              <th className="px-5 py-2.5 font-medium">Status</th>
+              <th className="px-5 py-2.5 font-medium">Predicted type</th>
               <th className="px-5 py-2.5 font-medium">Severity</th>
-              <th className="px-5 py-2.5 font-medium">Probability</th>
+              <th className="px-5 py-2.5 font-medium">Type probability</th>
+              <th className="px-5 py-2.5 font-medium">Highest condition risk</th>
               <th className="px-5 py-2.5 font-medium">Review</th>
               <th className="px-5 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
             </tr>
@@ -1245,8 +1153,9 @@ function VisitsTab({
                 <td className="px-5 py-2.5 tabular-nums">{v.measurements?.weight_kg != null ? `${v.measurements.weight_kg} kg` : "—"}</td>
                 <td className="px-5 py-2.5 tabular-nums">{v.measurements?.height_cm != null ? `${v.measurements.height_cm} cm` : "—"}</td>
                 <td className="px-5 py-2.5">{formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity)}</td>
-                <td className="px-5 py-2.5">{v.prediction?.severity ? formatStatus(v.prediction.severity) : "—"}</td>
-                <td className="px-5 py-2.5 tabular-nums">{formatPercent(v.prediction?.risk)}</td>
+                <td className="px-5 py-2.5">{displayPredictedSeverity(displayedMalnutritionType(v.prediction), v.prediction?.severity) ?? "—"}</td>
+                <td className="px-5 py-2.5 tabular-nums">{formatPercent(primaryTypeProbability(v.prediction))}</td>
+                <td className="px-5 py-2.5 tabular-nums">{v.prediction ? formatHighestConditionRisk(v.prediction) : "—"}</td>
                 <td className="px-5 py-2.5">{reviewLabel(v.review_status)}</td>
                 <td className="px-3 py-2.5 text-right">
                   {canWrite && v.id === latestVisitId && onEditVisit && onDeleteVisit ? (
@@ -1490,7 +1399,9 @@ function AiDetailsTab({
             <Meta label="Predicted malnutrition type" value={formatNutritionalStatus(displayedMalnutritionType(profile.current?.prediction), ga.severity)} />
             <Meta label="Detected conditions" value={detected} />
             <Meta label="Acute malnutrition status" value={ga.acute_status ?? "—"} />
-            <Meta label="Overall severity" value={ga.severity ?? "—"} />
+            {displayPredictedSeverity(displayedMalnutritionType(profile.current?.prediction), ga.severity) ? (
+              <Meta label="Overall severity" value={displayPredictedSeverity(displayedMalnutritionType(profile.current?.prediction), ga.severity)!} />
+            ) : null}
           </div>
           <p className="mt-3 text-sm text-[#64748b]">
             Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
@@ -1509,7 +1420,7 @@ function AiDetailsTab({
           {ga.modality_reliability ? (
             <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <li className="rounded-xl bg-[#f8fafc] px-4 py-3 ring-1 ring-line/70">
-                Historical growth · Reliability {formatPercent(ga.modality_reliability.history)}
+                Growth anchor · Reliability {formatPercent(ga.modality_reliability.history)}
                 {completenessLabel(ga.input_snapshot?.values, ["Hist_2025_Age_months", "Hist_2025_Height_cm", "Hist_2025_Weight_kg", "Birth_Weight_g", "Hist_2025_MAM", "Hist_2025_SAM", "Hist_2025_Underweight", "Hist_2025_Stunting"])}
               </li>
               <li className="rounded-xl bg-[#f8fafc] px-4 py-3 ring-1 ring-line/70">

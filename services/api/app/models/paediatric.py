@@ -28,6 +28,7 @@ class Child(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     phm_area: Mapped[str | None] = mapped_column(String(120))
     assigned_doctor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     external_patient_id_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    registration_intake: Mapped[dict | None] = mapped_column(JSON)
 
     visits: Mapped[list[Visit]] = relationship(back_populates="child", order_by="Visit.visit_number")
     caregiver: Mapped[Caregiver | None] = relationship(back_populates="child", uselist=False)

@@ -45,6 +45,21 @@ from app.services.model_display import get_model_output_display_metadata
 router = APIRouter(prefix="/children", tags=["children"])
 
 
+def _profile_ga_block(latest) -> dict | None:
+    prediction = (latest or {}).get("prediction") if isinstance(latest, dict) else None
+    block = prediction.get("ga_rgca") if isinstance(prediction, dict) else None
+    return block if isinstance(block, dict) else None
+
+
+def _profile_model_mode(latest) -> str | None:
+    block = _profile_ga_block(latest)
+    if not block:
+        return None
+    if block.get("prediction_source") == "GA-RGCA-v4-Rolling-RSL":
+        return "ga_rgca_v4_rsl"
+    return "ga_rgca"
+
+
 def _next_pseudo(db: Session) -> str:
     count = db.scalar(select(func.count()).select_from(Child)) or 0
     return f"C-{1100 + count}"
@@ -257,6 +272,7 @@ def create_child(body: ChildCreate, request: Request, db: Session = Depends(get_
         phm_area=body.phm_area,
         assigned_doctor_id=assigned_doctor_id,
         registered_by=current.id,
+        registration_intake=body.registration_intake,
     )
     db.add(child)
     db.flush()
@@ -349,6 +365,8 @@ def patch_child(child_id: UUID, body: ChildUpdate, request: Request, db: Session
         child.moh_area = data["moh_area"] or None
     if "phm_area" in data:
         child.phm_area = data["phm_area"] or None
+    if "registration_intake" in data and data["registration_intake"] is not None:
+        child.registration_intake = data["registration_intake"]
     if "assigned_doctor_id" in data and data["assigned_doctor_id"] is not None:
         doctor = db.get(User, data["assigned_doctor_id"])
         if doctor is None or doctor.facility_id != child.facility_id or doctor.role != UserRole.DOCTOR:
@@ -482,6 +500,14 @@ def _child_profile(db: Session, child: Child) -> dict:
                     "height_cm": anthro.height_cm,
                     "muac_cm": anthro.muac_cm,
                 },
+                "feeding": None
+                if not visit.dietary
+                else {
+                    "breastfeeding_status": visit.dietary.breastfeeding_status,
+                    "complementary_feeding": visit.dietary.complementary_feeding,
+                    "meal_frequency": visit.dietary.meal_frequency,
+                    "micronutrient_supplementation": visit.dietary.micronutrient_supplementation,
+                },
                 "prediction": None
                 if not pred
                 else {
@@ -590,6 +616,7 @@ def _child_profile(db: Session, child: Child) -> dict:
         "district": child.district,
         "moh_area": child.moh_area,
         "phm_area": child.phm_area,
+        "registration_intake": child.registration_intake if isinstance(child.registration_intake, dict) else None,
         "assigned_doctor": {"id": str(assigned.id), "full_name": assigned.full_name} if assigned else None,
         "caregiver": None
         if not caregiver
@@ -615,14 +642,10 @@ def _child_profile(db: Session, child: Child) -> dict:
         "follow_up_overdue_days": overdue,
         "visits": history,
         "model_warning": model_warning,
-        "model_is_demo": False
-        if isinstance((latest or {}).get("prediction"), dict) and (latest or {}).get("prediction", {}).get("ga_rgca")
-        else (bool(latest_model.is_demo) if latest_model else active_model_is_demo(db)),
+        "model_is_demo": False if _profile_ga_block(latest) else (bool(latest_model.is_demo) if latest_model else active_model_is_demo(db)),
         "display_semantics": get_model_output_display_metadata(
-            model_mode="ga_rgca" if isinstance((latest or {}).get("prediction"), dict) and (latest or {}).get("prediction", {}).get("ga_rgca") else None,
-            is_demo=False
-            if isinstance((latest or {}).get("prediction"), dict) and (latest or {}).get("prediction", {}).get("ga_rgca")
-            else True,
+            model_mode=_profile_model_mode(latest),
+            is_demo=False if _profile_ga_block(latest) else True,
         ),
         "synthetic_data": synthetic,
         "data_quality": quality,

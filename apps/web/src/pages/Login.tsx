@@ -61,6 +61,13 @@ export default function LoginPage() {
           <Button className="mt-6 w-full" type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"} <ArrowRight className="h-4 w-4" />
           </Button>
+          <div className="mt-6 rounded-xl bg-[#f8fafc] px-4 py-3 text-left text-xs leading-relaxed text-[#64748b] ring-1 ring-[#e8eef5]">
+            <p className="font-semibold text-[#0f2744]">Demo accounts</p>
+            <p className="mt-1">Password: doctor123</p>
+            <p className="mt-2">doctor@demo.local</p>
+            <p>doctor@gmail.com</p>
+            <p>doctor.kandy@demo.local</p>
+          </div>
         </form>
       </section>
     </div>

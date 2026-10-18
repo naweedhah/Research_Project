@@ -45,6 +45,9 @@ export function CommandPalette() {
                 Register child
               </Command.Item>
             ) : null}
+            <Command.Item onSelect={() => go("/clinic-board")} className="rounded-lg px-3 py-2 text-sm hover:bg-canvas">
+              Clinic board
+            </Command.Item>
             <Command.Item onSelect={() => go("/alerts")} className="rounded-lg px-3 py-2 text-sm hover:bg-canvas">View alerts</Command.Item>
             <Command.Item onSelect={() => go("/children")} className="rounded-lg px-3 py-2 text-sm hover:bg-canvas">New visit (open a child first)</Command.Item>
           </Command.List>

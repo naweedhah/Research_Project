@@ -25,6 +25,8 @@ def semantics_for_prediction(pred, *, is_demo: bool | None = None) -> dict:
     block = None
     if pred is not None and isinstance(getattr(pred, "calibrated_probabilities", None), dict):
         block = pred.calibrated_probabilities.get("ga_rgca")
+    if isinstance(block, dict) and block.get("prediction_source") == "GA-RGCA-v4-Rolling-RSL":
+        return get_model_output_display_metadata(model_mode="ga_rgca_v4_rsl", is_demo=False)
     if isinstance(block, dict) and block.get("prediction_source") == "GA-RGCA-v3":
         return get_model_output_display_metadata(model_mode="ga_rgca", is_demo=False)
     return get_model_output_display_metadata(is_demo=True if is_demo is None else is_demo)
@@ -42,6 +44,45 @@ def get_model_output_display_metadata(
     settings = get_settings()
     mode = (model_mode if model_mode is not None else settings.model_mode).lower()
     demo = is_demo_mode(model_mode=mode, is_demo=is_demo)
+
+    if mode == "ga_rgca_v4_rsl":
+        return {
+            "model_mode": "ga_rgca_v4_rsl",
+            "clinical_use": False,
+            "is_demo": False,
+            "score_kind": "highest_condition_probability",
+            "score_label": "Highest Predicted Condition Risk",
+            "score_description": (
+                "Highest of the Underweight, Stunting, MAM, and SAM probabilities from the "
+                "GA-RGCA v4 Rolling SuperLearner. The Normal acute probability is not included. "
+                "This is a 12-month nutritional-risk research output from the current visit. "
+                "It is not a diagnosis and it is not an overall malnutrition probability."
+            ),
+            "score_is_probability": True,
+            "score_is_calibrated": True,
+            "velocity_label": "Risk Velocity",
+            "velocity_description": (
+                "Visit-to-visit change is shown only when both visits used the same model version. "
+                "A change from v3 or the demo score to v4 is not compared."
+            ),
+            "prediction_task": "twelve_month_nutritional_risk",
+            "prediction_task_label": "12-Month Nutritional Risk Prediction",
+            "projection_version": "ga-rgca-v4-fused-latent-v1",
+            "projection_label": "Fused latent representation",
+            "projection_description": (
+                "Coordinates from the GA-RGCA v4 fused latent vector. This is not anatomical imaging "
+                "and it is not in the same space as a GA-RGCA v3 embedding."
+            ),
+            "confidence_label": "Ensemble uncertainty",
+            "confidence_is_calibrated": False,
+            "banner_title": "RESEARCH MODEL",
+            "banner_subtitle": "GA-RGCA-v4-Rolling-RSL · Research decision-support prototype — clinician confirmation required.",
+            "report_disclaimer": (
+                "Research decision-support prototype. Clinician confirmation required. "
+                "Repeated rolling-origin and external prospective validation are still required."
+            ),
+            "alert_rule_note": "Generated from GA-RGCA v4 Rolling SuperLearner condition probabilities",
+        }
 
     if mode == "ga_rgca":
         return {

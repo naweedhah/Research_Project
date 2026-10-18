@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from app.core.policy import ClinicalPolicy
 from app.models.enums import DataQualityFlag
+from app.services.paediatric_bounds import unusual_measurement_messages
 
 VERIFY_MEASUREMENT = "Please verify this measurement before prediction."
 
@@ -146,6 +147,21 @@ def validate_visit_payload(payload: dict, policy: ClinicalPolicy, socioeconomic_
                     key,
                     DataQualityFlag.OUTLIER_REVIEW_REQUIRED,
                     f"{label} {value} is outside the accepted range{span}. {VERIFY_MEASUREMENT}",
+                    blocking=True,
+                )
+            )
+
+    age = _as_finite_number(anthro.get("age_months"))
+    weight = _as_finite_number(anthro.get("weight_kg"))
+    height = _as_finite_number(anthro.get("height_cm"))
+    if age is not None and weight is not None and height is not None:
+        for message in unusual_measurement_messages(age, weight, height):
+            field = "weight_kg" if message.startswith("Weight") else "height_cm"
+            issues.append(
+                QualityIssue(
+                    field,
+                    DataQualityFlag.OUTLIER_REVIEW_REQUIRED,
+                    message,
                     blocking=True,
                 )
             )

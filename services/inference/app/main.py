@@ -12,6 +12,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.demo_outcomes import demo_confidence, get_demo_outcome
 from app.ga_rgca import REQUIRED_FILES, IncompleteBaseline, load_ga_rgca
+from app.ga_rgca_v4 import REQUIRED_FILES as V4_REQUIRED_FILES
+from app.ga_rgca_v4 import V4_MODEL_VERSION, IncompleteVisit, load_ga_rgca_v4
 
 _REPO = Path(__file__).resolve().parents[3]
 CONTRACTS = Path("/contracts") if Path("/contracts").exists() else _REPO / "packages" / "contracts"
@@ -22,6 +24,8 @@ class Settings(BaseSettings):
     model_mode: str = "demo"
     model_artifact_path: str = "/artifacts/active"
     embedding_dim: int = 128
+    c1_model_version: str = "ga_rgca_v4_rsl"
+    ga_rgca_v4_dir: str = ""
 
 
 settings = Settings()
@@ -231,6 +235,13 @@ class OnnxModelAdapter:
 GA_MODEL, GA_LOAD_ERROR = load_ga_rgca()
 
 
+def _v4_selected() -> bool:
+    return settings.c1_model_version.strip().lower() in {"ga_rgca_v4_rsl", "ga-rgca-v4-rolling-rsl"}
+
+
+V4_MODEL, V4_LOAD_ERROR = load_ga_rgca_v4() if _v4_selected() else (None, None)
+
+
 class GaRgcaAdapter:
     """Score the visit being entered as the baseline for a later-risk prediction.
 
@@ -320,7 +331,81 @@ class GaRgcaAdapter:
         )
 
 
+class GaRgcaV4Adapter:
+    """Current visit is the rolling 12-month origin. There is no demo fallback."""
+
+    name = V4_MODEL_VERSION
+
+    def predict(self, req: PredictRequest) -> PredictionResult:
+        if V4_MODEL is None:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "MODEL_NOT_AVAILABLE",
+                    "message": V4_LOAD_ERROR or "GA-RGCA v4 Rolling SuperLearner is not loaded",
+                    "prediction_source": None,
+                },
+            )
+        t0 = time.perf_counter()
+        try:
+            heads = V4_MODEL.predict_payload(req.model_dump())
+        except IncompleteVisit as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "REAL_MODEL_INPUT_INCOMPLETE",
+                    "message": "GA-RGCA v4 needs the current visit age, sex, height, and weight. No demo score was substituted.",
+                    "missing": exc.missing,
+                    "prediction_source": None,
+                },
+            ) from exc
+        elapsed = (time.perf_counter() - t0) * 1000
+        acute = heads["acute_probabilities"]
+        condition_risk = max(
+            heads["underweight_probability"],
+            heads["stunting_probability"],
+            heads["mam_probability"],
+            heads["sam_probability"],
+        )
+        stored = {key: value for key, value in heads.items() if key != "latent"}
+        stored["input_snapshot"] = {
+            "values": heads["input_snapshot"],
+            "missing_features": heads["missing_features"],
+            "model_version": V4_MODEL_VERSION,
+            "calibration_version": "ga-rgca-v4-superlearner",
+            "feature_schema_version": "ga-rgca-v4-rolling-current-visit",
+            "binary_thresholds": heads["binary_thresholds"],
+            "acute_temperature": heads["acute_temperature"],
+            "severity_temperature": heads["severity_temperature"],
+            "uncertainty_threshold": heads["uncertainty_threshold"],
+            "rolling_origin": True,
+        }
+        return PredictionResult(
+            status=heads["predicted_malnutrition_type"],
+            severity=heads["severity"],
+            raw_probabilities={"acute": acute, "ga_rgca": stored},
+            calibrated_probabilities={"acute": acute, "risk": condition_risk, "ga_rgca": stored},
+            risk_score=round(float(condition_risk), 4),
+            confidence="elevated" if heads["uncertainty_flag"] else "low",
+            latent_embedding=heads["latent"] or [],
+            model_version=V4_MODEL_VERSION,
+            calibration_version="ga-rgca-v4-superlearner",
+            feature_schema_version="ga-rgca-v4-rolling-current-visit",
+            inference_ms=round(elapsed, 2),
+            mode="PYTORCH",
+            score_kind="highest_condition_probability",
+            score_is_probability=True,
+            score_is_calibrated=True,
+            prediction_task="twelve_month_nutritional_risk",
+            clinical_use=False,
+            data_limitations=heads["data_limitations"],
+            prediction_source=V4_MODEL_VERSION,
+        )
+
+
 def get_adapter():
+    if _v4_selected():
+        return GaRgcaV4Adapter()
     mode = settings.model_mode.lower()
     path = settings.model_artifact_path
     if mode == "sklearn":
@@ -329,8 +414,6 @@ def get_adapter():
         return OnnxModelAdapter(path)
     if mode == "pytorch" and GA_MODEL is None:
         return PyTorchMultimodalAdapter(path)
-    if GA_MODEL is not None:
-        return GaRgcaAdapter()
     return GaRgcaAdapter()
 
 
@@ -339,25 +422,75 @@ ADAPTER = get_adapter()
 
 @app.get("/health")
 def health():
+    if _v4_selected():
+        loaded = V4_MODEL is not None
+        return {
+            "status": "ok",
+            "service": "inference",
+            "configured_model_mode": settings.model_mode,
+            "c1_model_version": settings.c1_model_version,
+            "mode": "ga_rgca_v4_rsl",
+            "active_model": V4_MODEL_VERSION if loaded else None,
+            "model_loaded": loaded,
+            "ga_rgca_loaded": loaded,
+        }
     loaded = GA_MODEL is not None
     return {
         "status": "ok",
         "service": "inference",
         "configured_model_mode": settings.model_mode,
+        "c1_model_version": settings.c1_model_version,
         "mode": settings.model_mode,
         "active_model": "GA-RGCA-v3" if loaded else None,
+        "model_loaded": loaded,
         "ga_rgca_loaded": loaded,
     }
 
 
 @app.get("/model-info")
 def model_info():
+    if _v4_selected():
+        loaded = V4_MODEL is not None
+        weights = V4_MODEL.policy["stack_weights"] if loaded else None
+        return {
+            "configured_model_mode": settings.model_mode,
+            "c1_model_version": settings.c1_model_version,
+            "mode": "ga_rgca_v4_rsl",
+            "active_model": V4_MODEL_VERSION if loaded else None,
+            "adapter": ADAPTER.__class__.__name__,
+            "model_loaded": loaded,
+            "model_version": V4_MODEL_VERSION if loaded else None,
+            "architecture": "GA-RGCA v4 Rolling SuperLearner",
+            "rolling_origin": True,
+            "prediction_horizon_months": 12,
+            "superlearner": loaded,
+            "experts": list(V4_MODEL.policy["candidate_names"]) if loaded else [],
+            "neural_ensemble_members": len(V4_MODEL.models) if loaded else 0,
+            "artifact_path": str(V4_MODEL.directory) if loaded else None,
+            "stack_weights": weights,
+            "prediction_source": V4_MODEL_VERSION if loaded else None,
+            "prediction_type": "twelve_month_nutritional_risk",
+            "outputs": ["Underweight", "Stunting", "MAM", "SAM", "Severity"],
+            "uncertainty_method": "neural ensemble variance",
+            "clinical_use": False,
+            "external_validation_complete": False,
+            "clinically_validated": False,
+            "repeated_origin_prospective_validation": False,
+            "demo": False,
+            "ga_rgca_loaded": loaded,
+            "ga_rgca_error": V4_LOAD_ERROR,
+            "ga_rgca_required_files": list(V4_REQUIRED_FILES),
+            "ga_rgca_task": "twelve_month_nutritional_risk" if loaded else None,
+            "ensemble_members": len(V4_MODEL.models) if loaded else 0,
+        }
     loaded = GA_MODEL is not None
     return {
         "configured_model_mode": settings.model_mode,
+        "c1_model_version": settings.c1_model_version,
         "mode": settings.model_mode,
         "active_model": "GA-RGCA-v3" if loaded else None,
         "adapter": ADAPTER.__class__.__name__,
+        "model_loaded": loaded,
         "model_version": "GA-RGCA-v3" if loaded else None,
         "prediction_source": "GA-RGCA-v3" if loaded else None,
         "artifact_directory": str(GA_MODEL.directory) if loaded else None,

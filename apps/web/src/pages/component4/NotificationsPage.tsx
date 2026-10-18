@@ -19,7 +19,7 @@ type Alert = {
   severity: string;
   status: string;
   message: string;
-  trigger_value?: { previous_risk?: number; current_risk?: number; risk_velocity?: number };
+  trigger_value?: { previous_risk?: number; current_risk?: number; risk_velocity?: number; basis?: string };
   created_at: string;
 };
 
@@ -131,7 +131,8 @@ export default function AlertsPage() {
               <p className="mt-3 text-sm leading-relaxed">{a.message}</p>
               {a.trigger_value?.previous_risk != null && a.trigger_value?.current_risk != null ? (
                 <p className="mt-2 text-sm text-muted">
-                  Probability: {formatPercent(a.trigger_value.previous_risk)} → {formatPercent(a.trigger_value.current_risk)}
+                  {a.trigger_value?.basis === "predicted_risk_change" ? "Highest predicted condition risk" : "Model score"}:{" "}
+                  {formatPercent(a.trigger_value.previous_risk)} → {formatPercent(a.trigger_value.current_risk)}
                 </p>
               ) : null}
               <div className="mt-4 flex flex-wrap gap-2">

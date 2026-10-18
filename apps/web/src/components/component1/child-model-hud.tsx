@@ -241,8 +241,8 @@ export function ChildModelHud({
         id: "status",
         label: statusLabel,
         value: status,
-        secondaryLabel: compact ? null : "Severity",
-        secondaryValue: compact ? null : (severity ?? "—"),
+        secondaryLabel: compact || !severity ? null : "Severity",
+        secondaryValue: compact || !severity ? null : severity,
         side: "right",
       },
       {

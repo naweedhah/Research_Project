@@ -5,14 +5,19 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, api } from "@/services/component4/httpClient";
 import { Button } from "@/components/common/button";
-import { Input, Label, Select } from "@/components/common/field";
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
+import { Input, Label } from "@/components/common/field";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
-import { displayedMalnutritionType } from "@/data/child-profile";
-import { formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
-import { X } from "lucide-react";
+import { CurrentConditionCard, PredictionCard } from "@/components/component1/assessment-result-cards";
+import { unusualMeasurementMessages } from "@/data/paediatric-measurement-bounds";
+import { formatStatus } from "@/utils/utils";
+import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 
-const STEPS = ["Visit details", "Anthropometry", "Socioeconomic", "Dietary", "Maternal / child health", "Review & submit"];
+const STEPS = ["Measurements", "Current feeding", "Review & submit"];
+
+function localDateTimeValue(date = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function VisitModalShell({
   children,
@@ -170,7 +175,7 @@ type VisitForm = {
 
 function emptyForm(sex = ""): VisitForm {
   return {
-    visit_date: new Date().toISOString().slice(0, 16),
+    visit_date: localDateTimeValue(),
     visit_type: "follow_up",
     scheduled: true,
     household_changed: false,
@@ -214,33 +219,6 @@ function emptyForm(sex = ""): VisitForm {
   };
 }
 
-function CategorySelect({
-  label,
-  value,
-  options,
-  onChange,
-  allowNotApplicable = false,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  allowNotApplicable?: boolean;
-}) {
-  return (
-    <div>
-      <Label>{label}</Label>
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Not recorded</option>
-        {allowNotApplicable ? <option value="__not_applicable__">Not yet applicable</option> : null}
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </Select>
-    </div>
-  );
-}
-
 function modelCategory(value: string): string | null {
   if (!value || value === "__not_applicable__") return null;
   return value;
@@ -265,6 +243,7 @@ function applyPrefill(base: VisitForm, prefill: Prefill): VisitForm {
   return {
     ...base,
     visit_type: isBaseline ? "routine" : "follow_up",
+    scheduled: true,
     age_months: str(prefill.child.age_months),
     sex: prefill.child.sex || base.sex,
     height_cm: isBaseline ? "" : str(a.height_cm),
@@ -289,26 +268,105 @@ function applyPrefill(base: VisitForm, prefill: Prefill): VisitForm {
     historical_sam: recordedFlag(history.historical_sam),
     historical_underweight: recordedGrade(history.historical_underweight),
     historical_stunting: recordedGrade(history.historical_stunting),
+    maternal_age_years: str(history.maternal_age_years),
+    research_maternal_education: str(history.maternal_education),
+    household_income_range: str(history.household_income_range),
+    father_occupation: str(history.father_occupation),
+    mother_occupation: str(history.mother_occupation),
+    exclusive_breastfeeding: str(history.exclusive_breastfeeding),
+    breastfeeding_duration_category: str(history.breastfeeding_duration),
+    complementary_feeding_timing: str(history.complementary_feeding_timing),
+    meal_frequency_category: str(history.meal_frequency),
+    dietary_diversity_category: str(history.dietary_diversity),
+    triposha_supplementation: str(history.triposha_supplementation),
+    vitamin_supplementation: str(history.vitamin_supplementation),
   };
 }
 
-function validationHints(form: VisitForm, isBaseline: boolean): string[] {
+function validationHints(form: VisitForm, _isBaseline: boolean): string[] {
   const hints: string[] = [];
   if (!form.age_months) hints.push("Age in months is required.");
   if (!form.weight_kg) hints.push("Weight is required for prediction.");
   if (!form.height_cm) hints.push("Height is required for prediction.");
-  if (isBaseline && !form.birth_weight_kg) hints.push("Birth weight is recommended at baseline registration visit.");
   if (!form.confirmation) hints.push("Confirm clinic record attestation before submitting.");
   return hints;
 }
 
-/** Aligns with backend QualityReport: required anthro must be present; optional gaps are review-only. */
-function dataQualityGate(form: VisitForm, isBaseline: boolean): "READY" | "REVIEW_REQUIRED" | "BLOCKED" {
-  const missingRequired = !form.age_months || !form.weight_kg || !form.height_cm || !form.confirmation;
-  if (missingRequired) return "BLOCKED";
-  const optionalGaps = isBaseline && !form.birth_weight_kg;
-  if (optionalGaps) return "REVIEW_REQUIRED";
-  return "READY";
+function ChoiceButton({
+  selected,
+  title,
+  hint,
+  onClick,
+}: {
+  selected: boolean;
+  title: string;
+  hint?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={`rounded-2xl border px-3 py-3 text-left transition ${
+        selected
+          ? "border-[#0E3A67] bg-[#EAF2FA] shadow-[0_8px_20px_-16px_rgba(14,58,103,0.8)]"
+          : "border-[#e4ecf4] bg-white hover:border-[#b7cbe0] hover:bg-[#f8fafc]"
+      }`}
+    >
+      <span className={`block text-sm font-semibold ${selected ? "text-[#0E3A67]" : "text-[#0f2744]"}`}>{title}</span>
+      {hint ? <span className="mt-1 block text-xs leading-snug text-[#64748b]">{hint}</span> : null}
+    </button>
+  );
+}
+
+function applyFeedingLogic(current: VisitForm, patch: Partial<VisitForm> = {}): VisitForm {
+  const next = { ...current, ...patch };
+  const mealsChosen = Boolean(patch.meal_frequency) && Number(next.meal_frequency) > 0;
+  const zeroMeals = patch.meal_frequency === "0" || (Boolean(patch.meal_frequency) && Number(next.meal_frequency) === 0);
+
+  if (patch.complementary_feeding === "yes" || mealsChosen) {
+    if (next.breastfeeding_status === "exclusive") next.breastfeeding_status = "";
+    if (mealsChosen) next.complementary_feeding = "yes";
+  }
+
+  if (zeroMeals) {
+    next.complementary_feeding = "no";
+    next.meal_frequency = "0";
+  }
+
+  if (next.breastfeeding_status === "exclusive") {
+    next.complementary_feeding = "no";
+    next.meal_frequency = "0";
+    return next;
+  }
+
+  if (next.complementary_feeding === "no") {
+    next.meal_frequency = "0";
+  } else if (next.complementary_feeding === "yes" && Number(next.meal_frequency) === 0) {
+    next.meal_frequency = "";
+  }
+
+  return next;
+}
+
+function formMeasurementIssues(form: VisitForm): string[] {
+  if (!form.age_months.trim() || !form.weight_kg.trim() || !form.height_cm.trim()) return [];
+  const age = Number(form.age_months);
+  const weight = Number(form.weight_kg);
+  const height = Number(form.height_cm);
+  if (!Number.isFinite(age) || !Number.isFinite(weight) || !Number.isFinite(height)) return [];
+  return unusualMeasurementMessages(age, weight, height);
+}
+
+function FieldPanel({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-[#d7e4f2] bg-gradient-to-br from-[#f4f8fc] to-white p-4">
+      <Label className="text-[#0f2744]">{label}</Label>
+      {children}
+      {hint ? <p className="mt-1.5 text-xs text-[#64748b]">{hint}</p> : null}
+    </div>
+  );
 }
 
 export default function NewVisitPage() {
@@ -323,11 +381,12 @@ export default function NewVisitPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [qualityIssues, setQualityIssues] = useState<string[]>([]);
+  const [unusualIssues, setUnusualIssues] = useState<string[]>([]);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [form, setForm] = useState<VisitForm>(() => emptyForm());
 
   useEffect(() => {
-    if (prefillQ.data) setForm(applyPrefill(emptyForm(prefillQ.data.child.sex), prefillQ.data));
+    if (prefillQ.data) setForm(applyFeedingLogic(applyPrefill(emptyForm(prefillQ.data.child.sex), prefillQ.data)));
   }, [prefillQ.data]);
 
   useEffect(() => {
@@ -340,29 +399,55 @@ export default function NewVisitPage() {
   const carrySocio = !form.household_changed && !isBaseline && Boolean(prefillQ.data?.socioeconomic);
 
   function set<K extends keyof VisitForm>(key: K, value: VisitForm[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      return { ...f, [key]: value };
+    });
+  }
+
+  function setFeeding<K extends keyof VisitForm>(key: K, value: VisitForm[K]) {
+    setForm((f) => applyFeedingLogic(f, { [key]: value } as Partial<VisitForm>));
   }
 
   const hints = useMemo(() => validationHints(form, isBaseline), [form, isBaseline]);
-  const qualityGate = useMemo(() => dataQualityGate(form, isBaseline), [form, isBaseline]);
+
+  function continueOrWarn() {
+    if (step === 0) {
+      const issues = formMeasurementIssues(form);
+      if (issues.length) {
+        setUnusualIssues(issues);
+        return;
+      }
+    }
+    setUnusualIssues([]);
+    setStep((s) => s + 1);
+  }
 
   async function submit() {
     if (hints.length > 0) {
       setError("Complete the required fields highlighted in the review step.");
       return;
     }
+    const unusual = formMeasurementIssues(form);
+    if (unusual.length) {
+      setUnusualIssues(unusual);
+      return;
+    }
     setBusy(true);
     setError(null);
     setQualityIssues([]);
     try {
+      const recordedAt = new Date();
       const prev = prefillQ.data?.anthropometric;
       const payload = {
-        visit_date: new Date(form.visit_date).toISOString(),
+        visit_date: recordedAt.toISOString(),
         visit_type: form.visit_type,
         scheduled: form.scheduled,
         confirmation_attested: form.confirmation,
         anthropometric: {
-          age_months: requiredNumber(form.age_months, "Age"),
+          age_months: requiredNumber(
+            ageMonthsAtVisit(prefillQ.data?.child.date_of_birth, localDateTimeValue(recordedAt)) || form.age_months,
+            "Age",
+          ),
           sex: form.sex,
           height_cm: requiredNumber(form.height_cm, "Height"),
           weight_kg: requiredNumber(form.weight_kg, "Weight"),
@@ -385,7 +470,7 @@ export default function NewVisitPage() {
         dietary: {
           breastfeeding_status: form.breastfeeding_status || null,
           complementary_feeding: triToBool(form.complementary_feeding),
-          dietary_diversity_score: optionalNumber(form.dietary_diversity_score, "Dietary diversity score"),
+          dietary_diversity_score: null,
           meal_frequency: optionalNumber(form.meal_frequency, "Meal frequency"),
           micronutrient_supplementation: triToBool(form.micronutrient_supplementation),
         },
@@ -488,6 +573,8 @@ export default function NewVisitPage() {
         severity?: string;
         uncertainty_flag?: boolean;
         uncertainty_label?: string;
+        binary_variance?: number;
+        uncertainty_threshold?: number;
         triage?: string;
         model_version?: string;
         prediction_source?: string;
@@ -501,68 +588,44 @@ export default function NewVisitPage() {
     };
     return (
       <VisitModalShell labelledBy="visit-result-title" onClose={() => router.push(`/children/${childId}`)}>
-      <Card className="max-w-xl border-[#e4ecf4] shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
-        <CardHeader>
-          <CardTitle id="visit-result-title">
-            {p.ga_rgca ? "Future Nutritional Risk Prediction" : "AI-assisted assessment"}
-          </CardTitle>
-        </CardHeader>
-        <CardBody className="space-y-3">
-          <p>
-            Child <strong>{child.pseudonymous_id}</strong> · Visit {recordedVisit?.visit_number ?? child.visit_count}
-          </p>
-          {p.ga_rgca ? (
-            <>
-              <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <p>Underweight <strong>{formatPercent(p.ga_rgca.underweight_probability)}</strong></p>
-                <p>Stunting <strong>{formatPercent(p.ga_rgca.stunting_probability)}</strong></p>
-                <p>MAM <strong>{formatPercent(p.ga_rgca.mam_probability)}</strong></p>
-                <p>SAM <strong>{formatPercent(p.ga_rgca.sam_probability)}</strong></p>
-              </div>
-              <p>Predicted Malnutrition Type <strong>{formatNutritionalStatus(displayedMalnutritionType(p), p.ga_rgca.severity)}</strong></p>
-              <p>Overall Severity <strong>{p.ga_rgca.severity}</strong></p>
-              <p>Model Uncertainty <strong>{p.ga_rgca.uncertainty_flag ? "Elevated" : "Low"}</strong></p>
-              <p className="text-sm text-muted">{p.ga_rgca.uncertainty_label}</p>
-              <p>Clinical Recommendation <strong>{p.ga_rgca.triage}</strong></p>
-              <p className="text-sm text-[#64748b]">Highest Predicted Condition Risk {formatPercent(p.risk)}</p>
-              <p className="text-sm text-muted">Research decision-support model — clinical confirmation required.</p>
-              {p.ga_rgca.historical_inputs ? (
-                <p className="text-sm text-muted">
-                  Baseline {p.ga_rgca.historical_inputs.assessment_date ? new Date(p.ga_rgca.historical_inputs.assessment_date).toLocaleDateString() : "date not recorded"}
-                  {p.ga_rgca.historical_inputs.horizon_end_date
-                    ? `, 12-month horizon ends ${new Date(p.ga_rgca.historical_inputs.horizon_end_date).toLocaleDateString()}`
-                    : ""}
-                  .{" "}
-                  {p.ga_rgca.historical_inputs.uses_current_visit_measurements
-                    ? "This visit is the baseline assessment."
-                    : "Today's measurements were not copied over the earlier baseline."}{" "}
-                  {Object.entries(p.ga_rgca.historical_inputs.fields)
-                    .filter(([, state]) => state === "not_recorded")
-                    .map(([name]) => name)
-                    .join(", ") || "All baseline fields were recorded"}
-                  {Object.values(p.ga_rgca.historical_inputs.fields).some((state) => state === "not_recorded")
-                    ? " not recorded. Not recorded is unknown, not a confirmed absence."
-                    : "."}
-                </p>
-              ) : null}
-              <p>Model <strong>GA-RGCA v3</strong></p>
-              <p className="text-sm text-muted">AI-assisted assessment. Clinical review required.</p>
-            </>
-          ) : (
-            <>
-              <p>Predicted status <strong>{formatNutritionalStatus(displayedMalnutritionType(p), p.severity)}</strong></p>
-              <p>Model-assessed probability <strong>{formatPercent(p.risk)}</strong></p>
-              <p className="text-sm text-muted">AI-assisted assessment from the measurements recorded at this visit. Clinical review required.</p>
-            </>
-          )}
-          <div className="flex flex-wrap gap-2">
+        <div className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
+          <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
+            <div className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 className="h-5 w-5" />
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Visit recorded</p>
+            </div>
+            <h1 id="visit-result-title" className="mt-1 text-2xl font-bold text-[#0f2744]">
+              Nutritional assessment
+            </h1>
+            <p className="mt-1 text-sm text-[#64748b]">
+              {child.full_name ? `${child.full_name} · ` : ""}
+              {child.pseudonymous_id} · Visit {recordedVisit?.visit_number ?? child.visit_count}
+            </p>
+          </div>
+
+          <div className="grid gap-4 px-6 py-5 lg:grid-cols-2">
+            <CurrentConditionCard
+              weightKg={form.weight_kg}
+              heightCm={form.height_cm}
+              ageMonths={form.age_months}
+              sex={form.sex}
+              feeding={{
+                breastfeeding_status: form.breastfeeding_status,
+                complementary_feeding: form.complementary_feeding,
+                meal_frequency: form.meal_frequency,
+                micronutrient_supplementation: form.micronutrient_supplementation,
+              }}
+            />
+            <PredictionCard prediction={p} />
+          </div>
+
+          <div className="flex flex-wrap gap-2 px-6 pb-6">
             <Button onClick={() => router.push(`/children/${childId}`)}>Open child profile</Button>
             <Button variant="secondary" onClick={() => router.push(`/children/${childId}/report`)}>
               View progress report
             </Button>
           </div>
-        </CardBody>
-      </Card>
+        </div>
       </VisitModalShell>
     );
   }
@@ -572,20 +635,21 @@ export default function NewVisitPage() {
     <div className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
       <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
         <h1 id="visit-form-title" className="text-2xl font-bold text-[#0f2744]">
-          {isBaseline ? "Baseline nutritional assessment" : "Follow-up nutritional assessment"}
+          {isBaseline ? "Record Nutritional Assessment" : "Follow-up nutritional assessment"}
         </h1>
         <p className="mt-1 text-sm text-[#64748b]">
           Patient: {child.full_name ? `${child.full_name} · ` : ""}
-          {child.pseudonymous_id} · Visit {child.visit_label ?? (isBaseline ? "V1" : `V${(child.visit_count ?? 0) + 1}`)} ·{" "}
-          {new Date(form.visit_date).toLocaleDateString()}
+          {child.pseudonymous_id} · Visit {child.visit_label ?? (isBaseline ? "V1" : `V${(child.visit_count ?? 0) + 1}`)}
         </p>
       </div>
       <ol className="flex flex-wrap gap-2 border-b border-[#e4ecf4] px-6 py-3.5">
         {STEPS.map((label, i) => (
           <li
             key={label}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-              i === step ? "bg-[#0E3A67] text-white" : "bg-[#f1f5f9] text-[#475569]"
+            className={`rounded-2xl border px-3 py-2 text-xs font-medium ${
+              i === step
+                ? "border-[#0E3A67] bg-[#0E3A67] text-white shadow-[0_8px_20px_-16px_rgba(14,58,103,0.8)]"
+                : "border-[#e4ecf4] bg-white text-[#475569]"
             }`}
           >
             {i + 1}. {label}
@@ -595,285 +659,197 @@ export default function NewVisitPage() {
       <div className="px-6 pb-6 pt-5">
         <div className="space-y-4">
           {step === 0 ? (
-            <>
-              <Label>Visit date/time</Label>
-              <Input type="datetime-local" value={form.visit_date} onChange={(e) => set("visit_date", e.target.value)} />
-              <Label>Visit type</Label>
-              <Select value={form.visit_type} onChange={(e) => set("visit_type", e.target.value)}>
-                <option value="routine">Routine / baseline</option>
-                <option value="follow_up">Follow-up</option>
-                <option value="unscheduled">Unscheduled</option>
-              </Select>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.scheduled} onChange={(e) => set("scheduled", e.target.checked)} />
-                Scheduled appointment (uncheck if walk-in)
-              </label>
-            </>
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <FieldPanel
+                  label="Age (months)"
+                  hint={
+                    <span className="font-medium text-[#0E3A67]">
+                      Birth weight: {form.birth_weight_kg ? `${form.birth_weight_kg} kg` : "not recorded"}
+                    </span>
+                  }
+                >
+                  <Input type="number" step="0.1" value={form.age_months} readOnly className="border-[#d7e4f2] bg-white" />
+                </FieldPanel>
+                <FieldPanel label="Sex">
+                  <Input value={formatStatus(form.sex)} readOnly className="border-[#d7e4f2] bg-white" />
+                </FieldPanel>
+                <FieldPanel
+                  label="Weight (kg) *"
+                  hint={
+                    !isBaseline && prefillQ.data.anthropometric?.weight_kg != null ? (
+                      <span className="font-medium text-[#0E3A67]">
+                        Last visit: {str(prefillQ.data.anthropometric.weight_kg)} kg
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.weight_kg}
+                    onChange={(e) => set("weight_kg", e.target.value)}
+                    className="border-[#d7e4f2] bg-white"
+                  />
+                </FieldPanel>
+                <FieldPanel
+                  label="Height / length (cm) *"
+                  hint={
+                    !isBaseline && prefillQ.data.anthropometric?.height_cm != null ? (
+                      <span className="font-medium text-[#0E3A67]">
+                        Last visit: {str(prefillQ.data.anthropometric.height_cm)} cm
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={form.height_cm}
+                    onChange={(e) => set("height_cm", e.target.value)}
+                    className="border-[#d7e4f2] bg-white"
+                  />
+                </FieldPanel>
+              </div>
+            </div>
           ) : null}
 
           {step === 1 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-5">
               <div>
-                <Label>Age (months)</Label>
-                <Input type="number" step="0.1" value={form.age_months} readOnly className="bg-[#f8fafc]" />
-                <p className="mt-1 text-xs text-[#64748b]">Calculated from date of birth and visit date</p>
+                <p className="mb-2 text-sm font-medium text-[#0f2744]">Breastfeeding status</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(
+                    [
+                      ["exclusive", "Exclusive", "Breast milk only"],
+                      ["stopped", "Stopped", "No longer breastfeeding"],
+                      ["never", "Never", "Never breastfed"],
+                    ] as const
+                  ).map(([value, title, hint]) => (
+                    <ChoiceButton
+                      key={title}
+                      selected={form.breastfeeding_status === value}
+                      title={title}
+                      hint={hint}
+                      onClick={() => setFeeding("breastfeeding_status", value)}
+                    />
+                  ))}
+                </div>
               </div>
               <div>
-                <Label>Sex</Label>
-                <Input value={formatStatus(form.sex)} readOnly className="bg-[#f8fafc]" />
+                <p className="mb-2 text-sm font-medium text-[#0f2744]">Complementary feeding</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      ["yes", "Yes"],
+                      ["no", "No"],
+                    ] as const
+                  ).map(([value, title]) => (
+                    <ChoiceButton
+                      key={title}
+                      selected={form.complementary_feeding === value}
+                      title={title}
+                      onClick={() => setFeeding("complementary_feeding", value)}
+                    />
+                  ))}
+                </div>
               </div>
-              <div>
-                <Label>Weight (kg) *</Label>
-                <Input type="number" step="0.01" value={form.weight_kg} onChange={(e) => set("weight_kg", e.target.value)} />
-                <p className="mt-1 text-xs text-[#64748b]">Kilograms, for example 5.2. Not grams.</p>
-              </div>
-              <div>
-                <Label>Height / length (cm) *</Label>
-                <Input type="number" step="0.1" value={form.height_cm} onChange={(e) => set("height_cm", e.target.value)} />
-                <p className="mt-1 text-xs text-[#64748b]">Centimetres, for example 58.</p>
-              </div>
-              <div>
-                <Label>Birth weight (kg)</Label>
-                <Input type="number" step="0.01" value={form.birth_weight_kg} onChange={(e) => set("birth_weight_kg", e.target.value)} />
-                <p className="mt-1 text-xs text-[#64748b]">Kilograms, for example 2.9. Not grams.</p>
-              </div>
-              {!isBaseline && prefillQ.data.anthropometric ? (
-                <p className="md:col-span-2 text-xs text-muted">
-                  Previous visit: weight {str(prefillQ.data.anthropometric.weight_kg)} kg · height{" "}
-                  {str(prefillQ.data.anthropometric.height_cm)} cm
-                </p>
-              ) : null}
-              <div className="md:col-span-2 space-y-2 rounded-xl border border-[#e4ecf4] bg-[#f8fafc] p-3">
-                <p className="text-sm font-medium text-[#0f2744]">Earlier clinical record</p>
-                <p className="text-xs text-[#64748b]">
-                  These are verified earlier findings. They are not taken from a model prediction. Underweight and stunting can both be present. Not recorded means unknown, not confirmed absent.
-                </p>
-                {prefillQ.data.historical_growth ? (
-                  <p className="text-xs text-[#334155]">
-                    The model uses visit {prefillQ.data.historical_growth.visit_number} on{" "}
-                    {new Date(prefillQ.data.historical_growth.visit_date).toLocaleDateString()} as its baseline
-                    ({str(prefillQ.data.historical_growth.age_months)} months, {str(prefillQ.data.historical_growth.weight_kg)} kg,{" "}
-                    {str(prefillQ.data.historical_growth.height_cm)} cm). Today&apos;s weight and height stay on this visit and are not copied into that baseline. The horizon is 12 months after that earlier date.
-                  </p>
-                ) : (
-                  <p className="text-xs text-[#334155]">
-                    No earlier measurement is stored. This visit is the baseline. Today&apos;s age, height, and weight are used with this visit date, and the horizon is 12 months after that date.
-                  </p>
-                )}
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <Label>Earlier MAM</Label>
-                    <Select value={form.historical_mam} onChange={(e) => set("historical_mam", e.target.value)}>
-                      <option value="">Not recorded</option>
-                      <option value="0">No, confirmed absent</option>
-                      <option value="1">Yes, confirmed present</option>
-                    </Select>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[#0f2744]">Meal frequency (per day)</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(
+                      [
+                        ["0", "0", form.meal_frequency !== "" && Number(form.meal_frequency) === 0],
+                        ["2", "1–2", Number(form.meal_frequency) >= 1 && Number(form.meal_frequency) <= 2],
+                        ["4", "3–4", Number(form.meal_frequency) >= 3 && Number(form.meal_frequency) <= 4],
+                        ["5", "5 or more", Number(form.meal_frequency) >= 5],
+                      ] as const
+                    ).map(([value, title, selected]) => (
+                      <ChoiceButton
+                        key={title}
+                        selected={selected}
+                        title={title}
+                        onClick={() => setFeeding("meal_frequency", value)}
+                      />
+                    ))}
                   </div>
-                  <div>
-                    <Label>Earlier SAM</Label>
-                    <Select value={form.historical_sam} onChange={(e) => set("historical_sam", e.target.value)}>
-                      <option value="">Not recorded</option>
-                      <option value="0">No, confirmed absent</option>
-                      <option value="1">Yes, confirmed present</option>
-                    </Select>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[#0f2744]">Micronutrient supplementation</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["yes", "Yes"],
+                        ["no", "No"],
+                      ] as const
+                    ).map(([value, title]) => (
+                      <ChoiceButton
+                        key={`micro-${title}`}
+                        selected={form.micronutrient_supplementation === value}
+                        title={title}
+                        onClick={() => set("micronutrient_supplementation", value)}
+                      />
+                    ))}
                   </div>
-                  <CategorySelect label="Earlier underweight" value={form.historical_underweight} options={["Normal", "Moderate", "Severe"]} onChange={(value) => set("historical_underweight", value)} />
-                  <CategorySelect label="Earlier stunting" value={form.historical_stunting} options={["Normal", "Moderate", "Severe"]} onChange={(value) => set("historical_stunting", value)} />
                 </div>
               </div>
             </div>
           ) : null}
 
           {step === 2 ? (
-            <>
-              {!isBaseline ? (
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.household_changed} onChange={(e) => set("household_changed", e.target.checked)} />
-                  Household information has changed since the previous visit
-                </label>
-              ) : null}
+            <div className="space-y-4 text-sm">
+              <p className="font-medium text-[#0f2744]">Review before running the model</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[#d7e4f2] bg-gradient-to-br from-[#f4f8fc] to-white px-4 py-3">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#94a3b8]">Measurements</p>
+                  <p className="mt-1 font-semibold text-[#0f2744]">
+                    {form.weight_kg || "—"} kg · {form.height_cm || "—"} cm
+                  </p>
+                  <p className="mt-1 text-xs text-[#64748b]">
+                    {form.age_months || "—"} months
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[#d7e4f2] bg-gradient-to-br from-[#f4f8fc] to-white px-4 py-3">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#94a3b8]">Current feeding</p>
+                  <p className="mt-1 font-semibold text-[#0f2744]">
+                    {form.breastfeeding_status ? formatStatus(form.breastfeeding_status) : "Not recorded"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#64748b]">Meals/day: {form.meal_frequency || "—"}</p>
+                </div>
+              </div>
               {carrySocio ? (
-                <p className="rounded-xl bg-canvas p-3 text-xs text-muted">
-                  Socioeconomic fields will be carried forward from the previous visit unless you mark household information as changed.
+                <p className="rounded-2xl border border-[#e4ecf4] bg-[#f8fafc] px-4 py-3 text-xs text-[#64748b]">
+                  Household data carried forward from registration / previous visit
                 </p>
               ) : null}
-              <div className={`grid gap-3 md:grid-cols-2 ${carrySocio ? "opacity-60 pointer-events-none" : ""}`}>
-                <div>
-                  <Label>Wealth proxy</Label>
-                  <Select value={form.wealth_proxy} onChange={(e) => set("wealth_proxy", e.target.value)}>
-                    <option value="">Select…</option>
-                    <option value="poorest">Poorest</option>
-                    <option value="second">Second quintile</option>
-                    <option value="middle">Middle</option>
-                    <option value="fourth">Fourth quintile</option>
-                    <option value="richest">Richest</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Maternal education</Label>
-                  <Select value={form.maternal_education} onChange={(e) => set("maternal_education", e.target.value)}>
-                    <option value="">Select…</option>
-                    <option value="none">None</option>
-                    <option value="primary">Primary</option>
-                    <option value="secondary">Secondary</option>
-                    <option value="tertiary">Tertiary</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Household size</Label>
-                  <Input type="number" value={form.household_size} onChange={(e) => set("household_size", e.target.value)} />
-                </div>
-                <div>
-                  <Label>Geographical area</Label>
-                  <Input value={form.geographical_area} onChange={(e) => set("geographical_area", e.target.value)} placeholder="e.g. colombo, rural north" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-[#0f2744]">GA-RGCA household context</p>
-                <p className="text-xs text-[#64748b]">Leave a field as not recorded when the clinic did not assess it. These labels match the trained categories.</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <Label>Maternal age (years)</Label>
-                    <Input type="number" value={form.maternal_age_years} onChange={(e) => set("maternal_age_years", e.target.value)} />
-                  </div>
-                  <CategorySelect label="Maternal education" value={form.research_maternal_education} options={["No formal education", "Below O/ Level", "O/L passed", "A/ Level passes", "Degree/ diploma"]} onChange={(value) => set("research_maternal_education", value)} />
-                  <CategorySelect label="Household income range" value={form.household_income_range} options={["Less than Rs. 20,000", "Rs.20,000 to Rs. 50,000", "Rs. 50,000 to Rs. 100,000", "More than Rs. 100,000"]} onChange={(value) => set("household_income_range", value)} />
-                  <CategorySelect label="Father occupation" value={form.father_occupation} options={["Abroad", "Government worker", "Manual worker", "No job", "Private sector worker", "Self-employed"]} onChange={(value) => set("father_occupation", value)} />
-                  <CategorySelect label="Mother occupation" value={form.mother_occupation} options={["Government worker", "Housewife", "Private sector worker", "Self-employed"]} onChange={(value) => set("mother_occupation", value)} />
-                </div>
-              </div>
-            </>
-          ) : null}
-
-          {step === 3 ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <Label>Breastfeeding status</Label>
-                <Select value={form.breastfeeding_status} onChange={(e) => set("breastfeeding_status", e.target.value)}>
-                  <option value="">Select…</option>
-                  <option value="exclusive">Exclusive</option>
-                  <option value="continued">Continued with complementary foods</option>
-                  <option value="stopped">Stopped</option>
-                  <option value="never">Never breastfed</option>
-                </Select>
-              </div>
-              <div>
-                <Label>Dietary diversity score (0–7)</Label>
-                <Input type="number" min={0} max={7} value={form.dietary_diversity_score} onChange={(e) => set("dietary_diversity_score", e.target.value)} />
-              </div>
-              <div>
-                <Label>Meal frequency (per day)</Label>
-                <Input type="number" min={1} max={8} value={form.meal_frequency} onChange={(e) => set("meal_frequency", e.target.value)} />
-              </div>
-              <label className="flex items-center gap-2 text-sm md:col-span-2">
-                <span className="min-w-[200px] text-sm">Complementary feeding</span>
-                <Select value={form.complementary_feeding} onChange={(e) => set("complementary_feeding", e.target.value as TriState)} className="max-w-xs">
-                  <option value="">Not assessed</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                  <option value="unknown">Unknown</option>
-                </Select>
-              </label>
-              <label className="flex items-center gap-2 text-sm md:col-span-2">
-                <span className="min-w-[200px] text-sm">Micronutrient supplementation</span>
-                <Select value={form.micronutrient_supplementation} onChange={(e) => set("micronutrient_supplementation", e.target.value as TriState)} className="max-w-xs">
-                  <option value="">Not assessed</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                  <option value="unknown">Unknown</option>
-                </Select>
-              </label>
-            </div>
-          ) : null}
-          {step === 3 ? (
-            <div className="mt-4 space-y-2">
-              <p className="text-sm font-medium text-[#0f2744]">GA-RGCA feeding and supplementation</p>
-              <p className="text-xs text-[#64748b]">These are separate from the fields above. A yes/no answer is not converted into a timing or variety category.</p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <CategorySelect label="Exclusive breastfeeding" value={form.exclusive_breastfeeding} options={["Yes", "No"]} onChange={(value) => set("exclusive_breastfeeding", value)} />
-                <CategorySelect label="Breastfeeding duration" value={form.breastfeeding_duration_category} options={["Less than 6 months", "More than 6 months"]} onChange={(value) => set("breastfeeding_duration_category", value)} />
-                <CategorySelect label="Complementary feeding timing" value={form.complementary_feeding_timing} options={["Before 6 months", "After 6 months"]} allowNotApplicable onChange={(value) => set("complementary_feeding_timing", value)} />
-                <CategorySelect label="Meal frequency" value={form.meal_frequency_category} options={["2 meals/day", "3 meals/day", "4+ meals/day"]} allowNotApplicable onChange={(value) => set("meal_frequency_category", value)} />
-                <CategorySelect label="Dietary diversity" value={form.dietary_diversity_category} options={["Less than 2 varieties", "2 to 5 varieties", "More than 5 varieties"]} allowNotApplicable onChange={(value) => set("dietary_diversity_category", value)} />
-                <CategorySelect label="Triposha supplementation" value={form.triposha_supplementation} options={["No", "Yes - irregular use", "Yes - regular use"]} onChange={(value) => set("triposha_supplementation", value)} />
-                <CategorySelect label="Vitamin supplementation" value={form.vitamin_supplementation} options={["Yes", "No"]} onChange={(value) => set("vitamin_supplementation", value)} />
-              </div>
-            </div>
-          ) : null}
-
-          {step === 4 ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <Label>Maternal BMI</Label>
-                <Input type="number" step="0.1" value={form.maternal_bmi} onChange={(e) => set("maternal_bmi", e.target.value)} />
-              </div>
-              <div>
-                <Label>Gestational age at birth (weeks)</Label>
-                <Input type="number" value={form.gestational_age_weeks} onChange={(e) => set("gestational_age_weeks", e.target.value)} />
-              </div>
-              {(
-                [
-                  ["immunization_uptodate", "Immunization up to date"],
-                  ["vitamin_a", "Vitamin A supplementation"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2 text-sm">
-                  <span className="min-w-[200px]">{label}</span>
-                  <Select value={form[key]} onChange={(e) => set(key, e.target.value as TriState)} className="max-w-xs">
-                    <option value="">Not assessed</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                    <option value="unknown">Unknown</option>
-                  </Select>
-                </label>
-              ))}
-            </div>
-          ) : null}
-
-          {step === 5 ? (
-            <div className="space-y-3 text-sm">
-              <p className="font-medium">Review before running the model</p>
-              <ul className="list-disc space-y-1 pl-5 text-muted">
-                <li>Weight: {form.weight_kg || "—"} kg · Height: {form.height_cm || "—"} cm</li>
-                <li>Visit type: {formatStatus(form.visit_type)} · Age: {form.age_months || "—"} months</li>
-                {carrySocio ? <li>Socioeconomic data carried forward from previous visit</li> : null}
-              </ul>
-              <p
-                className={
-                  qualityGate === "READY"
-                    ? "rounded-xl bg-emerald-50 px-3 py-2 text-emerald-900"
-                    : qualityGate === "REVIEW_REQUIRED"
-                      ? "rounded-xl bg-amber-50 px-3 py-2 text-clinical-warning"
-                      : "rounded-xl bg-red-50 px-3 py-2 text-clinical-danger"
-                }
-                data-testid="data-quality-gate"
-              >
-                Data quality: <strong>{qualityGate}</strong>
-                {qualityGate === "READY"
-                  ? " — required fields complete; prediction can proceed."
-                  : qualityGate === "REVIEW_REQUIRED"
-                    ? " — optional fields missing; prediction can proceed after confirmation."
-                    : " — required fields incomplete; prediction is blocked."}
-              </p>
               {hints.length > 0 ? (
-                <ul className="rounded-xl bg-amber-50 p-3 text-clinical-warning">
+                <ul className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-clinical-warning">
                   {hints.map((h) => (
                     <li key={h}>• {h}</li>
                   ))}
                 </ul>
-              ) : (
-                <p className="text-muted">Required fields appear complete. The server will validate ranges against clinic policy.</p>
-              )}
+              ) : null}
               {qualityIssues.length > 0 ? (
-                <ul className="rounded-xl border border-clinical-danger/30 bg-red-50 p-3 text-clinical-danger">
+                <ul className="rounded-2xl border border-clinical-danger/30 bg-red-50 p-4 text-clinical-danger">
                   {qualityIssues.map((q) => (
                     <li key={q}>• {q}</li>
                   ))}
                 </ul>
               ) : null}
-              <label className="flex items-start gap-2">
-                <input type="checkbox" checked={form.confirmation} onChange={(e) => set("confirmation", e.target.checked)} />
-                I confirm that the entered information matches the available clinic record.
+              <label className="flex items-start gap-3 rounded-2xl border border-[#e4ecf4] bg-white px-4 py-3 text-sm text-[#0f2744]">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[#0E3A67]"
+                  checked={form.confirmation}
+                  onChange={(e) => set("confirmation", e.target.checked)}
+                />
+                <span>
+                  <span className="block font-semibold">Confirm clinic record</span>
+                  <span className="mt-1 block text-xs text-[#64748b]">
+                    I confirm that the entered information matches the available clinic record.
+                  </span>
+                </span>
               </label>
             </div>
           ) : null}
@@ -883,8 +859,8 @@ export default function NewVisitPage() {
             <Button variant="secondary" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
               Back
             </Button>
-            {step < 5 ? (
-              <Button onClick={() => setStep((s) => s + 1)}>Continue</Button>
+            {step < 2 ? (
+              <Button onClick={continueOrWarn}>Continue</Button>
             ) : (
               <Button onClick={submit} disabled={busy || !form.confirmation}>
                 {busy ? "Running assessment…" : "Run AI assessment"}
@@ -894,6 +870,47 @@ export default function NewVisitPage() {
         </div>
       </div>
     </div>
+    {unusualIssues.length > 0 ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="absolute inset-0 bg-[#0A2748]/50" aria-hidden />
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="unusual-measurement-title"
+          className="relative w-full max-w-md rounded-2xl border border-[#e4ecf4] bg-white p-5 shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]"
+        >
+          <div className="mb-3 flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-amber-50 p-2 text-amber-700">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 id="unusual-measurement-title" className="text-lg font-bold text-[#0f2744]">
+                Check these measurements
+              </h2>
+              <p className="mt-1 text-sm text-[#64748b]">
+                These values are not realistic for this child&apos;s age. The visit was not saved. Please verify weight (kg) and height (cm) and enter them again.
+              </p>
+            </div>
+          </div>
+          <ul className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            {unusualIssues.map((issue) => (
+              <li key={issue}>• {issue}</li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-end">
+            <Button
+              onClick={() => {
+                setUnusualIssues([]);
+                set("confirmation", false);
+                setStep(1);
+              }}
+            >
+              Review measurements
+            </Button>
+          </div>
+        </div>
+      </div>
+    ) : null}
     </VisitModalShell>
   );
 }
