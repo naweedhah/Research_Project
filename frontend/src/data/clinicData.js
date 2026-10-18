@@ -1,0 +1,36 @@
+export const clinicStaffDetails = {
+  summary: {
+    totalClinics: 125,
+    nutritionOfficers: 320,
+    healthcareWorkers: 860,
+    activePrograms: 45,
+    vacancies: 28,
+    trainingCompleted: 91,
+  },
+  provinces: [
+    { province: 'Western', clinics: 22, officers: 58, workers: 160, programs: 8 },
+    { province: 'Central', clinics: 16, officers: 42, workers: 110, programs: 6 },
+    { province: 'Southern', clinics: 14, officers: 36, workers: 95, programs: 5 },
+    { province: 'Northern', clinics: 12, officers: 30, workers: 78, programs: 4 },
+    { province: 'Eastern', clinics: 15, officers: 38, workers: 102, programs: 6 },
+    { province: 'North Western', clinics: 13, officers: 34, workers: 88, programs: 4 },
+    { province: 'North Central', clinics: 11, officers: 28, workers: 74, programs: 4 },
+    { province: 'Uva', clinics: 12, officers: 32, workers: 86, programs: 5 },
+    { province: 'Sabaragamuwa', clinics: 10, officers: 22, workers: 67, programs: 3 },
+  ],
+  services: [
+    { name: 'Growth Monitoring', coverage: 92, clinicsOffering: 118, monthlySessions: 2400 },
+    { name: 'Nutrition Counseling', coverage: 84, clinicsOffering: 110, monthlySessions: 1850 },
+    { name: 'Supplement Distribution', coverage: 78, clinicsOffering: 105, monthlySessions: 1600 },
+    { name: 'Child Screening', coverage: 80, clinicsOffering: 112, monthlySessions: 1720 },
+    { name: 'Maternal Nutrition Support', coverage: 71, clinicsOffering: 98, monthlySessions: 1320 },
+  ],
+  roster: [
+    { name: 'Ms. Anoma Silva', role: 'Nutrition Officer', district: 'Badulla', clinic: 'Badulla MOH Clinic', status: 'Active' },
+    { name: 'Mr. Ravi Fernando', role: 'Healthcare Worker', district: 'Batticaloa', clinic: 'Batticaloa Nutrition Hub', status: 'Active' },
+    { name: 'Dr. S. Perera', role: 'Programme Lead', district: 'Colombo', clinic: 'National Nutrition Centre', status: 'Active' },
+    { name: 'Ms. N. Bandara', role: 'Nutrition Officer', district: 'Nuwara Eliya', clinic: 'Estate Outreach Unit', status: 'On Training' },
+    { name: 'Mr. K. Mohamed', role: 'Healthcare Worker', district: 'Ampara', clinic: 'Ampara Screening Post', status: 'Active' },
+    { name: 'Ms. T. Wickramasinghe', role: 'Nutrition Officer', district: 'Monaragala', clinic: 'Monaragala PHM Clinic', status: 'Active' },
+  ],
+};
