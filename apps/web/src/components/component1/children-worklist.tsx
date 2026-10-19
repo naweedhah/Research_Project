@@ -19,7 +19,7 @@ import {
   primaryTypeProbabilityLabel,
 } from "@/data/child-profile";
 import { formatClinicalDate, formatPercent, formatNutritionalStatus, formatStatus, clinicalPhrase, ageLabel, cn, displayPredictedSeverity } from "@/utils/utils";
-import { assessWhoUndernutrition } from "@/data/who-growth-standards";
+import { assessWhoUndernutrition, NO_UNDERNUTRITION_LABEL } from "@/data/who-growth-standards";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 
 type ClinicalAttention = { type: string; label: string; severity?: string; status?: string };
@@ -110,14 +110,6 @@ const REVIEW_LABELS: Record<string, string> = {
   FURTHER_ASSESSMENT: "Further assessment required",
   NOT_REQUIRED: "Review not required",
 };
-
-function progressTone(display?: string | null) {
-  if (display === "improving") return "bg-emerald-50/30";
-  if (display === "deteriorating") return "bg-red-50/20";
-  if (display === "stagnating") return "bg-amber-50/20";
-  if (display === "incompatible_model") return "bg-slate-50/40";
-  return "";
-}
 
 function progressBadgeClass(display?: string | null) {
   if (display === "improving") return "bg-emerald-50 text-emerald-800 ring-emerald-200";
@@ -233,17 +225,24 @@ function WorklistContent() {
     }
   }
 
-  if (query.isLoading) return <Skeleton className="h-64" />;
-  if (query.isError) return <ErrorState message="Unable to load the child registry." />;
+  if (query.isLoading) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        <Skeleton className="h-16 max-w-md" />
+        <Skeleton className="h-96 rounded-[28px]" />
+      </div>
+    );
+  }
+  if (query.isError) return <ErrorState message={query.error instanceof Error ? query.error.message : "Unable to load the child registry."} />;
 
   return (
-    <div className="-mx-6 -mt-2 min-h-[calc(100vh-4rem)] bg-[#eef2f7] px-4 pb-8 pt-2 sm:px-6">
+    <div className="min-h-[calc(100vh-6rem)] pb-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0f2744]">Children Under Monitoring</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#102A4C]">Children</h1>
         </div>
         {canRegister ? (
-          <Button type="button" className="rounded-xl bg-[#2563eb] shadow-sm hover:bg-[#1d4ed8]" onClick={() => setRegisterOpen(true)}>
+          <Button type="button" className="rounded-2xl bg-[#102A4C] shadow-card hover:bg-[#173D6B]" onClick={() => setRegisterOpen(true)}>
             Register child
           </Button>
         ) : null}
@@ -260,7 +259,7 @@ function WorklistContent() {
         onConfirm={removeChild}
       />
 
-      <div className="overflow-hidden rounded-3xl bg-white shadow-[0_4px_24px_rgba(15,40,80,0.06)]">
+      <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/85 shadow-card backdrop-blur-xl">
       <div className="grid gap-3 border-b border-[#e8eef5] p-4 lg:grid-cols-[1fr_auto_auto_auto_auto_auto]">
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-[#94a3b8]" />
@@ -308,16 +307,16 @@ function WorklistContent() {
       ) : (
         <>
           <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full min-w-[1180px] text-left text-sm">
+            <table className="w-full min-w-[960px] text-left text-sm">
               <thead>
-                <tr className="border-b border-[#e8eef5] text-[10px] uppercase tracking-wide text-[#64748b]">
-                  <th className="px-4 py-3 font-semibold">Child name</th>
-                  <th className="px-3 py-3 font-semibold">Latest WHO assessment</th>
-                  <th className="px-3 py-3 font-semibold">12-month GA-RGCA prediction</th>
-                  <th className="px-3 py-3 font-semibold">Longitudinal Progress</th>
-                  <th className="px-3 py-3 font-semibold">Clinical Attention</th>
-                  <th className="px-3 py-3 font-semibold">Next Follow-Up</th>
-                  <th className="px-4 py-3 text-right font-semibold">Action</th>
+                <tr className="border-b border-[#e8eef5] text-[10px] uppercase tracking-[0.14em] text-[#5C6E82]">
+                  <th className="px-5 py-4 font-semibold">Child</th>
+                  <th className="px-3 py-4 font-semibold">Age · Sex</th>
+                  <th className="px-3 py-4 font-semibold">Current · WHO status</th>
+                  <th className="px-3 py-4 font-semibold">Future · 12-month prediction</th>
+                  <th className="px-3 py-4 font-semibold">Last visit</th>
+                  <th className="px-3 py-4 font-semibold">Review state</th>
+                  <th className="px-5 py-4 text-right font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,73 +396,58 @@ function WorklistRow({
       ? `/children/${row.id}?focus=review`
       : `/children/${row.id}`;
 
+  const attention = attentionSummary(row, reviewLabel);
+
   return (
     <>
-      <tr className={cn("border-b border-[#e8eef5] last:border-0", progressTone(row.progress_display))}>
-        <td className="px-4 py-3 align-top">
-          <button type="button" onClick={onToggle} className="mr-1 inline-flex text-[#94a3b8] hover:text-[#2563eb]" aria-label="Expand row">
+      <tr className="border-b border-[#e8eef5]/80 transition last:border-0 hover:bg-[#F4F7FA]">
+        <td className="px-5 py-4 align-middle">
+          <div className="flex items-center gap-2">
+          <button type="button" onClick={onToggle} className="inline-flex shrink-0 text-[#94a3b8] hover:text-[#102A4C]" aria-expanded={expanded} aria-label={expanded ? "Hide clinical detail" : "Show clinical detail"}>
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
-          <p className="inline font-semibold text-[#0f2744]">{row.full_name?.trim() || "—"}</p>
-          <p className="mt-0.5 text-xs text-[#64748b]">
-            {row.pseudonymous_id}
-            {" · "}
-            {ageLabel(row.age_months)} · {formatStatus(row.sex)}
-            {row.facility_code ? ` · ${row.facility_code}` : ""}
-          </p>
+          <span className="inline-block min-w-0 align-middle">
+            <span className="block font-semibold text-[#102A4C]">{row.full_name?.trim() || row.pseudonymous_id}</span>
+            <span className="mt-0.5 block text-xs text-[#5C6E82]">{row.pseudonymous_id}</span>
+          </span>
+          </div>
         </td>
-        <td className="px-3 py-3 align-top">
-          {row.last_visit ? (
-            <>
-              <p className="font-medium text-[#0f2744]">{formatClinicalDate(row.last_visit)}</p>
-              <p className="text-xs text-[#64748b]">
-                V{row.latest_visit_number ?? row.visit_count} · {row.assessment_count} assessment{row.assessment_count === 1 ? "" : "s"}
-              </p>
-              <WhoCell row={row} />
-            </>
+        <td className="px-3 py-4 align-middle text-xs text-[#102A4C]">
+          {ageLabel(row.age_months)}
+          <span className="block text-[#5C6E82]">{formatStatus(row.sex)}</span>
+        </td>
+        <td className="px-3 py-4 align-middle">
+          <WhoChip row={row} />
+        </td>
+        <td className="px-3 py-4 align-middle">
+          <PredictionChip row={row} />
+        </td>
+        <td className="px-3 py-4 align-middle text-xs text-[#102A4C]">
+          {row.last_visit ? formatClinicalDate(row.last_visit) : <span className="text-[#94a3b8]">No visit</span>}
+        </td>
+        <td className="px-3 py-4 align-middle">
+          {attention ? (
+            <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", attention.tone)}>{attention.label}</span>
           ) : (
-            <span className="text-[#64748b]">No assessments yet</span>
+            <span className="text-xs text-[#94a3b8]">Clear</span>
           )}
         </td>
-        <td className="px-3 py-3 align-top">
-          <AssessmentCell row={row} />
-        </td>
-        <td className="px-3 py-3 align-top">
-          <ProgressCell row={row} progressLabel={progressLabel} />
-        </td>
-        <td className="px-3 py-3 align-top">
-          <AttentionCell row={row} reviewLabel={reviewLabel} />
-        </td>
-        <td className="px-3 py-3 align-top">
-          <FollowUpCell row={row} />
-        </td>
-        <td className="px-4 py-3 text-right align-top">
+        <td className="px-5 py-4 text-right align-middle">
           <div className="inline-flex items-center justify-end gap-2">
             {canWrite ? <RecordActions onEdit={onEdit} onDelete={onDelete} editLabel={`Edit ${row.pseudonymous_id}`} deleteLabel={`Remove ${row.pseudonymous_id}`} /> : null}
             <Link
               href={href}
-              className={
-                !row.has_assessment
-                  ? "inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#0E3A67] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0A2748]"
-                  : "inline-flex items-center gap-1 text-sm font-medium text-[#2563eb] hover:underline"
-              }
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-2xl bg-[#102A4C] px-3.5 text-xs font-medium text-white shadow-card hover:bg-[#173D6B]"
             >
-              {!row.has_assessment ? (
-                <>
-                  <ClipboardPlus className="h-3.5 w-3.5" />
-                  Record visit
-                </>
-              ) : (
-                <>
-                  {actionLabel} <ChevronRight className="h-4 w-4" />
-                </>
-              )}
+              {!row.has_assessment ? <ClipboardPlus className="h-3.5 w-3.5" /> : null}
+              {!row.has_assessment ? "Record visit" : actionLabel}
+              <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </td>
       </tr>
       {expanded ? (
-        <tr className="bg-[#f8fafc]">
+        <tr className="bg-[#F7FAFC]">
           <td colSpan={7} className="px-6 py-4 text-sm text-[#475569]">
             <ExpandedDetail row={row} progressLabel={progressLabel} reviewLabel={reviewLabel} />
           </td>
@@ -473,17 +457,59 @@ function WorklistRow({
   );
 }
 
-function WhoCell({ row }: { row: Item }) {
+function attentionSummary(row: Item, reviewLabel: string) {
+  const alert = row.clinical_attention?.[0];
+  if (alert) {
+    const extra = (row.clinical_attention?.length ?? 0) - 1;
+    return { label: extra > 0 ? `${alert.label} +${extra}` : alert.label, tone: "bg-[#F8E8D8] text-[#8A5A12]" };
+  }
+  if (row.follow_up_display_status === "overdue") {
+    return { label: "Follow-up overdue", tone: "bg-[#F8E4E2] text-[#8E3D36]" };
+  }
+  if (row.clinician_review_status === "AWAITING_REVIEW" || row.clinician_review_status === "IN_REVIEW" || row.clinician_review_status === "FURTHER_ASSESSMENT") {
+    return { label: reviewLabel, tone: "bg-[#E7EEF6] text-[#14345B]" };
+  }
+  if (!row.has_assessment) return { label: "Baseline needed", tone: "bg-[#E7EEF6] text-[#14345B]" };
+  return null;
+}
+
+function statusTone(label: string) {
+  const text = label.toLowerCase();
+  if (text.includes("sam")) return { wrap: "bg-[#F8E4E2] text-[#8E2E28] ring-1 ring-[#E7B2AC]", dot: "bg-[#D64545]" };
+  if (text.includes("mam") || text.includes("wasting")) return { wrap: "bg-[#FFF1E6] text-[#9A4B12] ring-1 ring-[#F0C9A4]", dot: "bg-[#E07A2F]" };
+  if (text.includes("underweight")) return { wrap: "bg-[#FDECEC] text-[#9B2C2C] ring-1 ring-[#F0B4B4]", dot: "bg-[#E15B5B]" };
+  if (text.includes("stunting")) return { wrap: "bg-[#FBF3E4] text-[#8A5A12] ring-1 ring-[#E8D3A4]", dot: "bg-[#E8AE4E]" };
+  if (text.includes("normal") || text.includes("no undernutrition")) return { wrap: "bg-[#E5F6F1] text-[#0C6B56] ring-1 ring-[#B7E4D6]", dot: "bg-[#12A37A]" };
+  return { wrap: "bg-[#F4F7FA] text-[#102A4C] ring-1 ring-[#D7E2EC]", dot: "bg-[#8AA0B5]" };
+}
+
+function StatusChip({ label, extra }: { label: string; extra?: string }) {
+  const tone = statusTone(label);
+  return (
+    <span className={cn("inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold", tone.wrap)}>
+      <span className={cn("h-2 w-2 shrink-0 rounded-full", tone.dot)} aria-hidden />
+      {label}
+      {extra ? <span className="font-medium opacity-80">{extra}</span> : null}
+    </span>
+  );
+}
+
+function WhoChip({ row }: { row: Item }) {
+  if (!row.last_visit) return <span className="text-xs text-[#94a3b8]">Not assessed</span>;
   const who = assessWhoUndernutrition({
     ageMonths: row.latest_visit_age_months ?? row.age_months,
     sex: row.sex,
     weightKg: row.measurements?.weight_kg,
     heightCm: row.measurements?.height_cm,
   });
-  if (!who) {
-    return <p className="mt-1 text-xs text-[#64748b]">WHO not assessed</p>;
-  }
-  return <p className="mt-1 text-xs font-medium text-[#0f2744]">{who.label}</p>;
+  const label = !who ? "WHO not assessed" : who.label === NO_UNDERNUTRITION_LABEL ? "Normal" : who.label;
+  return <StatusChip label={label} />;
+}
+
+function PredictionChip({ row }: { row: Item }) {
+  if (!row.has_assessment) return <span className="text-xs text-[#94a3b8]">No prediction</span>;
+  const typeLabel = formatNutritionalStatus(displayedMalnutritionType(row), row.severity);
+  return <StatusChip label={typeLabel} extra={formatPercent(primaryTypeProbability(row))} />;
 }
 
 function AssessmentCell({ row }: { row: Item }) {
@@ -622,11 +648,13 @@ function ExpandedDetail({ row, progressLabel, reviewLabel }: { row: Item; progre
         {row.risk_velocity_available ? <p className="text-xs">RV {row.risk_velocity_pp_month} pp/month</p> : null}
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase text-[#64748b]">Review & alerts</p>
-        <p className="mt-2 text-sm">{reviewLabel}</p>
-        {(row.clinical_attention ?? []).map((a) => (
-          <p key={a.type} className="text-sm text-clinical-warning">{a.label}</p>
-        ))}
+        <p className="text-xs font-semibold uppercase text-[#64748b]">Review and follow-up</p>
+        <div className="mt-2 space-y-2">
+          <AttentionCell row={row} reviewLabel={reviewLabel} />
+          <FollowUpCell row={row} />
+          <ProgressCell row={row} progressLabel={progressLabel} />
+          <AssessmentCell row={row} />
+        </div>
       </div>
     </div>
   );
@@ -646,50 +674,25 @@ function MobileCard({
   const needsReview = row.clinician_review_status === "AWAITING_REVIEW";
   const href = !row.has_assessment ? `/children/${row.id}/visits/new` : needsReview ? `/children/${row.id}?focus=review` : `/children/${row.id}`;
   return (
-    <article className={cn("rounded-2xl border border-[#e8eef5] bg-white p-4 shadow-sm", progressTone(row.progress_display))}>
+    <article className="rounded-[24px] border border-white/80 bg-white/85 p-4 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-[#0f2744]">{row.full_name?.trim() || "—"}</p>
-          <p className="text-xs text-[#64748b]">
+          <p className="font-semibold text-[#102A4C]">{row.full_name?.trim() || row.pseudonymous_id}</p>
+          <p className="text-xs text-[#5C6E82]">
             {row.pseudonymous_id} · {ageLabel(row.age_months)} · {formatStatus(row.sex)}
           </p>
         </div>
         <div className="flex items-center gap-1">
           {canWrite ? <RecordActions onEdit={onEdit} onDelete={onDelete} editLabel={`Edit ${row.pseudonymous_id}`} deleteLabel={`Remove ${row.pseudonymous_id}`} /> : null}
-          <Link
-            href={href}
-            className={
-              !row.has_assessment
-                ? "inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#0E3A67] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0A2748]"
-                : "text-sm font-medium text-[#2563eb]"
-            }
-          >
-            {!row.has_assessment ? (
-              <>
-                <ClipboardPlus className="h-3.5 w-3.5" />
-                Record visit
-              </>
-            ) : needsReview ? (
-              "Review"
-            ) : (
-              "Open"
-            )}
+          <Link href={href} className="inline-flex min-h-9 items-center rounded-2xl bg-[#102A4C] px-3 text-xs font-medium text-white">
+            {!row.has_assessment ? "Record visit" : needsReview ? "Review" : "Open"}
           </Link>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <span className="text-[#64748b]">
-            {row.score_kind === "highest_condition_probability"
-              ? primaryTypeProbabilityLabel(row)
-              : clinicalPhrase(row.probability_label, "12-month GA-RGCA prediction")}
-          </span>
-          <p>{row.has_assessment ? formatPercent(primaryTypeProbability(row)) : "—"}</p>
-          {row.has_assessment && row.score_kind === "highest_condition_probability" ? (
-            <p className="text-[#64748b]">Highest risk: {formatHighestConditionRisk(row)}</p>
-          ) : null}
-        </div>
-        <div><span className="text-[#64748b]">Progress</span><p>{PROGRESS_LABELS[row.progress_display ?? ""] ?? "—"}</p></div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <WhoChip row={row} />
+        <span className="text-[#45C4BB]" aria-hidden>→</span>
+        <PredictionChip row={row} />
       </div>
     </article>
   );

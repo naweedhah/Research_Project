@@ -31,7 +31,6 @@ import { displayedMalnutritionType, formatHighestConditionRisk, primaryTypeProba
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
-
 type PriorityAlert = {
   type: string;
   severity: string;
@@ -205,14 +204,14 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-w-[1240px] space-y-4">
-        <Skeleton className="h-28" />
-        <div className="grid grid-cols-5 gap-4">
+      <div className="min-w-0 space-y-4" aria-busy="true" aria-label="Loading clinical overview">
+        <Skeleton className="h-20 max-w-md" />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-28 rounded-3xl" />
           ))}
         </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-96 rounded-[24px]" />
       </div>
     );
   }
@@ -220,7 +219,7 @@ export default function DashboardPage() {
   if (error || !data) {
     return (
       <div className="space-y-4">
-        <ErrorState message="Clinical dashboard data could not be loaded." />
+        <ErrorState message={error instanceof Error ? error.message : "Clinical dashboard data could not be loaded."} />
         <div className="text-center">
           <Button type="button" onClick={() => refetch()} disabled={isFetching}>
             Retry
@@ -237,12 +236,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-w-[1240px] space-y-5">
-      <header>
-        <h1 className="text-2xl font-bold text-[#0f2744]">Dashboard</h1>
+    <div className="min-w-0 space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#102A4C]">Clinical Overview</h1>
+        </div>
+        <Link href="/children">
+          <Button className="rounded-2xl bg-[#102A4C] hover:bg-[#173D6B]">Open children register <ArrowRight className="h-4 w-4" /></Button>
+        </Link>
       </header>
 
-      <section className="grid grid-cols-5 gap-3">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <SummaryTile
           label="Children Under Monitoring"
           value={data.kpis.children_under_monitoring}
@@ -284,12 +288,13 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section id="review-queue" className="rounded-3xl bg-white p-5 shadow-[0_4px_24px_rgba(15,40,80,0.06)]">
+      <section id="review-queue" className="rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-card backdrop-blur-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 shrink">
-            <h2 className="text-base font-semibold text-[#0f2744]">Patients Requiring Review</h2>
+            <h2 className="text-base font-semibold text-[#102A4C]">Priority Attention</h2>
+            <p className="mt-0.5 text-xs text-[#5C6E82]">Children who need a clinician today, with the reason. Current WHO state and the 12-month prediction stay separate.</p>
           </div>
-          <div className="flex shrink-0 flex-nowrap gap-1.5 overflow-x-auto" role="tablist" aria-label="Priority patient filters">
+          <div className="flex min-w-0 flex-wrap gap-1.5" role="tablist" aria-label="Priority patient filters">
             {(
               [
                 ["all", "All"],
@@ -306,7 +311,7 @@ export default function DashboardPage() {
                 aria-selected={filter === key}
                 onClick={() => setFilter(key)}
                 className={`shrink-0 rounded-lg px-3 py-1 text-xs font-medium transition ${
-                  filter === key ? "bg-[#2563eb] text-white" : "bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]"
+                  filter === key ? "bg-[#102A4C] text-white" : "bg-[#F4F7FA] text-[#475569] hover:bg-white"
                 }`}
               >
                 {label}
@@ -327,7 +332,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <ProgressOverviewSection items={progressChart} pieData={progressPieData} total={progressTotal} />
 
         <FollowUpWorklistSection followUps={data.follow_ups} />
@@ -335,7 +340,9 @@ export default function DashboardPage() {
 
       {data.recent_clinical_reviews.length > 0 ? (
         <RecentClinicalReviewsSection reviews={data.recent_clinical_reviews} />
-      ) : null}
+      ) : (
+        <EmptyState title="No clinician reviews recorded yet." body="Reviews appear here once a clinician confirms or disagrees with an assessment." />
+      )}
     </div>
   );
 }
@@ -493,7 +500,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
 
   return (
     <article className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_1px_2px_rgba(10,39,72,0.04)] transition hover:shadow-[0_16px_40px_-28px_rgba(10,39,72,0.45)]">
-      <div className="flex items-center justify-between gap-4 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Link
@@ -516,7 +523,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
           {row.current_status ? (
             <p className="mt-2 inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-[#0f2744]">
               {isConditionModel
-                ? `Predicted type: ${displayedMalnutritionType(row) || "—"}${typeProbability != null ? ` · ${formatPercent(typeProbability)}` : ""}`
+                ? `12-month prediction: ${displayedMalnutritionType(row) || "—"}${typeProbability != null ? ` · ${formatPercent(typeProbability)}` : ""}`
                 : formatNutritionalStatus(displayedMalnutritionType(row), row.severity)}
             </p>
           ) : null}
@@ -730,7 +737,7 @@ function ProbabilityInfoButton({
             <>
               <p className="mt-2">
                 {twelveMonthRisk
-                  ? "This is the highest GA-RGCA v3 condition probability. It is a model estimate, not a confirmed current nutritional status."
+                  ? "This is the highest GA-RGCA condition probability for the next 12 months. It is a model estimate, not a confirmed current nutritional status."
                   : "The model currently estimates nutritional risk from the latest visit."}{" "}
                 <strong className="text-[#0f2744]">{currentText}</strong>
               </p>

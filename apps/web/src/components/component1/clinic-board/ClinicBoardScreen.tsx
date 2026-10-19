@@ -30,9 +30,9 @@ const OPEN_QUERY: AttentionQuery = {
 
 const TABS: { id: AttentionTab; label: string; short: string }[] = [
   { id: "all", label: "All attention", short: "All" },
-  { id: "future-risk", label: "Future risk", short: "Risk" },
-  { id: "pattern-change", label: "Pattern change", short: "Change" },
-  { id: "weight-decline", label: "Weight decline", short: "Weight" },
+  { id: "future-risk", label: "Early-risk signal", short: "Early risk" },
+  { id: "pattern-change", label: "Current–future change", short: "Change" },
+  { id: "weight-decline", label: "Growth watch", short: "Growth" },
 ];
 
 export function ClinicBoardScreen({
@@ -74,7 +74,7 @@ export function ClinicBoardScreen({
   };
 
   return (
-    <div className="relative -m-6 min-h-[calc(100vh-4rem)] overflow-x-hidden bg-[#F5F8FC] p-4 sm:p-6">
+    <div className="relative -m-2 min-h-[calc(100vh-6rem)] overflow-x-hidden bg-transparent p-1 sm:-m-4 sm:p-2">
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(14,116,144,0.09),transparent_42%),radial-gradient(ellipse_at_top_right,rgba(67,56,202,0.07),transparent_38%)]"
         aria-hidden
@@ -86,11 +86,7 @@ export function ClinicBoardScreen({
       <div className="relative mx-auto flex max-w-[1440px] flex-col gap-4">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#0E3A67]/10 pb-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0E3A67]">Paediatric nutrition intelligence</p>
-            <h1 className="mt-1 text-[1.75rem] font-semibold tracking-tight text-[#0A2748] sm:text-[2rem]">Clinic Board</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#475569]">
-              Current undernutrition findings and 12-month predictive risk across the clinic.
-            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#102A4C]">Clinic Board</h1>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/75 px-3 py-2 shadow-sm backdrop-blur-xl">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0f766e]">
@@ -241,9 +237,9 @@ function ClinicPulse({
     <section aria-label="Clinic pulse" className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
       <PulseCard icon={Users} label="Children" value={childCount} detail="On the clinic list" tone="navy" />
       <PulseCard icon={Stethoscope} label="Needs attention" value={attentionCount} detail="Unique children in any tray" tone="amber" dominant onClick={() => onOpen("all")} />
-      <PulseCard icon={Sun} label="Future risk while well" value={futureRisk} detail={share(futureRisk, childCount)} tone="amber" onClick={() => onOpen("future-risk")} />
-      <PulseCard icon={Info} label="Current–future mismatch" value={mismatch} detail={share(mismatch, childCount)} tone="navy" onClick={() => onOpen("pattern-change")} />
-      <PulseCard icon={Scale} label="Weight decline" value={weight} detail={share(weight, childCount)} tone="cyan" onClick={() => onOpen("weight-decline")} />
+      <PulseCard icon={Sun} label="Well now, future risk" value={futureRisk} detail="No current WHO signal → future-risk prediction" tone="amber" onClick={() => onOpen("future-risk")} />
+      <PulseCard icon={Info} label="Current-future difference" value={mismatch} detail={share(mismatch, childCount)} tone="navy" onClick={() => onOpen("pattern-change")} />
+      <PulseCard icon={Scale} label="Growth watch" value={weight} detail="Recorded measurement change" tone="cyan" onClick={() => onOpen("weight-decline")} />
     </section>
   );
 }
@@ -572,17 +568,17 @@ function share(count: number, total: number) {
 }
 
 function tabHint(tab: AttentionTab) {
-  if (tab === "future-risk") return "No current WHO undernutrition finding, but the 12-month model predicts an undernutrition type.";
+  if (tab === "future-risk") return "No equivalent current WHO signal → future-risk prediction. The child is well on today's measurements, but the 12-month model predicts an undernutrition type.";
   if (tab === "pattern-change") return "The latest WHO finding and the predicted 12-month type are different patterns.";
-  if (tab === "weight-decline") return "Weight is at least 0.1 kg below the previous recorded visit.";
+  if (tab === "weight-decline") return "Recorded measurement change: weight lower than at the previous recorded visit.";
   return "Each child is listed once, with every attention reason that applies.";
 }
 
 function chipLabel(reason: AttentionReason, delta?: number) {
-  if (reason === "future-risk") return "Early-risk signal";
-  if (reason === "pattern-change") return "Pattern change";
-  if (delta == null) return "Weight decline";
-  return `Weight ↓ ${Math.abs(delta).toFixed(1)} kg`;
+  if (reason === "future-risk") return "No current WHO signal → future risk";
+  if (reason === "pattern-change") return "Current–future change";
+  if (delta == null) return "Recorded weight change";
+  return `Recorded weight ↓ ${Math.abs(delta).toFixed(1)} kg`;
 }
 
 function chipClass(reason: AttentionReason, row: AttentionCase) {
