@@ -4,12 +4,29 @@
 
 :root {
   color-scheme: light;
+  --bg: #f4f7fa;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-dark: #102a4c;
+  --ink: #102a4c;
+  --muted: #5c6e82;
+  --line: #d7e2ec;
+  --cyan: #45c4bb;
+  --amber: #e8ae4e;
+  --critical: #ea6b60;
+  --shadow-soft: 0 20px 60px rgba(25, 48, 72, 0.08);
 }
 
 html,
 body {
-  background: #e8eef5;
-  color: #10233a;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 0% -10%, rgba(69, 196, 187, 0.16), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(62, 117, 184, 0.12), transparent 50%);
+  background-attachment: fixed;
 }
 
 *:focus-visible {
@@ -60,12 +77,28 @@ body {
 }
 
 .clinical-twin-panel {
+  min-height: 62vh;
   background:
-    radial-gradient(ellipse at 50% 58%, rgba(191, 219, 254, 0.22) 0%, rgba(248, 250, 252, 0.96) 42%, #f8fafc 72%);
-  border: 1px solid #e4ecf4;
+    radial-gradient(ellipse at 50% 55%, rgba(69, 196, 187, 0.18) 0%, rgba(244, 247, 250, 0.94) 40%, rgba(255, 255, 255, 0.78) 72%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(18px);
   box-shadow:
     0 1px 1px rgba(10, 39, 72, 0.03),
-    0 18px 40px -24px rgba(10, 39, 72, 0.18);
+    0 24px 60px -28px rgba(16, 42, 76, 0.28);
+}
+
+.clinical-twin-panel::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 18rem;
+  height: 18rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  border: 1px solid rgba(69, 196, 187, 0.35);
+  box-shadow: 0 0 80px rgba(69, 196, 187, 0.18) inset;
+  pointer-events: none;
 }
 
 .hud-metric-card {
@@ -172,6 +205,27 @@ body {
   }
   .hud-connector {
     opacity: 0.35;
+  }
+}
+
+@keyframes progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.progress-sweep {
+  animation: progress-sweep 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe-only,
+  .progress-sweep {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

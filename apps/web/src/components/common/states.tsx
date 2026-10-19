@@ -4,7 +4,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function EmptyState({ title, body }: { title: string; body?: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-line bg-white px-6 py-12 text-center">
+    <div className="rounded-[24px] border border-dashed border-line bg-white/80 px-6 py-12 text-center shadow-card">
       <p className="font-medium">{title}</p>
       {body ? <p className="mt-1 text-sm text-muted">{body}</p> : null}
     </div>
