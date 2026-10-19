@@ -43,11 +43,27 @@ function formatApiDetail(detail: unknown): string {
   return "The visit could not be saved. Check the entered measurements and try again.";
 }
 
+const STATUS_MESSAGES: Record<number, string> = {
+  401: "Your session has expired. Please sign in again.",
+  403: "You do not have permission to access this information.",
+  422: "Please review the highlighted visit information.",
+  503: "The prediction service is currently unavailable.",
+};
+
+function clinicalMessage(status: number, detail: unknown): string {
+  const specific = formatApiDetail(detail);
+  const generic = STATUS_MESSAGES[status];
+  if (!generic) return specific;
+  if (status === 422 && specific && !specific.startsWith("The visit could not be saved")) return specific;
+  if (status === 503 && typeof detail === "string" && /model|prediction|inference/i.test(detail)) return `${generic} ${detail}`;
+  return generic;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
   constructor(status: number, detail: unknown) {
-    super(formatApiDetail(detail));
+    super(clinicalMessage(status, detail));
     this.status = status;
     this.detail = detail;
   }
