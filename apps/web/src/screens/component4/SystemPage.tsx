@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/component4/httpClient";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
 import { IntegrationFlowPanel } from "@/components/component1/integration-flow-panel";
+import { AdminNav, PageHeader } from "@/components/clinical/page-header";
 
 type IntegrationStatus = {
   c3: { status: string; configured: boolean; pending_events: number; failed_events: number; last_success_at?: string | null };
@@ -21,11 +22,8 @@ export default function SystemPage() {
   });
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">System health</h1>
-        <p className="mt-1 text-sm text-[#64748b]">Service status for the clinic workspace.</p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader kicker="System" title="System health" purpose="Service status for the API, database, inference runtime and component integrations." action={<AdminNav />} />
 
       <IntegrationFlowPanel />
 
