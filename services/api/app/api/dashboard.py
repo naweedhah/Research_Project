@@ -154,7 +154,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
 
     deteriorating_ids: set = set()
     stagnating_ids: set = set()
-    improving = stable = insufficient = 0
+    improving = stable = insufficient = incompatible = 0
 
     for child in children:
         m = latest_metrics.get(child.id)
@@ -170,6 +170,8 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             improving += 1
         elif m.progress_state in {ProgressState.STABLE, ProgressState.BASELINE}:
             stable += 1
+        elif m.progress_state == ProgressState.INCOMPATIBLE_MODEL:
+            incompatible += 1
         else:
             insufficient += 1
 
@@ -403,6 +405,7 @@ def dashboard(db: Session = Depends(get_db), current=Depends(require_permission(
             "stagnating": len(stagnating_ids),
             "deteriorating": len(deteriorating_ids),
             "insufficient_history": insufficient,
+            "incompatible_model": incompatible,
             "total_classified": progress_total,
         },
         "longitudinal_intelligence": {

@@ -24,7 +24,6 @@ import { ChildModelViewer } from "@/components/component1/child-model/ChildModel
 import { LatentTrajectory, TrendChart, type TrendMetric } from "@/components/charts/child-profile-charts";
 import { ExplainabilityTrigger } from "@/components/component1/explainability-dialog";
 import { VisitMotionTimeline } from "@/components/futuristic/visit-motion";
-import { VisitComparison } from "@/components/clinical/visit-comparison";
 import { FollowUpSchedulePanel } from "@/components/component1/follow-up-schedule-panel";
 import { RegisterChildModal } from "@/components/component1/register-child-modal";
 import { ConfirmAction, RecordActions } from "@/components/component1/record-actions";
@@ -647,7 +646,7 @@ function Overview({
               ) : null
             }
           >
-            <ChildModelViewer className="h-full min-h-[320px] md:min-h-[520px]" riskIntensity={pred?.risk} neutral />
+            <ChildModelViewer className="h-full min-h-[320px] md:min-h-[520px]" riskIntensity={pred?.risk} />
             <span className="sr-only">
               Animated three-dimensional patient model with connected clinical measurements. Visual metaphor for progress only, not anatomical imaging.
             </span>
@@ -1209,9 +1208,6 @@ function ProgressTab({
       <Section title="Recorded visits in motion" subtitle="Each point is a stored visit. Nothing is interpolated between visits.">
         <VisitMotionTimeline profile={profile} />
       </Section>
-      <Section title="Compare two visits" subtitle="Age, measurements, current WHO assessment and the prediction generated at each visit.">
-        <VisitComparison profile={profile} />
-      </Section>
       <Section
         title="Trends"
         actions={
@@ -1267,19 +1263,6 @@ function ProgressTab({
             }
           />
         </div>
-      </Section>
-      <Section
-        title="Multimodal latent representation trajectory"
-        subtitle={
-          <>
-            {semantics.projection_label}:{" "}
-            {profile.current?.projection_version ?? semantics.projection_version ?? "—"}
-            {profile.model?.label ? ` · Model ${profile.model.label}` : ""}
-          </>
-        }
-      >
-        <LatentTrajectory visits={profile.visits} warning={profile.model_warning} />
-        <p className="mt-2 text-xs text-[#64748b]">{semantics.projection_description}</p>
       </Section>
     </div>
   );

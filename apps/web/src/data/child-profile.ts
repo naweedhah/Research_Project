@@ -448,18 +448,22 @@ export function riskVelocityPpMonth(raw?: number | null): number | null {
   return Math.round(raw * 1000) / 10;
 }
 
-/** Calendar-month age at a visit, from stored DOB and visit date. Does not invent measurements. */
+/** Completed months at a visit, from stored DOB and visit date. Matches API/WHO age. */
 export function ageMonthsAtVisit(dob?: string | null, visitDate?: string | null, fallback = 0): number {
   if (!dob || !visitDate) return fallback;
   const birth = dob.slice(0, 10);
   const visit = visitDate.slice(0, 10);
-  if (birth.length < 7 || visit.length < 7) return fallback;
+  if (birth.length < 10 || visit.length < 10) return fallback;
   const birthYear = Number(birth.slice(0, 4));
   const birthMonth = Number(birth.slice(5, 7));
+  const birthDay = Number(birth.slice(8, 10));
   const visitYear = Number(visit.slice(0, 4));
   const visitMonth = Number(visit.slice(5, 7));
-  if ([birthYear, birthMonth, visitYear, visitMonth].some((n) => Number.isNaN(n))) return fallback;
-  return Math.max(0, (visitYear - birthYear) * 12 + (visitMonth - birthMonth));
+  const visitDay = Number(visit.slice(8, 10));
+  if ([birthYear, birthMonth, birthDay, visitYear, visitMonth, visitDay].some((n) => Number.isNaN(n))) return fallback;
+  let months = (visitYear - birthYear) * 12 + (visitMonth - birthMonth);
+  if (visitDay < birthDay) months -= 1;
+  return Math.max(0, months);
 }
 
 const ATTENTION_ALERT_STATUSES = new Set(["OPEN", "ACKNOWLEDGED", "IN_REVIEW"]);

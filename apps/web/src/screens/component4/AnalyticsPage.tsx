@@ -10,7 +10,7 @@ import { useClinicChildren } from "@/data/use-clinic-children";
 import { formatStatus } from "@/utils/utils";
 
 type Dashboard = {
-  risk_trend: { improving: number; stable: number; stagnating: number; deteriorating: number; insufficient_history: number; total_classified: number };
+  risk_trend: { improving: number; stable: number; stagnating: number; deteriorating: number; insufficient_history: number; incompatible_model?: number; total_classified: number };
   kpis: { children_under_monitoring: number; awaiting_clinical_review: number; open_alerts: number; overdue_follow_ups: number };
 };
 
@@ -37,6 +37,7 @@ export default function AnalyticsPage() {
       { name: "Stable", n: t.stable },
       { name: "Stagnating", n: t.stagnating },
       { name: "Deteriorating", n: t.deteriorating },
+      { name: "Not comparable", n: t.incompatible_model ?? 0 },
       { name: "Insufficient history", n: t.insufficient_history },
     ];
   }, [dashboard.data]);

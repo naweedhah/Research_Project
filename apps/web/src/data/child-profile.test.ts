@@ -172,7 +172,8 @@ describe("child profile view model", () => {
 
   it("ages the child from visit date and DOB rather than inventing an age", () => {
     expect(ageMonthsAtVisit("2025-03-08", "2026-06-12")).toBe(15);
-    expect(ageMonthsAtVisit("2025-03-08", "2026-02-01")).toBe(11);
+    expect(ageMonthsAtVisit("2025-03-08", "2026-02-01")).toBe(10);
+    expect(ageMonthsAtVisit("2024-11-16", "2026-06-05")).toBe(18);
     expect(ageMonthsAtVisit(null, "2026-06-12", 17)).toBe(17);
   });
 

@@ -85,6 +85,7 @@ type Dashboard = {
     stagnating: number;
     deteriorating: number;
     insufficient_history: number;
+    incompatible_model?: number;
     total_classified: number;
   };
   longitudinal_intelligence: {
@@ -132,6 +133,7 @@ const PROGRESS_COLORS: Record<string, string> = {
   Stagnating: "#d97706",
   Deteriorating: "#dc2626",
   "Insufficient history": "#94a3b8",
+  "Not comparable": "#64748b",
 };
 
 const REVIEW_LABELS: Record<string, string> = {
@@ -188,6 +190,9 @@ export default function DashboardPage() {
       { name: "Stagnating", n: data.risk_trend.stagnating },
       { name: "Deteriorating", n: data.risk_trend.deteriorating },
     ];
+    if ((data.risk_trend.incompatible_model ?? 0) > 0) {
+      items.push({ name: "Not comparable", n: data.risk_trend.incompatible_model ?? 0 });
+    }
     if (data.risk_trend.insufficient_history > 0) {
       items.push({ name: "Insufficient history", n: data.risk_trend.insufficient_history });
     }

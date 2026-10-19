@@ -26,7 +26,7 @@ export function ChildModelScene({
   return (
     <Canvas
       orthographic
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.outputColorSpace = SRGBColorSpace;
