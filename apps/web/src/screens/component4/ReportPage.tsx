@@ -17,7 +17,10 @@ import {
   progressLabel as profileProgressLabel,
   reviewLabel,
   type ChildProfile,
+  ageMonthsAtVisit,
 } from "@/data/child-profile";
+import { assessWhoUndernutrition, NO_UNDERNUTRITION_LABEL } from "@/data/who-growth-standards";
+import { applicabilityState, uncertaintyState } from "@/data/clinical-selectors";
 
 type Report = {
   pseudonymous_id: string;
@@ -96,8 +99,8 @@ export default function ReportPage() {
     enabled: childId.length > 0,
   });
 
-  if (isLoading) return <Skeleton className="h-96" />;
-  if (error || !data) return <ErrorState message="Report could not be generated." />;
+  if (isLoading) return <Skeleton className="mx-auto h-96 max-w-3xl rounded-[24px]" />;
+  if (error || !data) return <ErrorState message={error instanceof Error ? error.message : "Report could not be generated."} />;
 
   const latest = data.risk_history.at(-1);
   const previous = data.risk_history.length > 1 ? data.risk_history.at(-2) : undefined;
@@ -131,17 +134,74 @@ export default function ReportPage() {
   const isConditionModel = Boolean(aiSource.ga_rgca || aiSource.highest_risk_condition);
   const aiTypeProbability = primaryTypeProbability(aiSource);
   const comparable = profile.data?.longitudinal_comparable !== false;
+  const currentVisit = profile.data?.current ?? null;
+  const ageAtLatest = profile.data ? ageMonthsAtVisit(profile.data.date_of_birth, currentVisit?.visit_date, profile.data.age_months) : null;
+  const who =
+    profile.data && meas.weight_kg != null && meas.height_cm != null && ageAtLatest != null
+      ? assessWhoUndernutrition({ ageMonths: ageAtLatest, sex: profile.data.sex, weightKg: meas.weight_kg, heightCm: meas.height_cm })
+      : null;
+  const whoLabel = who ? (who.label === NO_UNDERNUTRITION_LABEL ? "Normal" : who.label) : "Not assessed";
+  const ga = latestPrediction?.ga_rgca ?? null;
+  const uncertainty = uncertaintyState(latestPrediction);
+  const applicability = applicabilityState(latestPrediction);
+  const inputs = profile.data?.latest_inputs ?? null;
+  const contextRows: [string, unknown][] = [];
+  if (inputs) {
+    const dietary = inputs.dietary ?? {};
+    const socio = inputs.socioeconomic ?? {};
+    const mch = inputs.maternal_child_health ?? {};
+    contextRows.push(
+      ["Breastfeeding", dietary.breastfeeding_status],
+      ["Complementary feeding", dietary.complementary_feeding],
+      ["Meal frequency", dietary.meal_frequency],
+      ["Micronutrient supplementation", dietary.micronutrient_supplementation],
+      ["Household size", socio.household_size],
+      ["Maternal education", socio.maternal_education],
+      ["Immunisation up to date", mch.immunization_uptodate],
+      ["Vitamin A", mch.vitamin_a],
+    );
+  }
+  const fmtContext = (v: unknown) => (v === true ? "Yes" : v === false ? "No" : v == null || v === "" ? "Not recorded" : formatStatus(String(v)));
 
   return (
-    <article className="print-plain mx-auto max-w-3xl space-y-6 rounded-2xl bg-white p-8 shadow-card">
+    <article className="print-plain mx-auto max-w-3xl space-y-6 rounded-[28px] border border-white/80 bg-white p-8 shadow-card">
       <header className="border-b border-line pb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Child progress summary</p>
-        <h1 className="mt-1 text-2xl font-semibold">{data.pseudonymous_id}</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#3E75B8]">Child nutrition report</p>
+        <h1 className="mt-1 text-2xl font-semibold text-[#102A4C]">{profile.data?.full_name?.trim() || data.pseudonymous_id}</h1>
+        <p className="text-sm text-muted">
+          {data.pseudonymous_id}
+          {profile.data ? ` · ${formatStatus(profile.data.sex)} · ${ageAtLatest ?? profile.data.age_months} months at latest visit` : ""}
+          {currentVisit ? ` · Visit ${currentVisit.visit_number} on ${formatClinicalDate(currentVisit.visit_date)}` : ""}
+          {profile.data?.facility?.name ? ` · ${profile.data.facility.name}` : ""}
+        </p>
         <p className="mt-2 text-sm font-medium text-[#0A2748]" data-testid="report-disclaimer">
           {clinicalPhrase(data.disclaimer, "AI-assisted assessment. Clinical review required.")}
         </p>
         <p className="mt-1 text-xs text-muted">{PRODUCT.disclaimer}</p>
       </header>
+
+      <section>
+        <h2 className="text-lg font-semibold">Current WHO assessment</h2>
+        <p className="text-xs text-muted">Based on latest recorded anthropometric measurements. WHO growth standards, 0–60 months.</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_2fr]">
+          <div className="rounded-xl bg-canvas p-4">
+            <p className="text-xs text-muted">Status</p>
+            <p className="mt-1 text-xl font-semibold">{whoLabel}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-xl bg-canvas p-4 text-center">
+            {[
+              ["Weight-for-age", who?.zScores.waz],
+              ["Height-for-age", who?.zScores.haz],
+              ["Weight-for-height", who?.zScores.whz],
+            ].map(([label, z]) => (
+              <div key={String(label)}>
+                <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
+                <p className="mt-1 font-semibold tabular-nums">{typeof z === "number" && Number.isFinite(z) ? `${z >= 0 ? "+" : ""}${z.toFixed(2)} z` : "—"}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold">Current clinical measurements</h2>
@@ -160,7 +220,7 @@ export default function ReportPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold">AI-assisted assessment</h2>
+        <h2 className="text-lg font-semibold">12-month GA-RGCA prediction</h2>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl bg-canvas p-4">
             <p className="text-xs text-muted">Latest predicted type</p>
@@ -179,6 +239,34 @@ export default function ReportPage() {
               <p className="text-xs text-muted">Leading condition: {formatHighestConditionRisk(aiSource)}</p>
             ) : null}
             <p className="text-xs text-muted">AI-assisted assessment. Clinical review required.</p>
+          </div>
+        </div>
+        {ga ? (
+          <div className="mt-3 grid gap-2 rounded-xl bg-canvas p-4 text-sm sm:grid-cols-4">
+            {[
+              ["Underweight", ga.underweight_probability],
+              ["Stunting", ga.stunting_probability],
+              ["MAM", ga.mam_probability],
+              ["SAM", ga.sam_probability],
+            ].map(([label, value]) => (
+              <div key={String(label)}>
+                <p className="text-xs text-muted">{label}</p>
+                <p className="font-semibold tabular-nums">{formatPercent(value as number | undefined)}</p>
+              </div>
+            ))}
+            <p className="text-xs text-muted sm:col-span-4">Prediction of nutritional status over the next {ga.prediction_horizon_months ?? 12} months from this visit. Not the current WHO assessment.</p>
+          </div>
+        ) : null}
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl bg-canvas p-4 text-sm">
+            <p className="text-xs text-muted">Severity and review</p>
+            <p className="mt-1 font-medium">{aiSeverity ?? "—"}{ga?.triage ? ` · ${ga.triage}` : ""}</p>
+            <p className="mt-1 text-xs text-muted">Model uncertainty: {uncertainty.label}</p>
+          </div>
+          <div className="rounded-xl bg-canvas p-4 text-sm">
+            <p className="text-xs text-muted">Similarity to training population</p>
+            <p className="mt-1 font-medium">{applicability.label}</p>
+            <p className="mt-1 text-xs text-muted">Internal applicability signal; not externally validated.</p>
           </div>
         </div>
       </section>
@@ -291,13 +379,41 @@ export default function ReportPage() {
         </table>
       </section>
 
+      <section>
+        <h2 className="text-lg font-semibold">Clinical context</h2>
+        {contextRows.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No feeding or household context stored for the latest visit.</p>
+        ) : (
+          <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            {contextRows.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-3 rounded-xl bg-canvas px-4 py-2.5">
+                <dt className="text-muted">{label}</dt>
+                <dd className="font-medium">{fmtContext(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Model information</h2>
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Model</dt><dd className="font-medium">{ga?.model_version ?? profile.data?.model?.label ?? "GA-RGCA-v4-Rolling-RSL"}</dd></div>
+          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Prediction horizon</dt><dd className="font-medium">{ga?.prediction_horizon_months ?? 12} months</dd></div>
+          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Prediction generated</dt><dd className="font-medium">{currentVisit ? formatClinicalDate(currentVisit.visit_date) : "—"}</dd></div>
+          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Status</dt><dd className="font-medium">Research decision-support prototype</dd></div>
+        </dl>
+      </section>
+
       <section className="rounded-xl border border-line bg-canvas p-4 text-xs text-muted">
-        <p data-testid="report-footer-disclaimer">{data.disclaimer}</p>
+        <p className="font-semibold text-[#102A4C]">Research disclaimer</p>
+        <p className="mt-1" data-testid="report-footer-disclaimer">{data.disclaimer}</p>
+        <p className="mt-2">Clinician confirmation required. One historical 12-month origin validated; repeated rolling-origin and external prospective validation are still required. Incident SAM is underpowered. The applicability signal is not externally validated.</p>
         <p className="mt-2">Latent embedding vectors and raw model internals are excluded from this clinician report by design.</p>
         <p className="mt-2">Clinical review and WHO growth standards interpretation remain the responsibility of the attending clinician.</p>
       </section>
 
-      <div className="flex flex-wrap gap-3 print:hidden">
+      <div className="no-print flex flex-wrap gap-3 print:hidden">
         <Button onClick={() => window.print()}>Print report</Button>
         <Link href={`/children/${childId}`}>
           <Button variant="secondary">Back to profile</Button>

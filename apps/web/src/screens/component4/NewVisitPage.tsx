@@ -9,8 +9,11 @@ import { Input, Label } from "@/components/common/field";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
 import { CurrentConditionCard, PredictionCard } from "@/components/component1/assessment-result-cards";
 import { unusualMeasurementMessages } from "@/data/paediatric-measurement-bounds";
-import { formatStatus } from "@/utils/utils";
+import { formatClinicalDate, formatStatus } from "@/utils/utils";
 import { AlertTriangle, CheckCircle2, X } from "lucide-react";
+import type { ChildProfile } from "@/data/child-profile";
+import { measurementChange, predictionLabel, whoLabelForVisit } from "@/data/clinical-selectors";
+import { assessWhoUndernutrition, NO_UNDERNUTRITION_LABEL } from "@/data/who-growth-standards";
 
 const STEPS = ["Measurements", "Current feeding", "Review & submit"];
 
@@ -23,10 +26,12 @@ function VisitModalShell({
   children,
   labelledBy,
   onClose,
+  wide = false,
 }: {
   children: ReactNode;
   labelledBy?: string;
   onClose?: () => void;
+  wide?: boolean;
 }) {
   useEffect(() => {
     if (!onClose) return;
@@ -45,7 +50,7 @@ function VisitModalShell({
           role="dialog"
           aria-modal="true"
           aria-labelledby={labelledBy}
-          className="relative w-full max-w-3xl"
+          className={wide ? "relative w-full max-w-5xl" : "relative w-full max-w-3xl"}
         >
           {onClose ? (
             <button
@@ -369,6 +374,73 @@ function FieldPanel({ label, hint, children }: { label: string; hint?: ReactNode
   );
 }
 
+function ContextRow({ label, value, accent }: { label: string; value: string; accent?: "navy" }) {
+  return (
+    <div className={accent === "navy" ? "rounded-xl bg-[#0E243D] px-3 py-2 text-white" : "rounded-xl bg-white/80 px-3 py-2"}>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${accent === "navy" ? "text-[#58D3CA]" : "text-[#5C6E82]"}`}>{label}</p>
+      <p className={`mt-0.5 text-sm font-semibold ${accent === "navy" ? "text-white" : "text-[#102A4C]"}`}>{value}</p>
+    </div>
+  );
+}
+
+function ChildContextPanel({
+  prefill,
+  profile,
+  form,
+}: {
+  prefill: Prefill;
+  profile?: ChildProfile;
+  form: VisitForm;
+}) {
+  const child = prefill.child;
+  const prev = prefill.anthropometric ?? {};
+  const prevWeight = typeof prev.weight_kg === "number" ? prev.weight_kg : null;
+  const prevHeight = typeof prev.height_cm === "number" ? prev.height_cm : null;
+  const history = prefill.historical_growth;
+  // Previous WHO status: prefer the stored profile visit; otherwise use the prefill anthropometrics with the age at that visit.
+  const previousWho =
+    !child.is_baseline && prevWeight != null && prevHeight != null
+      ? assessWhoUndernutrition({
+          ageMonths: history?.age_months ?? child.age_months,
+          sex: child.sex,
+          weightKg: prevWeight,
+          heightCm: prevHeight,
+        })
+      : null;
+  const previousWhoLabel = profile?.current
+    ? whoLabelForVisit(profile, profile.current)
+    : previousWho
+      ? previousWho.label === NO_UNDERNUTRITION_LABEL
+        ? "Normal"
+        : previousWho.label
+      : "Not assessed";
+  const liveWeight = measurementChange(form.weight_kg ? Number(form.weight_kg) : null, prevWeight, "kg");
+  const liveHeight = measurementChange(form.height_cm ? Number(form.height_cm) : null, prevHeight, "cm");
+  return (
+    <aside className="rounded-2xl border border-[#d7e4f2] bg-[#F4F7FA] p-4 lg:sticky lg:top-0" aria-label="Child context">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3E75B8]">Child context</p>
+      <p className="mt-1 text-base font-semibold text-[#102A4C]">{child.full_name?.trim() || child.pseudonymous_id}</p>
+      <p className="text-xs text-[#5C6E82]">{child.pseudonymous_id}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+        <ContextRow label="Age today" value={`${form.age_months || child.age_months} months`} />
+        <ContextRow label="Sex" value={formatStatus(child.sex)} />
+        {child.is_baseline ? (
+          <ContextRow label="Visit" value="Baseline · first assessment" />
+        ) : (
+          <>
+            <ContextRow label="Previous visit" value={profile?.current?.visit_date ? formatClinicalDate(profile.current.visit_date) : "Loading…"} />
+            <ContextRow label="Previous weight" value={prevWeight != null ? `${prevWeight} kg${liveWeight && liveWeight.direction !== "same" ? ` → today ${liveWeight.text}` : ""}` : "—"} />
+            <ContextRow label="Previous height" value={prevHeight != null ? `${prevHeight} cm${liveHeight && liveHeight.direction !== "same" ? ` → today ${liveHeight.text}` : ""}` : "—"} />
+            <ContextRow label="Previous WHO assessment" value={previousWhoLabel} />
+            <ContextRow label="Previous 12-month prediction" value={profile?.current?.prediction ? predictionLabel(profile.current.prediction) : "Not available"} accent="navy" />
+          </>
+        )}
+      </div>
+      <p className="mt-3 text-[11px] leading-relaxed text-[#5C6E82]">Previous values are shown for comparison only. Today&apos;s measurements produce a new current WHO assessment and a new 12-month prediction.</p>
+    </aside>
+  );
+}
+
 export default function NewVisitPage() {
   const childId = useParams<{ childId: string }>()?.childId ?? "";
   const router = useRouter();
@@ -376,6 +448,11 @@ export default function NewVisitPage() {
     queryKey: ["visit-prefill", childId],
     queryFn: () => api<Prefill>(`/children/${childId}/visits/prefill`),
     enabled: childId.length > 0,
+  });
+  const profileQ = useQuery({
+    queryKey: ["child", childId],
+    queryFn: () => api<ChildProfile>(`/children/${childId}`),
+    enabled: childId.length > 0 && prefillQ.data?.child.is_baseline === false,
   });
 
   const [step, setStep] = useState(0);
@@ -518,7 +595,7 @@ export default function NewVisitPage() {
       setQualityIssues(issues.map((issue) => issue.message ?? "Review this field."));
       setError(
         issues.length
-          ? "This visit was not saved. Review the measurements below."
+          ? "Please review the highlighted visit information."
           : err instanceof Error
             ? err.message
             : "Visit could not be saved",
@@ -589,14 +666,14 @@ export default function NewVisitPage() {
     };
     return (
       <VisitModalShell labelledBy="visit-result-title" onClose={() => router.push(`/children/${childId}`)}>
-        <div className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
+        <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)] backdrop-blur-xl">
           <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
             <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 className="h-5 w-5" />
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Visit recorded</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Visit recorded · prediction generated</p>
             </div>
             <h1 id="visit-result-title" className="mt-1 text-2xl font-bold text-[#0f2744]">
-              Nutritional assessment
+              WHO current <span className="text-[#45C4BB]">→</span> AI future
             </h1>
             <p className="mt-1 text-sm text-[#64748b]">
               {child.full_name ? `${child.full_name} · ` : ""}
@@ -622,28 +699,35 @@ export default function NewVisitPage() {
 
           <div className="flex flex-wrap gap-2 px-6 pb-6">
             <Button onClick={() => router.push(`/children/${childId}`)}>Open child profile</Button>
+            <Button variant="secondary" onClick={() => router.push(`/children/${childId}?tab=ai`)}>
+              View AI details
+            </Button>
             <Button variant="secondary" onClick={() => router.push(`/children/${childId}/report`)}>
-              View progress report
+              Report
             </Button>
           </div>
+          <p className="px-6 pb-5 text-xs text-[#5C6E82]">Research decision-support prototype. Clinician confirmation required.</p>
         </div>
       </VisitModalShell>
     );
   }
 
   return (
-    <VisitModalShell labelledBy="visit-form-title" onClose={() => router.push(`/children/${childId}`)}>
-    <div className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
+    <VisitModalShell wide labelledBy="visit-form-title" onClose={() => router.push(`/children/${childId}`)}>
+    <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)] backdrop-blur-xl">
       <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
-        <h1 id="visit-form-title" className="text-2xl font-bold text-[#0f2744]">
-          {isBaseline ? "Record Nutritional Assessment" : "Follow-up nutritional assessment"}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3E75B8]">New visit</p>
+        <h1 id="visit-form-title" className="mt-1 text-2xl font-bold text-[#0f2744]">
+          {isBaseline ? "Record baseline assessment" : "Record follow-up visit"}
         </h1>
         <p className="mt-1 text-sm text-[#64748b]">
-          Patient: {child.full_name ? `${child.full_name} · ` : ""}
-          {child.pseudonymous_id} · Visit {child.visit_label ?? (isBaseline ? "V1" : `V${(child.visit_count ?? 0) + 1}`)}
+          Enter today&apos;s measurements and feeding context. Visit {child.visit_label ?? (isBaseline ? "V1" : `V${(child.visit_count ?? 0) + 1}`)}.
         </p>
       </div>
-      <ol className="flex flex-wrap gap-2 border-b border-[#e4ecf4] px-6 py-3.5">
+      <div className="grid gap-4 p-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:p-5">
+      <ChildContextPanel prefill={prefillQ.data} profile={profileQ.data} form={form} />
+      <div className="min-w-0">
+      <ol className="flex flex-wrap gap-2 border-b border-[#e4ecf4] pb-3.5">
         {STEPS.map((label, i) => (
           <li
             key={label}
@@ -657,7 +741,7 @@ export default function NewVisitPage() {
           </li>
         ))}
       </ol>
-      <div className="px-6 pb-6 pt-5">
+      <div className="pt-5">
         <div className="space-y-4">
           {step === 0 ? (
             <div className="space-y-4">
@@ -681,8 +765,14 @@ export default function NewVisitPage() {
                     !isBaseline && prefillQ.data.anthropometric?.weight_kg != null ? (
                       <span className="font-medium text-[#0E3A67]">
                         Last visit: {str(prefillQ.data.anthropometric.weight_kg)} kg
+                        {(() => {
+                          const d = form.weight_kg ? measurementChange(Number(form.weight_kg), Number(prefillQ.data.anthropometric?.weight_kg), "kg") : null;
+                          return d && d.direction !== "same" ? ` · change ${d.text}` : "";
+                        })()}
                       </span>
-                    ) : undefined
+                    ) : (
+                      <span>Kilograms, e.g. 9.4</span>
+                    )
                   }
                 >
                   <Input
@@ -699,8 +789,14 @@ export default function NewVisitPage() {
                     !isBaseline && prefillQ.data.anthropometric?.height_cm != null ? (
                       <span className="font-medium text-[#0E3A67]">
                         Last visit: {str(prefillQ.data.anthropometric.height_cm)} cm
+                        {(() => {
+                          const d = form.height_cm ? measurementChange(Number(form.height_cm), Number(prefillQ.data.anthropometric?.height_cm), "cm") : null;
+                          return d && d.direction !== "same" ? ` · change ${d.text}` : "";
+                        })()}
                       </span>
-                    ) : undefined
+                    ) : (
+                      <span>Centimetres, recumbent length under 24 months</span>
+                    )
                   }
                 >
                   <Input
@@ -855,7 +951,15 @@ export default function NewVisitPage() {
             </div>
           ) : null}
 
-          {error ? <p className="text-sm text-clinical-danger">{error}</p> : null}
+          {busy ? (
+            <p className="rounded-2xl border border-[#45C4BB]/40 bg-[#F4F7FA] px-4 py-3 text-sm text-[#102A4C]" role="status">
+              Generating 12-month nutritional risk prediction
+              <span className="mt-2 block h-1 overflow-hidden rounded-full bg-[#d7e2ec]">
+                <span className="block h-full w-1/2 rounded-full bg-[#45C4BB] progress-sweep" />
+              </span>
+            </p>
+          ) : null}
+          {error ? <p className="text-sm text-clinical-danger" role="alert">{error}</p> : null}
           <div className="flex justify-between pt-2">
             <Button variant="secondary" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
               Back
@@ -864,11 +968,13 @@ export default function NewVisitPage() {
               <Button onClick={continueOrWarn}>Continue</Button>
             ) : (
               <Button onClick={submit} disabled={busy || !form.confirmation}>
-                {busy ? "Running assessment…" : "Run AI assessment"}
+                {busy ? "Generating 12-month nutritional risk prediction" : "Run 12-month assessment"}
               </Button>
             )}
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
     {unusualIssues.length > 0 ? (

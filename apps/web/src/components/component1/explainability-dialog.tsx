@@ -10,6 +10,7 @@ import {
   type ModalityCount,
 } from "@/data/child-profile";
 import { cn, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
+import { applicabilityState, uncertaintyState } from "@/data/clinical-selectors";
 
 const MODALITY_LABELS: Record<string, string> = {
   anthropometric: "Anthropometric",
@@ -18,13 +19,13 @@ const MODALITY_LABELS: Record<string, string> = {
   maternal_child_health: "Maternal / child health",
 };
 
-function FieldLabel({ children }: { children: string }) {
-  return <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">{children}</p>;
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#58D3CA]">{children}</p>;
 }
 
 export function ExplainabilityTrigger({
   profile,
-  label = "Explainability",
+  label = "AI Details",
   className,
 }: {
   profile: ChildProfile;
@@ -81,175 +82,202 @@ export function ExplainabilityDialog({
     ? (Object.entries(profile.modalities) as [string, ModalityCount][])
     : [];
 
+  const ga = prediction?.ga_rgca;
+  const uncertainty = uncertaintyState(prediction);
+  const applicability = applicabilityState(prediction);
+  const reliability = ga?.modality_reliability;
+  const reliabilityRows = reliability
+    ? [
+        ["Growth history", reliability.history],
+        ["Household / socioeconomic", reliability.socioeconomic],
+        ["Feeding", reliability.feeding],
+        ["Supplementation", reliability.supplementation],
+      ]
+    : [];
+  const sevProbs = ga?.severity_probabilities;
+  const futureBars: [string, number | undefined][] = ga
+    ? [
+        ["Underweight", ga.underweight_probability],
+        ["Stunting", ga.stunting_probability],
+        ["MAM", ga.mam_probability],
+        ["SAM", ga.sam_probability],
+      ]
+    : [];
+
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto">
       <button
         type="button"
-        className="absolute inset-0 bg-[#0A2748]/40 backdrop-blur-md"
-        aria-label="Close explainability dialog"
+        className="absolute inset-0 bg-[#0A2748]/50 backdrop-blur-md"
+        aria-label="Close AI details"
         onClick={onClose}
       />
       <div className="relative flex min-h-full items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-12">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="explainability-title"
-          className="relative w-full max-w-3xl"
-        >
+        <div role="dialog" aria-modal="true" aria-labelledby="explainability-title" className="relative w-full max-w-3xl">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 z-10 rounded-lg p-2 text-[#64748b] hover:bg-white hover:text-[#0A2748]"
+            className="absolute right-3 top-3 z-10 rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <div className="overflow-hidden rounded-2xl border border-[#e4ecf4] bg-white shadow-[0_24px_64px_-28px_rgba(10,39,72,0.45)]">
-            <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
-              <h2 id="explainability-title" className="text-xl font-bold text-[#0f2744]">
-                Advanced explainability
+          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0E243D] text-white shadow-[0_32px_80px_-32px_rgba(4,18,38,0.8)]">
+            <div className="border-b border-white/10 px-6 py-5 pr-14">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#58D3CA]">GA-RGCA intelligence</p>
+              <h2 id="explainability-title" className="mt-1 text-xl font-semibold">
+                AI Details
               </h2>
-              <p className="mt-1 text-sm text-[#64748b]">
-                Stored model outputs for this visit. Clinical review required.
-              </p>
+              <p className="mt-1 text-sm text-white/70">Stored outputs for the selected visit, in clinical language. Nothing here is recalculated.</p>
             </div>
 
-            <div className="max-h-[min(70vh,36rem)] space-y-5 overflow-y-auto px-6 py-5">
-              <section>
-                <FieldLabel>Prediction being reviewed</FieldLabel>
-                <p className="mt-1 text-sm font-medium text-[#0f2744]">
+            <div className="max-h-[min(72vh,40rem)] space-y-4 overflow-y-auto px-6 py-5">
+              <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <FieldLabel>Prediction · next {ga?.prediction_horizon_months ?? 12} months</FieldLabel>
+                <p className="mt-1 text-lg font-semibold">
                   {formatNutritionalStatus(displayedMalnutritionType(prediction), prediction?.severity)}
-                  {primaryTypeProbability(prediction) != null ? ` · ${formatPercent(primaryTypeProbability(prediction))}` : ""}
+                  {primaryTypeProbability(prediction) != null ? <span className="ml-2 text-sm font-medium text-white/70">{formatPercent(primaryTypeProbability(prediction))}</span> : null}
                 </p>
-                {prediction?.ga_rgca ? (
-                  <p className="mt-0.5 text-xs text-[#64748b]">
-                    Highest predicted condition risk: {formatHighestConditionRisk(prediction)}
-                  </p>
+                {ga ? <p className="mt-1 text-xs text-white/70">Highest predicted condition risk: {formatHighestConditionRisk(prediction)}</p> : null}
+                {futureBars.length ? (
+                  <ul className="mt-3 space-y-2">
+                    {futureBars.map(([label, value]) => (
+                      <li key={label}>
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span>{label}</span>
+                          <span className="tabular-nums text-white/70">{formatPercent(value)}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div className="h-full rounded-full bg-[#45C4BB]" style={{ width: `${Math.max(0, Math.min(100, Math.round((value ?? 0) * 100)))}%` }} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
-                <p className="mt-1 text-xs text-[#64748b]">
-                  {prediction?.ga_rgca
-                    ? "Task: future nutritional-risk prediction from this visit. Research decision-support model — clinical confirmation required."
+                <p className="mt-2 text-xs text-white/60">
+                  {ga
+                    ? "Stored probabilities for the 12-month horizon from this visit. This is a prediction, not the current WHO assessment."
                     : "AI-assisted assessment from the measurements recorded at this visit. Clinical review required."}
                 </p>
               </section>
 
-              {prediction?.ga_rgca ? (
-                <section>
-                  <FieldLabel>Acute malnutrition status</FieldLabel>
-                  <p className="mt-1 text-sm font-medium text-[#0f2744]">{prediction.ga_rgca.acute_status ?? "—"}</p>
-                  <p className="mt-1 text-xs text-[#64748b]">
-                    Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
-                  </p>
+              {ga ? (
+                <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <FieldLabel>Severity</FieldLabel>
+                  <p className="mt-1 text-sm font-medium">{prediction?.severity ?? "—"}{ga.acute_status ? <span className="text-white/60"> · acute status {ga.acute_status}</span> : null}</p>
+                  {sevProbs ? (
+                    <p className="mt-1 text-xs text-white/70">
+                      Normal {formatPercent(sevProbs.Normal ?? sevProbs.normal)} · Moderate {formatPercent(sevProbs.Moderate ?? sevProbs.moderate)} · Severe {formatPercent(sevProbs.Severe ?? sevProbs.severe)}
+                    </p>
+                  ) : null}
+                  {ga.triage ? <p className="mt-1 text-xs text-white/70">Review pathway: {ga.triage}</p> : null}
                 </section>
               ) : null}
 
-              {prediction?.ga_rgca?.model_version ? (
-                <section>
-                  <FieldLabel>Model</FieldLabel>
-                  <p className="mt-1 text-sm font-medium text-[#0f2744]">{prediction.ga_rgca.model_version}</p>
-                  <p className="mt-1 text-xs text-[#64748b]">
-                    {prediction.ga_rgca.prediction_horizon_months
-                      ? `${prediction.ga_rgca.prediction_horizon_months}-month horizon from this visit. `
-                      : ""}
-                    Research decision-support prototype. Clinician confirmation required. Repeated rolling-origin prospective validation and external prospective validation are still required.
-                  </p>
-                  {prediction.ga_rgca.severity_probabilities ? (
-                    <p className="mt-1 text-xs text-[#475569]">
-                      Severity probabilities: Normal {formatPercent(prediction.ga_rgca.severity_probabilities.Normal ?? prediction.ga_rgca.severity_probabilities.normal)} · Moderate {formatPercent(prediction.ga_rgca.severity_probabilities.Moderate ?? prediction.ga_rgca.severity_probabilities.moderate)} · Severe {formatPercent(prediction.ga_rgca.severity_probabilities.Severe ?? prediction.ga_rgca.severity_probabilities.severe)}
-                    </p>
+              {ga ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <FieldLabel>Model uncertainty</FieldLabel>
+                    <p className={cn("mt-1 text-sm font-medium", uncertainty.flagged ? "text-[#F3C97A]" : "text-white")}>{uncertainty.label}</p>
+                    <p className="mt-1 text-xs text-white/70">{uncertainty.detail}</p>
+                    {ga.ensemble_variance != null ? <p className="mt-2 text-[11px] text-white/50">Ensemble variance {Number(ga.ensemble_variance).toFixed(4)}</p> : null}
+                  </section>
+                  <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <FieldLabel>Similarity to training population</FieldLabel>
+                    <p className={cn("mt-1 text-sm font-medium", applicability.outside ? "text-[#F3C97A]" : "text-white")}>{applicability.label}</p>
+                    <p className="mt-1 text-xs text-white/70">{applicability.detail}</p>
+                  </section>
+                  {ga.acute_conformal_prediction_set ? (
+                    <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                      <FieldLabel>Acute prediction set</FieldLabel>
+                      <p className="mt-1 text-sm font-medium">{ga.acute_conformal_prediction_set.join(", ")}</p>
+                      <p className="mt-1 text-xs text-white/70">Additional uncertainty information for the acute Normal/MAM/SAM prediction. It does not replace the acute status above.</p>
+                    </section>
                   ) : null}
-                  <p className="mt-1 text-xs text-[#475569]">
-                    Uncertainty {prediction.ga_rgca.uncertainty_flag ? "flagged" : "not flagged"}
-                    {prediction.ga_rgca.ensemble_variance != null ? ` · ensemble variance ${Number(prediction.ga_rgca.ensemble_variance).toFixed(4)}` : ""}
-                    {prediction.ga_rgca.out_of_distribution_flag != null
-                      ? ` · applicability ${prediction.ga_rgca.out_of_distribution_flag ? "outside reference" : "inside reference"}`
-                      : ""}
-                    {prediction.ga_rgca.latent_distance != null ? ` · latent distance ${Number(prediction.ga_rgca.latent_distance).toFixed(2)}` : ""}
-                  </p>
-                  {prediction.ga_rgca.acute_conformal_prediction_set ? (
-                    <p className="mt-1 text-xs text-[#475569]">
-                      Acute conformal set: {prediction.ga_rgca.acute_conformal_prediction_set.join(", ")}. This does not replace the acute status.
-                    </p>
-                  ) : null}
-                </section>
+                </div>
               ) : null}
 
-              <section>
-                <FieldLabel>Modality Reliability</FieldLabel>
-                {prediction?.ga_rgca?.modality_reliability ? (
+              <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <FieldLabel>Modality reliability</FieldLabel>
+                {reliabilityRows.length ? (
                   <>
-                    <ul className="mt-2 space-y-1 text-sm text-[#0f2744]">
-                      <li>Growth anchor {formatPercent(prediction.ga_rgca.modality_reliability.history)}</li>
-                      <li>Socioeconomic {formatPercent(prediction.ga_rgca.modality_reliability.socioeconomic)}</li>
-                      <li>Feeding {formatPercent(prediction.ga_rgca.modality_reliability.feeding)}</li>
-                      <li>Supplementation {formatPercent(prediction.ga_rgca.modality_reliability.supplementation)}</li>
+                    <ul className="mt-2 space-y-2">
+                      {reliabilityRows.map(([label, value]) => (
+                        <li key={String(label)}>
+                          <div className="mb-1 flex items-center justify-between text-xs">
+                            <span>{label}</span>
+                            <span className="tabular-nums text-white/70">{formatPercent(value as number)}</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div className="h-full rounded-full bg-[#58D3CA]" style={{ width: `${Math.max(0, Math.min(100, Math.round(((value as number) ?? 0) * 100)))}%` }} />
+                          </div>
+                        </li>
+                      ))}
                     </ul>
-                    <p className="mt-2 text-xs text-[#64748b]">
-                      Modality reliability reflects how the GA-RGCA fusion mechanism weighted the quality and availability of each information source for this prediction. It is not a causal explanation or feature importance measure.
+                    <p className="mt-2 text-xs text-white/70" title="Reliability indicates how usable each information group was. It is not feature importance.">
+                      Reliability indicates how usable each information group was for this prediction. It is not feature importance and not a causal explanation.
                     </p>
                   </>
                 ) : (
-                  <p className="mt-1 text-sm text-[#64748b]">No GA-RGCA modality reliability is stored for this visit.</p>
+                  <p className="mt-1 text-sm text-white/70">No modality reliability is stored for this visit.</p>
                 )}
               </section>
 
-              <section>
-                <FieldLabel>Calibrated status probabilities</FieldLabel>
-                {classes && Object.keys(classes).length > 0 ? (
+              {classes && Object.keys(classes).length > 0 ? (
+                <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <FieldLabel>Calibrated status probabilities</FieldLabel>
                   <ul className="mt-2 space-y-2">
                     {Object.entries(classes).map(([key, value]) => (
                       <li key={key}>
                         <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-[#0f2744]">{formatStatus(key)}</span>
-                          <span className="tabular-nums text-[#475569]">{formatPercent(value)}</span>
+                          <span>{formatStatus(key)}</span>
+                          <span className="tabular-nums text-white/70">{formatPercent(value)}</span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[#e8eef5]">
-                          <div
-                            className="h-full rounded-full bg-[#0E3A67]"
-                            style={{ width: `${Math.max(0, Math.min(100, Math.round(value * 100)))}%` }}
-                          />
+                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div className="h-full rounded-full bg-[#3E75B8]" style={{ width: `${Math.max(0, Math.min(100, Math.round(value * 100)))}%` }} />
                         </div>
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="mt-1 text-sm text-[#64748b]">Calibrated class probabilities are not stored for this visit.</p>
-                )}
-                <p className="mt-2 text-xs text-[#64748b]">
-                  These are stored model class outputs. They are not feature attributions and do not explain why a class
-                  was selected.
-                </p>
-              </section>
+                  <p className="mt-2 text-xs text-white/60">Stored class outputs. They are not feature attributions.</p>
+                </section>
+              ) : null}
 
-              <section>
+              <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <FieldLabel>Input coverage used by the model</FieldLabel>
                 {modalities.length > 0 ? (
                   <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                     {modalities.map(([key, row]) => (
-                      <li key={key} className="rounded-xl bg-[#f8fafc] px-3 py-2.5 ring-1 ring-line/70">
-                        <p className="text-sm font-medium text-[#0f2744]">{MODALITY_LABELS[key] ?? key}</p>
-                        <p className="mt-0.5 text-xs text-[#64748b]">
-                          {row.available} of {row.total} fields available
-                        </p>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white ring-1 ring-line/70">
-                          <div
-                            className="h-full rounded-full bg-[#2563eb]"
-                            style={{ width: `${row.total ? Math.round((row.available / row.total) * 100) : 0}%` }}
-                          />
+                      <li key={key} className="rounded-xl bg-white/5 px-3 py-2.5">
+                        <p className="text-sm font-medium">{MODALITY_LABELS[key] ?? key}</p>
+                        <p className="mt-0.5 text-xs text-white/60">{row.available} of {row.total} fields available</p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div className="h-full rounded-full bg-white/70" style={{ width: `${row.total ? Math.round((row.available / row.total) * 100) : 0}%` }} />
                         </div>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-1 text-sm text-[#64748b]">No visit inputs stored.</p>
+                  <p className="mt-1 text-sm text-white/70">No visit inputs stored.</p>
                 )}
-                <p className="mt-2 text-xs text-[#64748b]">Unavailable fields are Unknown / Not assessed, not equivalent to No.</p>
+                <p className="mt-2 text-xs text-white/60">Unavailable fields are Unknown / Not assessed, not equivalent to No.</p>
               </section>
 
-              <section>
-                <FieldLabel>Fusion attention</FieldLabel>
-                <p className="mt-1 text-sm text-[#64748b]">Cross-attention weights are not stored for this visit.</p>
+              <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <FieldLabel>Model identity</FieldLabel>
+                <p className="mt-1 text-sm font-medium">{ga?.model_version ?? "Not stored"}</p>
+                <p className="mt-1 text-xs text-white/70">{ga?.prediction_horizon_months ? `${ga.prediction_horizon_months}-month horizon from this visit. ` : ""}Research decision-support prototype. Clinician confirmation required.</p>
+              </section>
+
+              <section className="rounded-2xl border border-[#F3C97A]/30 bg-[#F3C97A]/10 p-4">
+                <FieldLabel>Limitations</FieldLabel>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-white/80">
+                  <li>One historical 12-month origin validated; repeated rolling-origin and external prospective validation are still required.</li>
+                  <li>Incident SAM is underpowered in the study data.</li>
+                  <li>The applicability and uncertainty signals are internal and not externally validated.</li>
+                  <li>Cross-attention weights are not stored, so no feature-level explanation is shown.</li>
+                </ul>
               </section>
             </div>
           </div>

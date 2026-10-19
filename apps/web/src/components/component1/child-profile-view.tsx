@@ -18,10 +18,13 @@ import {
   Minus,
 } from "lucide-react";
 import { CurrentConditionCard, PredictionCard } from "@/components/component1/assessment-result-cards";
+import { ProbabilityBar } from "@/components/clinical/primitives";
 import { ChildModelHud } from "@/components/component1/child-model-hud";
 import { ChildModelViewer } from "@/components/component1/child-model/ChildModelViewer";
 import { LatentTrajectory, TrendChart, type TrendMetric } from "@/components/charts/child-profile-charts";
 import { ExplainabilityTrigger } from "@/components/component1/explainability-dialog";
+import { VisitMotionTimeline } from "@/components/futuristic/visit-motion";
+import { VisitComparison } from "@/components/clinical/visit-comparison";
 import { FollowUpSchedulePanel } from "@/components/component1/follow-up-schedule-panel";
 import { RegisterChildModal } from "@/components/component1/register-child-modal";
 import { ConfirmAction, RecordActions } from "@/components/component1/record-actions";
@@ -575,34 +578,8 @@ function Overview({
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">{profile.model_warning}</p>
       ) : null}
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        <CurrentConditionCard
-          id="clinical-snapshot"
-          eyebrow={`${isLatest ? "Latest visit" : `Visit ${selected?.visit_number ?? "—"}`} · ${selected ? formatClinicalDate(selected.visit_date) : "—"}${clinicName ? ` · ${clinicName}` : ""}`}
-          title={isLatest ? "Current condition" : "Condition at this visit"}
-          weightKg={meas?.weight_kg}
-          heightCm={meas?.height_cm}
-          ageMonths={ageAtVisit}
-          sex={profile.sex}
-          previous={prior ? { weightKg: prevMeas?.weight_kg, heightCm: prevMeas?.height_cm } : null}
-          feeding={selected?.feeding}
-        />
-        <div id="ai-assessment" className="flex h-full flex-col scroll-mt-20">
-          {pred ? (
-            <PredictionCard prediction={pred} className="h-full" />
-          ) : (
-            <Section className="flex h-full flex-col" title="AI-assisted assessment" subtitle="Clinical review required.">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <MetricTile label="Nutritional status" value="—" hint="No prediction stored for this visit." />
-                <MetricTile label="Data quality" value={profile.data_quality_label ? formatStatus(profile.data_quality_label) : "—"} />
-              </div>
-            </Section>
-          )}
-        </div>
-      </div>
-
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.8fr)]">
-      <section id="patient-stage" className="clinical-twin-panel relative h-full overflow-hidden rounded-2xl">
+      <section id="patient-stage" className="clinical-twin-panel relative h-full overflow-hidden rounded-[28px]">
         <div className="px-4 pb-5 pt-4 sm:px-5">
           <ChildModelHud
             compact
@@ -670,7 +647,7 @@ function Overview({
               ) : null
             }
           >
-            <ChildModelViewer className="h-full min-h-[320px] md:min-h-[480px]" riskIntensity={pred?.risk} />
+            <ChildModelViewer className="h-full min-h-[320px] md:min-h-[520px]" riskIntensity={pred?.risk} neutral />
             <span className="sr-only">
               Animated three-dimensional patient model with connected clinical measurements. Visual metaphor for progress only, not anatomical imaging.
             </span>
@@ -734,6 +711,33 @@ function Overview({
         </button>
       </Section>
       </div>
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <CurrentConditionCard
+          id="clinical-snapshot"
+          eyebrow={`${isLatest ? "Latest visit" : `Visit ${selected?.visit_number ?? "—"}`} · ${selected ? formatClinicalDate(selected.visit_date) : "—"}${clinicName ? ` · ${clinicName}` : ""}`}
+          title={isLatest ? "Current condition" : "Condition at this visit"}
+          weightKg={meas?.weight_kg}
+          heightCm={meas?.height_cm}
+          ageMonths={ageAtVisit}
+          sex={profile.sex}
+          previous={prior ? { weightKg: prevMeas?.weight_kg, heightCm: prevMeas?.height_cm } : null}
+          feeding={selected?.feeding}
+        />
+        <div id="ai-assessment" className="flex h-full flex-col scroll-mt-20">
+          {pred ? (
+            <PredictionCard prediction={pred} className="h-full" />
+          ) : (
+            <Section className="flex h-full flex-col" title="AI-assisted assessment" subtitle="Clinical review required.">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MetricTile label="Nutritional status" value="—" hint="No prediction stored for this visit." />
+                <MetricTile label="Data quality" value={profile.data_quality_label ? formatStatus(profile.data_quality_label) : "—"} />
+              </div>
+            </Section>
+          )}
+        </div>
+      </div>
+
 
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
         <Section
@@ -1202,6 +1206,12 @@ function ProgressTab({
   );
   return (
     <div className="space-y-4">
+      <Section title="Recorded visits in motion" subtitle="Each point is a stored visit. Nothing is interpolated between visits.">
+        <VisitMotionTimeline profile={profile} />
+      </Section>
+      <Section title="Compare two visits" subtitle="Age, measurements, current WHO assessment and the prediction generated at each visit.">
+        <VisitComparison profile={profile} />
+      </Section>
       <Section
         title="Trends"
         actions={
@@ -1394,7 +1404,11 @@ function AiDetailsTab({
   return (
     <div className="space-y-4">
       {ga ? (
-        <Section title="Prediction interpretation" subtitle="Stored GA-RGCA outputs for the latest assessment. Clinical review required.">
+        <Section
+          className="border-white/10 bg-[#102A4C] text-white [&_h2]:text-white [&_header]:border-white/10 [&_header_p]:text-white/70"
+          title="Prediction interpretation"
+          subtitle="Stored GA-RGCA-v4-Rolling-RSL outputs. Research decision-support prototype. Clinician confirmation required."
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <Meta label="Predicted malnutrition type" value={formatNutritionalStatus(displayedMalnutritionType(profile.current?.prediction), ga.severity)} />
             <Meta label="Detected conditions" value={detected} />
@@ -1403,9 +1417,15 @@ function AiDetailsTab({
               <Meta label="Overall severity" value={displayPredictedSeverity(displayedMalnutritionType(profile.current?.prediction), ga.severity)!} />
             ) : null}
           </div>
-          <p className="mt-3 text-sm text-[#64748b]">
-            Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction.
+          <p className="mt-3 text-sm text-white/70">
+            Acute status represents the model&apos;s Normal/MAM/SAM acute-malnutrition output and is separate from Underweight and Stunting prediction. Modality reliability is not feature importance.
           </p>
+          <div className="mt-4 grid gap-3">
+            <ProbabilityBar label="Underweight" value={ga.underweight_probability} tone="gold" />
+            <ProbabilityBar label="Stunting" value={ga.stunting_probability} tone="amber" />
+            <ProbabilityBar label="MAM" value={ga.mam_probability} tone="orange" />
+            <ProbabilityBar label="SAM" value={ga.sam_probability} tone="coral" />
+          </div>
           {ga.binary_thresholds ? (
             <div className="mt-4 space-y-2 text-sm">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">Decision Thresholds</p>
@@ -1445,21 +1465,24 @@ function AiDetailsTab({
       <Section title="Research Limitations" subtitle="Prototype constraints. This is not a clinical validation statement.">
         <ul className="list-disc space-y-1 pl-5 text-sm text-[#64748b]">
           <li>Research decision-support prototype.</li>
-          <li>Clinical confirmation is required.</li>
-          <li>Missing baseline status information may reduce available model context.</li>
+          <li>Clinician confirmation required.</li>
+          <li>One historical 12-month origin validated.</li>
+          <li>Repeated rolling-origin prospective validation required.</li>
+          <li>External prospective validation required.</li>
+          <li>Context timing limitations: household, feeding and supplementation context may not align exactly with the measurement date.</li>
+          <li>Incident SAM underpowered.</li>
+          <li>Applicability/OOD signal not externally validated.</li>
           <li>Modality reliability is not causal explanation.</li>
-          <li>External clinical validation is not yet complete.</li>
           {ga?.applicability?.message ? <li>{ga.applicability.message}</li> : null}
         </ul>
       </Section>
       <Section
-        title="Advanced explainability"
-        subtitle="Stored model outputs for this visit. Clinical review required."
-        actions={<ExplainabilityTrigger profile={profile} label="Open explainability" />}
+        title="AI Details"
+        subtitle="Stored model outputs for this visit in clinical language. Clinical review required."
+        actions={<ExplainabilityTrigger profile={profile} label="Open AI Details" />}
       >
         <p className="text-sm text-[#475569]">
-          Review stored class outputs and which modality fields were available. Feature attributions are not
-          generated here.
+          Prediction, severity, model uncertainty, similarity to the training population, modality reliability and model identity. Feature attributions are not generated here.
         </p>
       </Section>
       <Section title="Model information">

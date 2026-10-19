@@ -158,8 +158,9 @@ export function CurrentConditionCard({
       <div className="mt-3 rounded-xl bg-white/80 px-3 py-2.5 ring-1 ring-[#e4ecf4]">
         <div className="flex items-center gap-2 text-sm text-[#475569]">
           <Ruler className="h-4 w-4 text-[#0E3A67]" />
-          WHO Undernutrition Assessment
+          Current WHO assessment
         </div>
+        <p className="mt-0.5 text-[11px] text-[#64748b]">Based on latest recorded anthropometric measurements.</p>
         <div className="mt-1.5">
           <span className={`inline-block rounded-full border px-3 py-1 text-base font-bold ${whoTone.badge}`}>
             {whoStatus ? whoStatus.label : "Not assessed"}
