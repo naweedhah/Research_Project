@@ -35,6 +35,17 @@ const NAV = [
   { href: "/alerts", label: "Alerts", icon: Bell },
 ];
 
+const NAV_GROUPS: { title: string; items: { href: string; label: string; icon: typeof Users }[] }[] = [
+  { title: "Clinic", items: NAV },
+];
+
+function isActive(href: string, currentPath: string) {
+  if (href === "/children") return currentPath.startsWith("/children");
+  if (href === "/admin/system") return currentPath.startsWith("/admin");
+  if (href === "/research/models") return currentPath.startsWith("/research");
+  return currentPath.startsWith(href);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -57,68 +68,91 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (user.isError) router.push("/login");
   }, [user.isError, router]);
 
+  const currentPath = pathname ?? "";
   return (
-    <div className="min-h-screen bg-canvas">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 bg-white px-3 py-2">
+    <div className="min-h-screen">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 z-50 rounded-xl bg-white px-3 py-2">
         Skip to content
       </a>
-      {mounted ? (
-        <header className="sticky top-0 z-30 border-b border-black/20 bg-[#0A2748] text-white">
-          <div className="flex h-16 items-center">
-            <div className="flex h-full w-60 shrink-0 items-center px-4">
-              <p className="whitespace-pre-line text-base font-semibold leading-tight tracking-tight">{PRODUCT.name.replace(" Intelligence", "\nIntelligence")}</p>
-            </div>
-            <div className="ml-auto flex items-center gap-4 px-4">
-            <NotificationMenu items={notes.data?.items ?? []} />
-            <ProfileMenu user={user.data} />
-            <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => logout.mutate()} aria-label="Log out">
-              <LogOut className="h-4 w-4" />
-            </Button>
-            </div>
-          </div>
-        </header>
-      ) : (
-        <header className="sticky top-0 z-30 border-b border-black/20 bg-[#0A2748]" aria-hidden>
-          <div className="h-16" />
-        </header>
-      )}
-      <div className="flex">
+      <div className="flex min-h-screen">
         <nav
-          className={cn(
-            "min-h-[calc(100vh-4rem)] w-60 border-r border-white/10 bg-[#0A2748] p-3",
-          )}
+          className="no-print sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col overflow-y-auto bg-[#0E243D] p-4 text-white md:flex"
           aria-label="Primary"
         >
-          <ul className="space-y-1">
-            {NAV.map((item) => {
-              const href = item.href;
-              const currentPath = pathname ?? "";
-              const active =
-                item.href === "/children"
-                  ? currentPath.startsWith("/children")
-                  : currentPath.startsWith(item.href);
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={href}
-                    className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm",
-                      active ? "bg-[#EAF2FA] text-[#0A2748] font-medium" : "text-white/80 hover:bg-white/10",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="px-2 pb-6 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#45C4BB]">Clinical Intelligence</p>
+            <p className="mt-2 text-xl font-bold leading-tight text-white">{PRODUCT.name}</p>
+          </div>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="mb-2">
+              <ul className="flex flex-col gap-1.5">
+                {group.items.map((item) => {
+                  const active = isActive(item.href, currentPath);
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex min-h-[52px] items-center gap-4 rounded-2xl px-5 text-[17px] leading-tight transition",
+                          active ? "bg-white font-semibold text-[#102A4C] shadow-card" : "text-white/80 hover:bg-white/10",
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          <div className="mt-auto flex justify-center pb-2 pt-4">
+            <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => logout.mutate()} aria-label="Log out">
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </nav>
-        <main id="main" className="min-w-0 flex-1 overflow-x-auto p-6">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
+          <header className="no-print sticky top-0 z-30 flex items-center justify-end gap-3 bg-[#0E243D] px-5 py-3 text-white">
+            {mounted ? (
+              <div className="flex items-center gap-2">
+                <NotificationMenu items={notes.data?.items ?? []} />
+                <ProfileMenu user={user.data} />
+                <Button variant="ghost" className="text-white hover:bg-white/10 md:hidden" onClick={() => logout.mutate()} aria-label="Log out">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <span className="h-9 w-24" />
+            )}
+          </header>
+          <main id="main" className="min-w-0 flex-1 overflow-x-auto p-3 sm:p-4">
+            {children}
+          </main>
+        </div>
       </div>
+      <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/90 px-2 py-2 backdrop-blur-xl md:hidden" aria-label="Primary mobile">
+        <ul className="grid grid-cols-4 gap-1">
+          {NAV.map((item) => {
+            const active = isActive(item.href, currentPath);
+            const Icon = item.icon;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn("flex flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px]", active ? "bg-[#102A4C] text-white" : "text-[#5C6E82]")}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
       {mounted ? <CommandPalette /> : null}
     </div>
   );
@@ -130,10 +164,10 @@ function ProfileMenu({ user }: { user?: User }) {
   const role = user?.role?.replaceAll("_", " ");
   return (
     <div className="relative flex items-center gap-2">
-      <p className="text-sm font-medium">{name}</p>
+      <p className="hidden truncate text-sm font-medium sm:block">{name}</p>
       <button
         type="button"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
         onClick={() => setOpen((v) => !v)}
         aria-label="Open profile"
         aria-expanded={open}
@@ -177,7 +211,7 @@ function NotificationMenu({ items }: { items: { id: string; title: string; sever
     <div className="relative">
       <button
         type="button"
-        className="relative rounded-lg p-2 text-white/90 hover:bg-white/10"
+        className="relative rounded-lg p-2 text-current hover:bg-white/10"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
       >
