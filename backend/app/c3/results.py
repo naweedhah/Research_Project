@@ -24,9 +24,15 @@ def runs() -> list[dict]:
     for path in sorted(p for p in RESULTS.iterdir() if p.is_dir()) if RESULTS.exists() else []:
         summary = path / "strategy_summary.csv"
         thresholds = path / "suggested_thresholds.json"
+        regression = path / "drift_harm_regression.csv"
+        calibrated = path.name.endswith("_calibrated")
+        target = path.name.removeprefix("c3_").removesuffix("_calibrated")
+        r2 = pd.read_csv(regression)["r2_balanced_accuracy_drop"].iloc[-1] if regression.exists() else None
         out.append(jsonable({
             "run": path.name,
-            "drift_limits": "calibrated" if path.name.endswith("_calibrated") else "conventional",
+            "target": target,
+            "drift_limits": "calibrated" if calibrated else "conventional",
+            "drift_r2": r2,
             "suggested_thresholds": json.loads(thresholds.read_text()) if thresholds.exists() else None,
             "strategy_summary": pd.read_csv(summary).to_dict("records") if summary.exists() else [],
             "report": f"/maintenance/results/{path.name}/report",

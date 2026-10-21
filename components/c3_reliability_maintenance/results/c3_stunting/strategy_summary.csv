@@ -1,0 +1,6 @@
+strategy,cycles,intervention_rate,unnecessary_interventions_when_harmless,corrected_when_harmful,escalated_when_harmful,no_response_when_harmful,candidates_rejected,mean_cost,test_bal_acc_after_harmful,gain_on_harmful,test_ece_after_harmful,test_sensitivity_after_harmful,change_on_harmless
+static,160,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.656,0.0,0.103,0.655,0.0
+periodic_retrain,160,0.975,0.971,0.982,0.018,0.0,0.622,2.938,0.668,0.012,0.105,0.705,0.009
+always_recalibrate,160,0.862,0.835,0.912,0.018,0.07,0.63,0.875,0.663,0.007,0.111,0.684,0.007
+always_retrain,160,0.862,0.835,0.912,0.018,0.07,0.659,2.6,0.666,0.01,0.104,0.694,0.008
+adaptive,160,0.338,0.184,0.614,0.228,0.158,0.704,0.8,0.657,0.002,0.104,0.669,0.003

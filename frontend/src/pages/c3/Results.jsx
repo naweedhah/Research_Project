@@ -12,18 +12,36 @@ const STRATEGY_LABEL = {
   adaptive: 'Adaptive (C3)',
 };
 
-const FIGURE_TEXT = {
-  'drift_vs_harm.png': ['Data changed vs model harmed', 'Each dot is one shift run. Drift (across) explains only about 18% of the real accuracy drop (up): big drift can be harmless, small drift can hurt.'],
+const figureText = (name, r2) => ({
+  'drift_vs_harm.png': ['Data changed vs model harmed', `Each dot is one shift run. Drift (across) explains only ${r2 == null ? 'a small part' : `about ${Math.round(r2 * 100)}%`} of the real accuracy drop (up): big drift can be harmless, small drift can hurt.`],
   'harm_by_strength.png': ['How harm grows with each problem', 'Mean drop in balanced accuracy at each strength (±1 SD over 5 repeats); the dashed line is the 0.05 harm limit.'],
-  'strategy_comparison.png': ['Maintenance strategies compared', 'C3 (green) makes the fewest unnecessary changes at a fraction of the retraining cost, with the same final accuracy.'],
-};
+  'strategy_comparison.png': ['Maintenance strategies compared', 'How often each strategy changed the model, how often the change was unneeded, and what it cost.'],
+}[name] || [name, '']);
 
 const FIGURE_ORDER = ['drift_vs_harm.png', 'strategy_comparison.png', 'harm_by_strength.png'];
+const TARGET_ORDER = ['underweight', 'stunting', 'wasting'];
+const LIMITS = [['calibrated', 'Data-driven drift limits'], ['conventional', 'Standard drift limits']];
+
+function Toggle({ options, value, onChange }) {
+  return (
+    <div className="inline-flex rounded-lg border border-line bg-white p-1 text-sm">
+      {options.map(([key, label]) => (
+        <button key={key} type="button" onClick={() => onChange(key)}
+          className={`rounded-md px-3 py-1.5 font-semibold transition ${value === key ? 'bg-c3 text-white' : 'text-muted hover:text-primary'}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function Results() {
   const runs = useApi('/maintenance/results');
-  const [which, setWhich] = useState('c3_underweight_calibrated');
-  const run = runs.data?.find((r) => r.run === which) || runs.data?.[0];
+  const [target, setTarget] = useState('underweight');
+  const [limits, setLimits] = useState('calibrated');
+  const targets = TARGET_ORDER.filter((t) => runs.data?.some((r) => r.target === t));
+  const run = runs.data?.find((r) => r.target === target && r.drift_limits === limits)
+    || runs.data?.find((r) => r.target === target) || runs.data?.[0];
   const adaptive = run?.strategy_summary.find((r) => r.strategy === 'adaptive');
   const periodic = run?.strategy_summary.find((r) => r.strategy === 'periodic_retrain');
 
@@ -32,15 +50,11 @@ export default function Results() {
       <PageHeader
         component="c3"
         title="Experiment results"
-        subtitle="160 shift runs on real linked data (120 stress tests + 40 unseen PHM areas), 800 maintenance cycles, underweight predicted a year ahead."
+        subtitle={`160 shift runs on real linked data (120 stress tests + 40 unseen PHM areas), 800 maintenance cycles, ${run?.target || 'underweight'} predicted a year ahead.`}
         actions={runs.data && (
-          <div className="inline-flex rounded-lg border border-line bg-white p-1 text-sm">
-            {runs.data.map((r) => (
-              <button key={r.run} type="button" onClick={() => setWhich(r.run)}
-                className={`rounded-md px-3 py-1.5 font-semibold transition ${run?.run === r.run ? 'bg-c3 text-white' : 'text-muted hover:text-primary'}`}>
-                {r.drift_limits === 'calibrated' ? 'Data-driven drift limits' : 'Standard drift limits'}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <Toggle options={targets.map((t) => [t, t[0].toUpperCase() + t.slice(1)])} value={run?.target} onChange={setTarget} />
+            <Toggle options={LIMITS} value={run?.drift_limits} onChange={setLimits} />
           </div>
         )}
       />
@@ -92,7 +106,7 @@ export default function Results() {
           <div className="grid gap-5 xl:grid-cols-2">
             {[...run.figures].sort((a, b) => FIGURE_ORDER.indexOf(a.split('/').pop()) - FIGURE_ORDER.indexOf(b.split('/').pop())).map((src) => {
               const name = src.split('/').pop();
-              const [title, text] = FIGURE_TEXT[name] || [name, ''];
+              const [title, text] = figureText(name, run.drift_r2);
               return (
                 <Card key={src} className={name === 'harm_by_strength.png' ? 'xl:col-span-2' : ''}>
                   <CardHeader title={title} subtitle={text} />

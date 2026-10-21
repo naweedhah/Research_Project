@@ -1,0 +1,33 @@
+family,shift,runs,harmful_share,mean_drop,max_psi,flagged_share
+field_dropped,WHZ not computed,5,0.2,-0.004,0.117,1.0
+field_dropped,birth weight not collected,5,0.2,0.002,0.117,1.0
+impossible_values,20% weights recorded 5x too high,5,0.2,0.016,0.299,1.0
+impossible_values,5% weights recorded 5x too high,5,0.2,0.0,0.126,0.4
+measurement_error,"height SD 1.0 cm, weight SD 0.3 kg",5,0.2,-0.001,0.117,0.4
+measurement_error,"height SD 2.0 cm, weight SD 0.6 kg",5,0.2,0.015,0.12,0.4
+measurement_error,"height SD 4.0 cm, weight SD 1.2 kg",5,0.6,0.052,0.232,1.0
+missing_weight,10% weights missing,5,0.2,-0.001,0.122,0.6
+missing_weight,25% weights missing,5,0.2,-0.002,0.14,1.0
+missing_weight,50% weights missing,5,0.2,-0.001,0.156,1.0
+missing_weight,75% weights missing,5,0.2,-0.0,0.245,1.0
+new_phm_area,unseen area PHM01,5,0.2,-0.019,0.707,1.0
+new_phm_area,unseen area PHM02,5,0.0,-0.012,0.856,1.0
+new_phm_area,unseen area PHM03,5,1.0,0.196,2.157,1.0
+new_phm_area,unseen area PHM04,5,0.2,-0.003,1.591,1.0
+new_phm_area,unseen area PHM05,5,0.0,-0.042,0.853,1.0
+new_phm_area,unseen area PHM06,5,0.0,-0.02,0.787,1.0
+new_phm_area,unseen area PHM07,5,0.8,0.15,0.635,1.0
+new_phm_area,unseen area PHM10,5,0.2,-0.002,0.453,1.0
+none,no shift,5,0.2,0.0,0.117,0.2
+poorer_growth_population,WAZ tilt 0.5,5,0.0,0.011,0.311,1.0
+poorer_growth_population,WAZ tilt 1.0,5,0.8,0.036,1.15,1.0
+poorer_growth_population,WAZ tilt 1.5,5,1.0,0.081,2.592,1.0
+prevalence,prevalence 25%,5,1.0,0.001,0.205,1.0
+prevalence,prevalence 40%,5,1.0,-0.007,0.324,1.0
+prevalence,prevalence 5%,5,0.0,-0.001,0.184,0.8
+scale_bias,scale reads 0.25 kg low,5,0.0,-0.004,0.132,0.6
+scale_bias,scale reads 0.5 kg low,5,0.0,0.002,0.199,1.0
+scale_bias,scale reads 1.0 kg low,5,0.0,0.015,0.571,1.0
+younger_population,age tilt 0.5,5,0.4,0.037,0.312,1.0
+younger_population,age tilt 1.0,5,1.0,0.061,1.102,1.0
+younger_population,age tilt 1.5,5,1.0,0.096,2.283,1.0
