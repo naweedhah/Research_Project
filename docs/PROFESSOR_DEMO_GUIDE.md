@@ -15,7 +15,7 @@ The active model is **GA-RGCA-v4-Rolling-RSL**. Horizon: **12 months**. This is 
 
 1. **Dashboard** — clinic totals and who needs attention today.
 2. **Children** — each row keeps **current WHO** and the **12-month prediction** in separate columns.
-3. Open **C-1137** (Yasas Methsara Weerasinghe) or another child with several visits.
+3. Open **C-1137** or another child with several visits.
 4. Show **current WHO assessment** from the latest measurements (the child today).
 5. Show the **next-12-month GA-RGCA prediction** (navy / future). Say clearly: these are different time points.
 6. Show the four probabilities: Underweight, Stunting, MAM, SAM.
