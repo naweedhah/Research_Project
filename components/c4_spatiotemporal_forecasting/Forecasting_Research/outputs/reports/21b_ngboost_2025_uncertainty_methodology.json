@@ -1,0 +1,35 @@
+{
+  "step": "21B",
+  "purpose": "Final 2025 NGBoost uncertainty lockbox audit",
+  "point_forecast_model": "Frozen Random Forest from Step 20/21",
+  "uncertainty_model": "NGBoost Normal predictive distribution",
+  "uncertainty_configs": {
+    "H1": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    },
+    "H3": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    },
+    "H6": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    }
+  },
+  "h6_selection_basis": "NGB_A was the uncertainty-oriented H6 candidate evaluated on 2024 before opening the 2025 lockbox.",
+  "test_period": "2025",
+  "strict_label_rule": "Forecast_Target_Date <= Forecast_Origin_Date",
+  "nominal_interval": 95.0,
+  "uncertainty_level_basis": "Relative 95% interval-width tertiles frozen from the corresponding 2024 validation predictions.",
+  "interpretation": "Low/Moderate/High uncertainty describes predictive interval width relative to the model mean. It is not a probability that the forecast is correct."
+}

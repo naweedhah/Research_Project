@@ -1,0 +1,50 @@
+{
+  "contract_version": "1.0",
+  "request_id": "11111111-1111-4111-8111-111111111111",
+  "correlation_id": "22222222-2222-4222-8222-222222222222",
+  "source": "C1",
+  "child": { "pseudonymous_child_id": "C-1005", "child_uuid": "33333333-3333-4333-8333-333333333333" },
+  "visit": { "visit_id": "44444444-4444-4444-8444-444444444444", "visit_number": 4, "visit_date": "2026-06-12" },
+  "prediction": {
+    "prediction_id": "55555555-5555-4555-8555-555555555555",
+    "status": "wasting",
+    "severity": "moderate",
+    "score": {
+      "value": 0.58,
+      "kind": "demo_progression_score",
+      "label": "Demo Progression Score",
+      "is_probability": false,
+      "is_calibrated": false
+    }
+  },
+  "longitudinal": {
+    "previous_score": 0.33,
+    "score_delta": 0.25,
+    "score_velocity": -0.12,
+    "progress_state": "DETERIORATING"
+  },
+  "alerts": ["DETERIORATION"],
+  "model": {
+    "model_version": "MCA-DEMO-1.0",
+    "feature_schema_version": "fs-2026-001",
+    "label_schema_version": "ls-2026-001",
+    "calibration_version": "demo-temp-v1",
+    "embedding_space_id": "demo-space-v1"
+  },
+  "features": {
+    "approved_feature_snapshot": {
+      "feature_schema_version": "fs-2026-001",
+      "values": {
+        "anthropometric": { "age_months": 17, "sex": "male", "weight_kg": 9.9, "height_cm": 78.2, "muac_cm": 11.9 },
+        "socioeconomic": {},
+        "dietary": {},
+        "maternal_child_health": {}
+      },
+      "missingness": { "anthropometric": [], "socioeconomic": [], "dietary": [], "maternal_child_health": [] }
+    }
+  },
+  "data_quality": { "status": "READY", "flags": [] },
+  "explanation_context_ref": null,
+  "requested_by": { "clinician_user_id": "66666666-6666-4666-8666-666666666666" },
+  "requested_at": "2026-08-26T10:00:00+00:00"
+}

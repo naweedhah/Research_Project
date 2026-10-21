@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cnip.local/contracts/integrations/c1-c4-model-update-proposal.v1.json",
+  "title": "C4→C1 Model Update Proposal v1",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "c4_decision_id",
+    "model_version",
+    "base_model_version",
+    "update_type",
+    "artifact",
+    "feature_schema_version",
+    "label_schema_version",
+    "embedding_space_id",
+    "approved_by_component",
+    "created_at"
+  ],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "c4_decision_id": { "type": "string", "format": "uuid" },
+    "model_version": { "type": "string" },
+    "base_model_version": { "type": "string" },
+    "update_type": { "type": "string", "enum": ["RECALIBRATION", "RETRAIN", "HOTFIX"] },
+    "artifact": {
+      "type": "object",
+      "required": ["uri", "sha256"],
+      "properties": {
+        "uri": { "type": "string" },
+        "sha256": { "type": "string", "minLength": 64, "maxLength": 128 }
+      }
+    },
+    "feature_schema_version": { "type": "string" },
+    "label_schema_version": { "type": "string" },
+    "calibration_version": { "type": ["string", "null"] },
+    "embedding_space_id": { "type": "string" },
+    "embedding_dimension": { "type": ["integer", "null"] },
+    "validation_summary_ref": { "type": ["string", "null"] },
+    "approved_by_component": { "const": "C4" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "notes": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

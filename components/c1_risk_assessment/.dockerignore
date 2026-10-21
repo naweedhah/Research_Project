@@ -1,0 +1,11 @@
+.git
+.venv
+node_modules
+.next
+**/__pycache__
+**/*.pyc
+ml/artifacts
+playwright-report
+test-results
+.cursor
+agent-transcripts

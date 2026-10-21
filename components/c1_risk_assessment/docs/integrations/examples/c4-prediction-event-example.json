@@ -1,0 +1,40 @@
+{
+  "contract_version": "1.0",
+  "event_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "event_type": "c1.prediction.completed",
+  "occurred_at": "2026-08-26T10:05:00+00:00",
+  "correlation_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "child": { "pseudonymous_child_id": "C-1005" },
+  "visit": { "visit_id": "44444444-4444-4444-8444-444444444444", "visit_number": 4, "visit_date": "2026-06-12" },
+  "features": {
+    "feature_schema_version": "fs-2026-001",
+    "values": {
+      "anthropometric": { "age_months": 17, "sex": "male", "weight_kg": 9.9, "height_cm": 78.2, "muac_cm": 11.9 },
+      "socioeconomic": {},
+      "dietary": {},
+      "maternal_child_health": {}
+    },
+    "missingness": { "anthropometric": [], "socioeconomic": [], "dietary": [], "maternal_child_health": [] }
+  },
+  "prediction": {
+    "prediction_id": "55555555-5555-4555-8555-555555555555",
+    "status": "wasting",
+    "severity": "moderate",
+    "score": {
+      "value": 0.58,
+      "kind": "demo_progression_score",
+      "label": "Demo Progression Score",
+      "is_probability": false,
+      "is_calibrated": false
+    },
+    "class_outputs": { "is_demo_synthetic": true }
+  },
+  "model": {
+    "model_version": "MCA-DEMO-1.0",
+    "feature_schema_version": "fs-2026-001",
+    "label_schema_version": "ls-2026-001",
+    "calibration_version": "demo-temp-v1",
+    "embedding_space_id": "demo-space-v1"
+  },
+  "quality": { "status": "READY", "flags": [] }
+}

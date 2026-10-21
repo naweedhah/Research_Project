@@ -1,0 +1,43 @@
+{
+  "step": "27B",
+  "purpose": "Add validated NGBoost probabilistic uncertainty to Step 27 Random Forest future forecasts.",
+  "future_target_period": "2026-01 to 2030-12",
+  "point_forecast_model": "Random Forest from Step 27",
+  "uncertainty_model": "NGBoost Normal predictive distribution",
+  "nominal_prediction_interval_percentage": 95.0,
+  "uncertainty_configs": {
+    "H1": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    },
+    "H3": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    },
+    "H6": {
+      "Config_ID": "NGB_A",
+      "n_estimators": 200,
+      "learning_rate": 0.03,
+      "tree_depth": 2,
+      "min_samples_leaf": 10
+    }
+  },
+  "uncertainty_level_threshold_source": "Frozen 2024 relative interval-width thresholds created in Step 21B.",
+  "validated_2025_observed_coverage_percentage": {
+    "H1": 90.66666666666666,
+    "H3": 91.0,
+    "H6": 86.0
+  },
+  "deployment_training_rule": "After final evaluation was frozen, NGBoost was retrained on all labels whose target date was available through 2025-12.",
+  "future_predictor_state": "Exactly reuses Step 27 future predictor projection.",
+  "future_target_state": "Exactly reuses Step 27 H1 Random Forest recursive future Malnutrition_Cases state.",
+  "important_interpretation": "The NGBoost 95% interval is a probabilistic NGBoost prediction interval. It is not a formal Random Forest confidence interval and it does not guarantee that 95% of 2026-2030 future observations will fall inside the interval.",
+  "future_validation_limitation": "Actual 2026-2030 outcomes are not yet available. Therefore future observed interval coverage cannot be calculated now. Step 21B unseen-2025 coverage is retained as the latest empirical calibration evidence.",
+  "main_output": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\27b_future_forecasts_with_ngboost_uncertainty_2026_2030.csv"
+}

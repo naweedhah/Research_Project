@@ -1,0 +1,31 @@
+STEP 20 - FINAL FORECASTING STRATEGY FREEZE
+========================================================================
+Freeze timestamp: 2026-10-09T18:42:44+05:30
+
+Selection basis:
+- Step 17 untouched 2024 external validation
+- Primary metric: MAE
+- RMSE used only as a tie-breaker
+- 2025 was not used for tuning or model selection
+
+Frozen point-forecast strategy:
+- H1: Tuned Random Forest (RF_B) | MAE=10.8862, RMSE=16.3931, WAPE=8.3938%
+- H3: Tuned Random Forest (RF_BASE) | MAE=10.6842, RMSE=15.8682, WAPE=8.2381%
+- H6: Tuned Random Forest (RF_BASE) | MAE=11.2015, RMSE=16.2735, WAPE=8.6369%
+
+Selection-rule verification:
+- H1: Tuned Random Forest | PASS
+- H3: Tuned Random Forest | PASS
+- H6: Tuned Random Forest | PASS
+
+Uncertainty support:
+- Tuned NGBoost retained only as supplementary probabilistic support.
+- H1: coverage=95.0000% | mean interval width=60.6572
+  Observed coverage is close to the nominal 95%; retain as supplementary uncertainty information.
+- H3: coverage=95.6667% | mean interval width=65.8691
+  Observed coverage is close to the nominal 95%; retain as supplementary uncertainty information.
+- H6: coverage=83.6667% | mean interval width=47.2961
+  Observed coverage is below 90%; treat the 95% interval as under-calibrated supplementary uncertainty information.
+
+LOCKBOX RULE:
+The 2025 final test may now be opened only with this frozen strategy. Do not change the selected model family or hyperparameters after seeing 2025 performance.

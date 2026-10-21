@@ -1,0 +1,25 @@
+{
+  "step": "32B",
+  "name": "Future Triposha Packet Planning Demand Estimation",
+  "selected_step32a_rule": "DISTRICT_MEDIAN",
+  "development_period": "2015-2023",
+  "selection_year": 2024,
+  "2025_role": "Retrospective check only; no reselection or updating",
+  "future_period": "2026-2030",
+  "future_source": "C:\\Users\\NIMSARA\\Desktop\\Research Github\\Research_Project\\components\\c4_spatiotemporal_forecasting\\Forecasting_Research\\outputs\\reports\\30_future_district_risk_prioritization.csv",
+  "formula": "Estimated_Triposha_Packets_Raw = RF_Predicted_Cases x Frozen_District_Packets_Per_Case_Ratio",
+  "whole_packet_planning_policy": "ceil(raw estimate)",
+  "ngboost_forecast_uncertainty_propagated": true,
+  "uncertainty_note": "If available, NGBoost bounds reflect malnutrition forecast uncertainty only; conversion-ratio uncertainty is not included.",
+  "new_ml_model_trained": false,
+  "rf_changed": false,
+  "ngboost_changed": false,
+  "shap_changed": false,
+  "dmbi_changed": false,
+  "interpretation": "Estimated Triposha Packet Planning Demand for operational planning support; not clinical eligibility or dosage.",
+  "limitations": [
+    "Historical Triposha distribution may reflect programme coverage/supply conditions rather than true unmet clinical need.",
+    "Step 32A 2025 retrospective WAPE was about 29.31%, so resource outputs should not be presented as exact counts.",
+    "Future programme-policy or supply-chain changes are not modeled."
+  ]
+}

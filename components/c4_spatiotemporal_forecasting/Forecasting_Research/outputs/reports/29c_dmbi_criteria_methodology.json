@@ -1,0 +1,28 @@
+{
+  "step": "29C",
+  "name": "DMBI Burden-Criteria Preparation",
+  "interpretation": "Relative district planning-priority index; not a clinical diagnosis or probability.",
+  "criteria": {
+    "C1_Forecasted_Malnutrition_Cases": "Absolute predicted district malnutrition burden.",
+    "C2_Forecasted_Cases_per_1000_U5": "Forecasted cases divided by Under-5 population available at forecast origin, multiplied by 1000.",
+    "C3_Forecasted_YoY_Burden_Growth_Percent": "Forecasted burden compared with the same target month one year earlier."
+  },
+  "criteria_direction": "Higher value means higher planning priority for all three criteria.",
+  "excluded_from_direct_dmbi_criteria": [
+    "Triposha/resource/intervention outputs",
+    "Programme/clinic variables",
+    "Climate variables",
+    "Socioeconomic variables",
+    "Maternal-health variables",
+    "Other forecasting predictors"
+  ],
+  "excluded_predictor_role": "They remain forecasting and SHAP explanation inputs.",
+  "2024_rule": "Strict rolling-origin RF predictions rebuilt with frozen final RF configurations; used for DMBI method development.",
+  "2025_rule": "Frozen Step 21 predictions reused; 2025 reserved for retrospective DMBI validation and must not tune DMBI weights.",
+  "future_rule": "Frozen Step 27 RF forecasts reused for 2026-2030 planning.",
+  "predicted_rate_population_rule": "Under-5 population at forecast origin; observed for historical origins and Step 27 projected for future origins.",
+  "growth_reference_rule": "Same target month one year earlier; historical actual through 2025, then Step 27 H1 RF future burden state.",
+  "critic_run_here": false,
+  "topsis_run_here": false,
+  "next_step": "29d_dmbi_critic_weight_development.py using 2024 development criteria only."
+}

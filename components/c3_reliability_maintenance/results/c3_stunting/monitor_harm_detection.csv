@@ -1,0 +1,5 @@
+monitor,auroc_for_harm,corr_with_drop
+max_psi,0.735,0.481
+max_ks,0.709,0.413
+max_missing_delta,0.504,-0.142
+prediction_psi,0.677,0.184

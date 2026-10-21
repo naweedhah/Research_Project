@@ -1,0 +1,13 @@
+{
+  "metadata": "metadata.json",
+  "forecast_records": "forecast_records.csv",
+  "forecast_lookup": "forecast_lookup.json",
+  "shap_explanations": "shap_explanations.json",
+  "resource_planning": "resource_planning.csv",
+  "gis_priority": "gis_priority.csv",
+  "warnings": "warnings.json",
+  "warning_summary": "warning_summary.json",
+  "annual_trends": "annual_trends.json",
+  "dataset_dashboard": "dataset_dashboard.csv",
+  "district_boundaries": "district_boundaries.geojson"
+}

@@ -1,0 +1,6 @@
+predictors,r2_balanced_accuracy_drop
+max_psi,0.167
+max_ks,0.122
+max_missing_delta,0.001
+prediction_psi,0.036
+max_psi + max_ks + max_missing_delta + prediction_psi,0.179

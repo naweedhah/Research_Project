@@ -1,0 +1,20 @@
+{
+  "contract_version": "1.0",
+  "c4_decision_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "model_version": "MCA-2026-002",
+  "base_model_version": "MCA-DEMO-1.0",
+  "update_type": "RECALIBRATION",
+  "artifact": {
+    "uri": "s3://cnip-artifacts/models/MCA-2026-002.pt",
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  },
+  "feature_schema_version": "fs-2026-001",
+  "label_schema_version": "ls-2026-001",
+  "calibration_version": "cal-v2",
+  "embedding_space_id": "demo-space-v1",
+  "embedding_dimension": 128,
+  "validation_summary_ref": "c4://decisions/eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "approved_by_component": "C4",
+  "created_at": "2026-08-26T12:00:00+00:00",
+  "notes": "Synthetic example — not a real model artifact"
+}

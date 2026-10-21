@@ -1,0 +1,18 @@
+{
+  "max_psi": {
+    "threshold": 0.177,
+    "detects_harm": 1.0,
+    "false_alarm": 0.63
+  },
+  "max_ks": {
+    "threshold": 0.319,
+    "detects_harm": 0.45,
+    "false_alarm": 0.06
+  },
+  "prediction_psi": {
+    "threshold": 0.051,
+    "detects_harm": 0.41,
+    "false_alarm": 0.06
+  },
+  "current_rules_false_alarm_rate": 0.89
+}
