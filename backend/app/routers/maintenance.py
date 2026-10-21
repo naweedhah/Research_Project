@@ -14,6 +14,7 @@ GET  /maintenance/dashboard                          model-health page
 
 Shared:
 GET  /maintenance/context                          external context signals (disasters, food prices, inflation)
+GET  /maintenance/context/dashboard                each source's fetch status and time series (external-context page)
 GET  /maintenance/results[/{run}/report | /{run}/figures/{name}]   experiment results
 """
 
@@ -26,6 +27,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.c3 import results
+from app.c3.context_view import context_dashboard
 from app.c3.live import Conflict, NotFound, live
 from app.c3.service import scenarios, service
 
@@ -175,6 +177,14 @@ def dashboard() -> str:
 @router.get("/context")
 def context(start: date, end: date, offline: bool = False) -> dict:
     return service.context(start, end, offline)
+
+
+@router.get("/context/dashboard")
+def context_dashboard_view(start: date, end: date, offline: bool = False, refresh: bool = False) -> dict:
+    """Every external source for one window: fetch status, time series for charts, and the signals C3 derives."""
+    if start > end:
+        raise HTTPException(400, "start is after end")
+    return context_dashboard(start, end, offline, refresh)
 
 
 @router.get("/results")

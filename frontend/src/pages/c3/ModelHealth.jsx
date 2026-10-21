@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Check, Play, RotateCcw, Undo2, X } from 'lucide-react';
 import { post, useApi } from '../../lib/useApi';
-import { Button, Card, CardBody, CardHeader, ErrorBox, Loading, PageHeader, pct } from '../../ui';
+import { Badge, Button, Card, CardBody, CardHeader, ErrorBox, Loading, PageHeader, pct } from '../../ui';
 import { CycleEvidence, HistoryTable } from './parts';
 
 /* Demonstration sandbox: simulated shifts on real held-out children (in memory; Reset restores v1.0). */
@@ -63,6 +63,7 @@ export default function ModelHealth() {
         component="c3"
         title="Model health"
         subtitle="Simulate what can happen to new data and watch C3 decide: no action, recalibrate, retrain or hold, and deploy only what passes every safety check."
+        actions={<Badge tone="violet">Practice sandbox · separate from the live model · Reset returns to v1.0</Badge>}
       />
       {status.error && <ErrorBox error={status.error} hint="Start the backend with C3_DATA_DIR set to the data folder." />}
       {s && !s.ready && <ErrorBox error={s.reason || 'Model not ready'} />}
@@ -70,7 +71,7 @@ export default function ModelHealth() {
       {s?.ready && (
         <Card className="mb-5">
           <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
-            <span><span className="text-muted">Active model </span><span className="font-semibold">{s.active_version}</span></span>
+            <span><span className="text-muted">Sandbox model </span><span className="font-semibold">{s.active_version}</span></span>
             <span><span className="text-muted">Predicts </span><span className="font-semibold">{s.target}</span></span>
             <span><span className="text-muted">Balanced accuracy at deployment </span><span className="tabular font-semibold">{pct(s.baseline.bal_acc)}</span></span>
             <span><span className="text-muted">Sensitivity </span><span className="tabular font-semibold">{pct(s.baseline.sensitivity)}</span></span>

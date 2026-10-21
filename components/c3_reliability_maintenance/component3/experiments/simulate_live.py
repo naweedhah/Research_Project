@@ -52,6 +52,8 @@ def main() -> None:
     ap.add_argument("--context", choices=["live", "offline", "none"], default="live")
     ap.add_argument("--no-outcomes", action="store_true", help="only submit the batch (outcomes still pending)")
     ap.add_argument("--auto-deploy", action="store_true", help="deploy a verified candidate without approval")
+    ap.add_argument("--outcomes-for", metavar="BATCH_ID",
+                    help="only send the outcomes for an earlier batch (use the same --seed, --shift and --records)")
     args = ap.parse_args()
 
     family, _, strength = args.shift.partition(":")
@@ -67,17 +69,23 @@ def main() -> None:
     rows = [{"record_id": rid, **{k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in row.items()}}
             for rid, row in zip(ids, X.to_dict("records"))]
 
-    batch = post(args.api, "/maintenance/live/batches", {
-        "records": rows, "batch_id": args.batch_id, "area": args.area, "collected_from": args.start,
-        "collected_to": args.end, "context": args.context})
-    c = batch["cycle"]
-    print(f"batch {batch['batch_id']}: {batch['records']} children ({shift.label}) -> {c['decision'].upper()}: {c['reason']}")
-    if c.get("possible_causes"):
-        print("  possible causes:", "; ".join(c["possible_causes"]))
-    if args.no_outcomes:
-        return
+    if args.outcomes_for:
+        batch_id = args.outcomes_for
+    else:
+        batch = post(args.api, "/maintenance/live/batches", {
+            "records": rows, "batch_id": args.batch_id, "area": args.area, "collected_from": args.start,
+            "collected_to": args.end, "context": args.context})
+        batch_id = batch["batch_id"]
+        c = batch["cycle"]
+        print(f"batch {batch_id}: {batch['records']} children ({shift.label}) -> {c['decision'].upper()}: {c['reason']}")
+        if c.get("possible_causes"):
+            print("  possible causes:", "; ".join(c["possible_causes"]))
+        if args.no_outcomes:
+            print(f"  outcomes pending; send them later with: --outcomes-for {batch_id} --seed {args.seed} "
+                  f"--shift {args.shift} --records {args.records}")
+            return
 
-    result = post(args.api, f"/maintenance/live/batches/{batch['batch_id']}/outcomes",
+    result = post(args.api, f"/maintenance/live/batches/{batch_id}/outcomes",
                   {"labels": {rid: int(v) for rid, v in zip(ids, y)}, "require_approval": not args.auto_deploy})
     if "post_deployment_check" in result:
         print("post-deployment check:", result["post_deployment_check"])

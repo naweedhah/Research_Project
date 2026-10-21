@@ -19,6 +19,7 @@ export default function LiveMonitoring() {
         component="c3"
         title="Live monitoring"
         subtitle="Each screening round is checked when it arrives (validation, drift, label-free urgency) and again when its outcomes are known (reliability, maintenance)."
+        actions={<Badge tone="success">Live model · saved across restarts</Badge>}
       />
       {status.error && <ErrorBox error={status.error} />}
 

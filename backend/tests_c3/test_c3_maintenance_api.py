@@ -40,3 +40,16 @@ def test_cycle_and_controls():
     assert "decision" in pending
     history = client.get("/maintenance/history").json()
     assert history[0]["action"] == "initial"
+
+
+def test_context_dashboard_offline_has_every_source_and_series():
+    d = client.get("/maintenance/context/dashboard",
+                   params={"start": "2025-12-01", "end": "2025-12-31", "offline": True}).json()
+    assert d["level"] == "alert" and d["effect"]["active"] and d["effect"]["limits"][0]["now"] == 0.15
+    assert {s["name"] for s in d["sources"]} == {"GDACS disasters", "WFP food prices", "CCPI inflation", "World Bank inflation"}
+    assert all(s["ok"] for s in d["sources"])
+    assert any(e["type"] == "Tropical cyclone" and e["signal"] == "alert" for e in d["disasters"])
+    names = [c["commodity"] for c in d["food"]["commodities"]]
+    assert names and not any("plant" in n.lower() for n in names) and d["food"]["mom_median"]
+    assert d["ccpi"] and d["worldbank"]
+    assert client.get("/maintenance/context/dashboard", params={"start": "2026-01-02", "end": "2026-01-01"}).status_code == 400

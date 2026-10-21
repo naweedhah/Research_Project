@@ -9,6 +9,7 @@ evidence as possible causes.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 
@@ -32,6 +33,8 @@ class AreaConfig:
 DEFAULT_AREA = AreaConfig("Kalmunai / Addalaichenai PHM areas", ("Ampara", "Batticaloa"), 7.42, 81.82)
 
 STAPLE_KEYWORDS = ("rice", "egg", "coconut", "lentil", "dhal", "wheat flour", "fish", "milk")
+# Whole words (plural allowed), so "egg" matches "Eggs" but not "Eggplants".
+STAPLE_PATTERN = r"\b(?:" + "|".join(re.escape(k) for k in STAPLE_KEYWORDS) + r")s?\b"
 
 
 @dataclass(frozen=True)
@@ -131,7 +134,7 @@ def food_price_signals(prices: pd.DataFrame, as_of: date, area: AreaConfig = DEF
                        rules: ContextRules = ContextRules()) -> list[ContextSignal]:
     """Median month-on-month and year-on-year change of staple-food prices in the area's districts."""
     d = prices[prices["admin2"].isin(area.districts)]
-    d = d[d["commodity"].str.lower().str.contains("|".join(STAPLE_KEYWORDS))]
+    d = d[d["commodity"].str.lower().str.contains(STAPLE_PATTERN, regex=True)]
     d = d[d["date"] <= pd.Timestamp(as_of)]
     if d.empty:
         return []

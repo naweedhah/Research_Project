@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 import { Check, Undo2, X } from 'lucide-react';
 import { post, useApi } from '../../lib/useApi';
-import { Button, Card, CardBody, CardHeader, ErrorBox, KeyValues, Loading, PageHeader } from '../../ui';
+import { Badge, Button, Card, CardBody, CardHeader, ErrorBox, KeyValues, Loading, PageHeader } from '../../ui';
 import { HistoryTable } from './parts';
 
 /* Live registry: every version, who approved it, and the controls a health officer uses. */
@@ -27,6 +27,7 @@ export default function ModelHistory() {
         component="c3"
         title="Versions & approvals"
         subtitle="C3 never changes the live model directly: candidates are verified, wait for approval, and can always be rolled back."
+        actions={<Badge tone="success">Live model · saved across restarts</Badge>}
       />
       {status.error && <ErrorBox error={status.error} />}
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
