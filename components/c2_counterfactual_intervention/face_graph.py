@@ -117,3 +117,40 @@ def generate_face_candidates(child: ChildFeatures, context: FeasibilityContext,
                              reference: tuple[Point, ...] | None = None) -> list[tuple[Change, ...]]:
     return [candidate.changes for candidate in
             generate_face_paths(child, context, predictor, max_changes, reference)]
+
+
+def food_transition_paths(baseline: frozenset[str], targets: dict[str, frozenset[str]],
+                          excluded: frozenset[str], max_nodes: int = 128) -> tuple[dict[str, dict], dict]:
+    """FACE-inspired bounded directed graph over observed and proposed food sets.
+
+    Intermediate prefixes are constructed states, not empirical reference-density
+    evidence. Edges add one food and cannot add an explicitly excluded food.
+    """
+    universe = sorted(set().union(baseline, *targets.values()) - set(baseline))
+    if len(universe) > 7 or 2 ** len(universe) > max_nodes:
+        return {}, {"status": "unavailable", "reason": "food transition graph exceeds configured node bound"}
+    from itertools import combinations
+    states = {baseline | frozenset(choice) for size in range(len(universe) + 1)
+              for choice in combinations(universe, size)}
+    graph = {state: tuple(sorted(((state | {food}, food) for food in universe
+                                 if food not in state and food not in excluded), key=lambda edge: edge[1]))
+             for state in states}
+    queue = [(0, tuple(sorted(baseline)), baseline)]
+    best = {baseline: 0}
+    paths = {baseline: [sorted(baseline)]}
+    pruned = sum(1 for state in states for food in universe if food not in state and food in excluded)
+    while queue:
+        cost, _, state = heappop(queue)
+        if cost != best[state]:
+            continue
+        for next_state, _ in graph[state]:
+            next_cost = cost + 1
+            if next_cost < best.get(next_state, float("inf")):
+                best[next_state] = next_cost
+                paths[next_state] = [*paths[state], sorted(next_state)]
+                heappush(queue, (next_cost, tuple(sorted(next_state)), next_state))
+    found = {identifier: {"path": paths[state], "path_cost": best[state],
+                          "intermediate_states": paths[state][1:-1]}
+             for identifier, state in targets.items() if state in paths and state != baseline}
+    return found, {"status": "executed", "node_count": len(states), "pruned_edges": pruned,
+                   "edge_cost": "one unit per permitted food addition; no empirical density claim"}

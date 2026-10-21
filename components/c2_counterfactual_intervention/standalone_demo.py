@@ -99,8 +99,8 @@ def _schedule(option: dict) -> list[dict]:
     return schedule
 
 
-def _food_plans(age: int, guidance: dict, budget_lkr: Decimal | None, period: str) -> list[dict]:
-    plans = shopping_examples(age, guidance, budget_lkr, period)
+def _food_plans(age: int, guidance: dict, budget_lkr: Decimal | None, period: str, *, scenarios=None) -> list[dict]:
+    plans = shopping_examples(age, guidance, budget_lkr, period, **({"scenarios": scenarios} if scenarios is not None else {}))
     for plan in plans:
         cost = Decimal(plan["estimated_total_lkr"]) if plan["estimated_total_lkr"] is not None else None
         plan["budget_remaining_lkr"] = (str((budget_lkr - cost).quantize(Decimal("0.01")))

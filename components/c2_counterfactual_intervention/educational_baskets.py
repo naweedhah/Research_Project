@@ -14,13 +14,21 @@ SCENARIOS = (
     ("Fish and fruit example", (("rice_raw_red_average", "1", "kg"), ("fish_salaya_fresh", "0.5", "kg"), ("papaw", "0.5", "kg"), ("carrot", "0.5", "kg"))),
     ("Varied groups example", (("rice_nadu_white_local", "1", "kg"), ("green_gram_average", "0.5", "kg"), ("egg_average", "8", "piece"), ("fish_salaya_fresh", "0.5", "kg"), ("gotukola_bunch", "2", "bunch"), ("banana_sour_plantain", "1", "kg"))),
 )
+# Additional illustrative combinations use the same source-checked commodities
+# and purchase units as the original four examples. They are not child portions.
+SCENARIO_VARIANTS = (
+    ("Pulse and vegetable example", (("rice_nadu_white_local", "0.5", "kg"), ("green_gram_average", "0.25", "kg"), ("carrot", "0.5", "kg"))),
+    ("Egg and fruit example", (("rice_raw_red_average", "0.5", "kg"), ("egg_average", "6", "piece"), ("papaw", "0.5", "kg"), ("gotukola_bunch", "1", "bunch"))),
+    ("Fish and greens example", (("rice_nadu_white_local", "1", "kg"), ("fish_salaya_fresh", "0.5", "kg"), ("gotukola_bunch", "1", "bunch"), ("carrot", "0.5", "kg"))),
+    ("Pulse and banana example", (("rice_raw_red_average", "0.5", "kg"), ("mysore_dhall_average", "0.25", "kg"), ("banana_sour_plantain", "1", "kg"), ("carrot", "0.5", "kg"))),
+)
 PERIOD_MULTIPLIER = {"daily": Decimal("1") / Decimal("7"), "weekly": Decimal("1"), "monthly": Decimal("4")}
 CENT = Decimal("0.01")
 
 
 def shopping_examples(age_months: int, guidance: dict, budget_lkr: Decimal | None,
                       period: str, *, history: list[OfficialPriceObservation] | None = None,
-                      as_of: date | None = None) -> list[dict]:
+                      as_of: date | None = None, scenarios=SCENARIOS) -> list[dict]:
     """Compare identical-period indicative costs; unknown evidence never becomes affordable."""
     if age_months < 6 or not guidance.get("reference") or not guidance.get("food_groups"):
         return []
@@ -30,7 +38,7 @@ def shopping_examples(age_months: int, guidance: dict, budget_lkr: Decimal | Non
                if row.evidence_status == "source_checked" and row.price_class == "retail"}
     groups = set(guidance["food_groups"])
     examples = []
-    for title, purchases in SCENARIOS:
+    for title, purchases in scenarios:
         items, missing, total = [], [], Decimal("0")
         for food_id, weekly_amount, unit in purchases:
             row = records.get(food_id)
