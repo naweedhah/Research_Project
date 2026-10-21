@@ -5,8 +5,11 @@ import {
   displayedMalnutritionType,
   formatHighestConditionRisk,
   highestConditionRisk,
+  architectureLabel,
   primaryTypeProbability,
   primaryTypeProbabilityLabel,
+  predictedTypeChipProbability,
+  runtimeModeLabel,
   probabilitySeries,
   sameConditionDelta,
   visitBinding,
@@ -158,6 +161,7 @@ describe("malnutrition type display", () => {
     it("pairs Normal with the residual and names the leading condition for the stored risk", () => {
       expect(primaryTypeProbability(normalChild)).toBeCloseTo(0.95);
       expect(primaryTypeProbabilityLabel(normalChild)).toBe("Normal probability");
+      expect(predictedTypeChipProbability(normalChild)).toBeNull();
       expect(highestConditionRisk(normalChild)).toEqual({ condition: "Stunting", probability: 0.05 });
       expect(formatHighestConditionRisk(normalChild)).toBe("Stunting 5%");
     });
@@ -180,6 +184,7 @@ describe("malnutrition type display", () => {
         },
       };
       expect(primaryTypeProbability(stunted)).toBe(0.66);
+      expect(predictedTypeChipProbability(stunted)).toBe(0.66);
       expect(highestConditionRisk(stunted)).toEqual({ condition: "Underweight", probability: 0.7 });
     });
 
@@ -211,6 +216,11 @@ describe("malnutrition type display", () => {
     it("Normal residual delta is comparable across visits", () => {
       const previous = { ...normalChild, ga_rgca: { ...normalChild.ga_rgca, stunting_probability: 0.1 } };
       expect(sameConditionDelta(normalChild, previous)).toBe(5);
+    });
+
+    it("does not present PYTORCH as the professor-facing architecture", () => {
+      expect(architectureLabel("PYTORCH")).toBe("GA-RGCA v4 Rolling SuperLearner");
+      expect(runtimeModeLabel("PYTORCH")).toBe("GA-RGCA v4 Rolling SuperLearner");
     });
   });
 });

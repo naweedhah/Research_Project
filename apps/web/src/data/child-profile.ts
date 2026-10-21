@@ -387,6 +387,16 @@ export function primaryTypeProbabilityLabel(source?: ProbabilitySource | null): 
 }
 
 /**
+ * Probability shown next to the predicted type in professor-facing UI.
+ * Normal is not a model class, so this is null when the predicted type is Normal.
+ */
+export function predictedTypeChipProbability(source?: ProbabilitySource | null): number | null {
+  const type = displayedMalnutritionType(source);
+  if (!type || type === "Normal") return null;
+  return primaryTypeProbability(source);
+}
+
+/**
  * The condition head that produced the stored primary risk score (max of
  * Underweight, Stunting, MAM, SAM) and that score. This is what alerts,
  * velocity and sorting use. Normal is never a candidate.
@@ -542,7 +552,15 @@ export function emptyAssessmentMessage(hasBaseline: boolean): string | null {
 
 export function architectureLabel(value?: string | null): string {
   if (!value) return "—";
+  if (value.replaceAll("-", "_").toUpperCase() === "PYTORCH") return "GA-RGCA v4 Rolling SuperLearner";
   if (value === "multimodal_cross_attention") return "Multimodal Cross-Attention";
+  return value.replaceAll("_", " ");
+}
+
+/** Runtime `mode` is an internal inference field. Do not show PYTORCH as the model. */
+export function runtimeModeLabel(value?: string | null): string {
+  if (!value) return "Clinical review required";
+  if (value.replaceAll("-", "_").toUpperCase() === "PYTORCH") return "GA-RGCA v4 Rolling SuperLearner";
   return value.replaceAll("_", " ");
 }
 

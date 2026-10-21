@@ -5,11 +5,11 @@ import { X } from "lucide-react";
 import {
   displayedMalnutritionType,
   formatHighestConditionRisk,
-  primaryTypeProbability,
+  predictedTypeChipProbability,
   type ChildProfile,
   type ModalityCount,
 } from "@/data/child-profile";
-import { cn, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
+import { cn, displayPredictedSeverity, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { applicabilityState, uncertaintyState } from "@/data/clinical-selectors";
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -95,6 +95,7 @@ export function ExplainabilityDialog({
       ]
     : [];
   const sevProbs = ga?.severity_probabilities;
+  const severityLabel = displayPredictedSeverity(displayedMalnutritionType(prediction), ga?.severity ?? prediction?.severity);
   const futureBars: [string, number | undefined][] = ga
     ? [
         ["Underweight", ga.underweight_probability],
@@ -137,7 +138,7 @@ export function ExplainabilityDialog({
                 <FieldLabel>Prediction · next {ga?.prediction_horizon_months ?? 12} months</FieldLabel>
                 <p className="mt-1 text-lg font-semibold">
                   {formatNutritionalStatus(displayedMalnutritionType(prediction), prediction?.severity)}
-                  {primaryTypeProbability(prediction) != null ? <span className="ml-2 text-sm font-medium text-white/70">{formatPercent(primaryTypeProbability(prediction))}</span> : null}
+                  {predictedTypeChipProbability(prediction) != null ? <span className="ml-2 text-sm font-medium text-white/70">{formatPercent(predictedTypeChipProbability(prediction))}</span> : null}
                 </p>
                 {ga ? <p className="mt-1 text-xs text-white/70">Highest predicted condition risk: {formatHighestConditionRisk(prediction)}</p> : null}
                 {futureBars.length ? (
@@ -162,16 +163,20 @@ export function ExplainabilityDialog({
                 </p>
               </section>
 
-              {ga ? (
+              {ga && (severityLabel || ga.triage) ? (
                 <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <FieldLabel>Severity</FieldLabel>
-                  <p className="mt-1 text-sm font-medium">{prediction?.severity ?? "—"}{ga.acute_status ? <span className="text-white/60"> · acute status {ga.acute_status}</span> : null}</p>
-                  {sevProbs ? (
-                    <p className="mt-1 text-xs text-white/70">
-                      Normal {formatPercent(sevProbs.Normal ?? sevProbs.normal)} · Moderate {formatPercent(sevProbs.Moderate ?? sevProbs.moderate)} · Severe {formatPercent(sevProbs.Severe ?? sevProbs.severe)}
-                    </p>
+                  {severityLabel ? (
+                    <>
+                      <FieldLabel>Severity</FieldLabel>
+                      <p className="mt-1 text-sm font-medium">{severityLabel}{ga.acute_status ? <span className="text-white/60"> · acute status {ga.acute_status}</span> : null}</p>
+                      {sevProbs ? (
+                        <p className="mt-1 text-xs text-white/70">
+                          Normal {formatPercent(sevProbs.Normal ?? sevProbs.normal)} · Moderate {formatPercent(sevProbs.Moderate ?? sevProbs.moderate)} · Severe {formatPercent(sevProbs.Severe ?? sevProbs.severe)}
+                        </p>
+                      ) : null}
+                    </>
                   ) : null}
-                  {ga.triage ? <p className="mt-1 text-xs text-white/70">Review pathway: {ga.triage}</p> : null}
+                  {ga.triage ? <p className={severityLabel ? "mt-1 text-xs text-white/70" : "text-xs text-white/70"}>Review pathway: {ga.triage}</p> : null}
                 </section>
               ) : null}
 

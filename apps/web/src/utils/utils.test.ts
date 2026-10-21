@@ -28,6 +28,7 @@ describe("formatters", () => {
 
   it("hides a formatted severity for Normal and keeps it for other types", () => {
     expect(displayPredictedSeverity("Normal", "Moderate")).toBeNull();
+    expect(displayPredictedSeverity("Normal", "Normal")).toBeNull();
     expect(displayPredictedSeverity("normal", "severe")).toBeNull();
     expect(displayPredictedSeverity("Stunting", "Moderate")).toBe("Moderate");
     expect(displayPredictedSeverity("Underweight", "Severe")).toBe("Severe");
