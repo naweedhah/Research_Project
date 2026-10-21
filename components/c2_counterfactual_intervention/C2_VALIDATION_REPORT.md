@@ -1,0 +1,15 @@
+# Version 2 research software validation
+
+## Explicit four-method software demonstration
+
+With `research_algorithm_demo=true`, the invented 24-month fixture, LKR 1,500 weekly test budget and `method=compare_all`, bounded search generated 4 catalogue candidates, official dice-ml generated 3, the FACE-inspired graph generated 4 and bounded Wachter-style optimization mapped to 1. Deduplication left 4 unique food options. The engineering budget/exclusion test ordered 3 options; Essentials was test rank 1 at LKR 238.48 indicative shopping cost. A LKR 100 budget gave no test rank; excluding dhall removed Essentials. These test ranks use fewer listed purchase items, then reference cost. They do not measure nutritional adequacy or predict health improvement. Verified nutrition ranks remain 0, and candidate C1 calls remain 0.
+
+Command: `py -m components.c2_counterfactual_intervention.evaluation_v2` from the repository root with `PYTHONPATH='.;backend'`.
+
+On 2026-10-19, an invented 24-month fixture generated **4 distinct food scenarios**, 0 verified ranked cards and 4 unresolved examples. All 4 had source-priced Colombo reference costs; **0** had verified local costs. Across 32 criterion checks, all 32 were unknown with the fixture's unverified feeding, allergy, locality, budget-scope, nutrition and suitability evidence. A reported egg exclusion rejected 2 matching food options. Budget variation changed indicative reference fit without changing original C1 context. Identical input produced identical output. The scenario endpoint made **0 candidate C1 calls**. One measured in-process call took 4.16 ms; timing varies by machine and is not a service SLA.
+
+This measures software behavior and evidence coverage, not child health improvement or clinical performance. Ranking-order sensitivity is not measurable until at least two fully verified eligible alternatives exist. The earlier PHM C1 audit's 3/2837 model-rule result remains historical comparison evidence and is not a v2 outcome measure.
+
+## Four-method addendum
+
+On the same invented fixture, `compare_all` ran the v2 bounded enumerator and FACE-inspired food-transition graph independently. Each generated 4 candidate IDs, and deduplication left 4 unique food examples. All 4 remained independently evidence-incomplete, with 0 verified ranks and 0 candidate C1 calls. The graph paths are constructed food-addition paths with unit edge costs; they are not empirical food-transition observations. DiCE and Wachter each returned `unavailable_real_nutrition_target` and 0 v2 candidates because the required validated classifier/reference data and differentiable target are absent. There was no fallback to bounded search. The existing official dice-ml method continues to run against a separate synthetic classifier in legacy tests. The new Wachter-style SciPy optimizer converged on its explicitly synthetic two-indicator software fixture; its objective has no clinical or nutrition validity. Method runtimes are measured per call and are excluded from same-input decision equality. These results do not meet the addendum's full real-nutrition four-method acceptance criterion.
