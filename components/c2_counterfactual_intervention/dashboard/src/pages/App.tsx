@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom'
-import { Activity, ChartNoAxesCombined, FlaskConical, Menu, Moon, ScanSearch, Sun, X } from 'lucide-react'
+import { Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { ChartNoAxesCombined, FlaskConical, Menu, Moon, ScanSearch, Sun, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '../components/ui/button'
 import { LoadingState } from '../components/ui/states'
@@ -10,6 +10,8 @@ const Studio = lazy(() => import('./Studio').then(module => ({ default: module.S
 const AutomaticAnalysis = lazy(() => import('./AutomaticAnalysis').then(module => ({ default: module.AutomaticAnalysis })))
 const StandaloneAnalysis = lazy(() => import('./StandaloneAnalysis').then(module => ({ default: module.StandaloneAnalysis })))
 const StandaloneResults = lazy(() => import('./StandaloneAnalysis').then(module => ({ default: module.StandaloneResults })))
+const ManualC1Validation = lazy(() => import('./ManualC1Validation').then(module => ({ default: module.ManualC1Validation })))
+const ScenarioV2 = lazy(() => import('./ScenarioV2').then(module => ({ default: module.ScenarioV2 })))
 const ModelValidation = lazy(() => import('./ModelValidation').then(module => ({ default: module.ModelValidation })))
 const FoodPrices = lazy(() => import('./FoodPrices').then(module => ({ default: module.FoodPrices })))
 const AlgorithmComparison = lazy(() => import('./AlgorithmComparison').then(module => ({ default: module.AlgorithmComparison })))
@@ -18,7 +20,6 @@ const EvidenceStatus = lazy(() => import('./EvidenceStatus').then(module => ({ d
 const links = [
   { path: '/', label: 'Overview', icon: ChartNoAxesCombined },
   { path: '/analysis', label: 'Intervention Analysis', icon: ScanSearch },
-  { path: '/analysis/results', label: 'Results', icon: Activity },
 ]
 
 function ThemeButton() {
@@ -55,7 +56,7 @@ export function App() {
         <div className="flex items-center gap-3"><Button variant="ghost" className="!px-2 lg:hidden" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={22}/></Button><div><span className="text-xs text-[var(--muted)]">FedNutri-XAI / Component 2</span><h2 className="text-sm font-semibold md:text-base">Personalized Counterfactual Intervention Engine</h2></div></div>
         <div className="flex items-center gap-2"><span className="hidden items-center gap-2 rounded-full border border-cyan-400/20 px-3 py-1.5 text-xs text-cyan-300 sm:inline-flex"><span className="size-1.5 rounded-full bg-cyan-400"/>Research prototype</span><ThemeButton/></div>
       </header>
-      <main className="mx-auto max-w-[1660px] px-5 py-7 md:px-9 md:py-9"><Suspense fallback={<LoadingState label="Opening research workspace…"/>}><Routes><Route path="/" element={<Overview/>}/><Route path="/analysis" element={<StandaloneAnalysis/>}/><Route path="/analysis/results" element={<StandaloneResults/>}/><Route path="/c1-comparison" element={<AutomaticAnalysis/>}/><Route path="/studio" element={<Studio/>}/><Route path="/advanced-testing" element={<Studio/>}/><Route path="/model-validation" element={<ModelValidation/>}/><Route path="/algorithm-comparison" element={<AlgorithmComparison/>}/><Route path="/food-price-explorer" element={<FoodPrices/>}/><Route path="/evidence-status" element={<EvidenceStatus/>}/><Route path="*" element={<NotFound/>}/></Routes></Suspense></main>
+      <main className="mx-auto max-w-[1660px] px-5 py-7 md:px-9 md:py-9"><Suspense fallback={<LoadingState label="Opening research workspace…"/>}><Routes><Route path="/" element={<Overview/>}/><Route path="/analysis" element={<ScenarioV2/>}/><Route path="/analysis/results" element={<StandaloneResults/>}/><Route path="/manual-c1" element={<Navigate to="/analysis" replace/>}/><Route path="/legacy-c1-comparison" element={<ManualC1Validation/>}/><Route path="/research-test" element={<StandaloneAnalysis/>}/><Route path="/c1-comparison" element={<AutomaticAnalysis/>}/><Route path="/studio" element={<Studio/>}/><Route path="/advanced-testing" element={<Studio/>}/><Route path="/model-validation" element={<ModelValidation/>}/><Route path="/algorithm-comparison" element={<AlgorithmComparison/>}/><Route path="/food-price-explorer" element={<FoodPrices/>}/><Route path="/evidence-status" element={<EvidenceStatus/>}/><Route path="*" element={<NotFound/>}/></Routes></Suspense></main>
     </div>
     <AnimatePresence>{mobileOpen && <motion.div className="fixed inset-0 z-50 lg:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <button aria-label="Close navigation overlay" className="absolute inset-0 bg-slate-950/75" onClick={() => setMobileOpen(false)}/>
