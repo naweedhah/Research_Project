@@ -1,0 +1,9 @@
+# Version 2 ranking method
+
+This is an **engineering design**, not an official Ministry of Health, FHB or WHO scoring algorithm. No numerical health benefit or published percentage weight is assigned.
+
+Candidate generation is deterministic and bounded to four selected household purchase examples from eight source-priced combinations. Duplicate ingredient sets are removed. Each alternative receives explicit pass/fail/unknown checks for age scope, baseline provenance, allergies, local availability, preparation, budget reference, nutritional adequacy and individual suitability. Any explicit fail rejects the option. Any mandatory unknown keeps it evidence-incomplete. Only an all-pass candidate can enter `ranked_cards`; the current bundled evidence cannot establish local cost, individual portions or clinical suitability, so the primary ranking is normally empty.
+
+If a fully eligible candidate exists after future reviewed evidence integration, sorting is lexicographic: verified nutritional suitability and coverage of independently assessed gaps; verified affordability; availability and practicality; smaller departure from confirmed diet; stable ID. The current code implements only a deterministic food-group/cost/ID fallback for candidates already fully eligible. It never treats food-group count as a nutrient or severity score. Rank 1–5 are capped by `max_candidates`. Unresolved comparisons remain separate. Ranking-order sensitivity cannot be measured on the current bounded example fixture because no candidate is fully eligible.
+
+The budget display uses period-matched, quantity-aware DCS Colombo retail references. It is an indicative shopping comparison, not verified Kalmunai pricing or a child-specific intervention cost. Daily scales weekly mass to one seventh and rounds discrete purchases up; monthly means four weekly purchases. This conversion is an explicit scenario convention, not a clinical recommendation.
