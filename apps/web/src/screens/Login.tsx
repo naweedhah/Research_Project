@@ -10,7 +10,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("doctor@gmail.com");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,6 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="w-full max-w-md rounded-[28px] border border-white/80 bg-white/85 p-8 shadow-card backdrop-blur-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#3E75B8]">Paediatric nutrition intelligence</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#102A4C]">Sign in</h1>
-          <p className="mt-1 text-sm leading-6 text-[#5C6E82]">Current WHO assessment and 12-month nutritional risk for every child you follow.</p>
           <div className="mt-8">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -64,11 +63,6 @@ export default function LoginPage() {
           <Button className="mt-6 w-full" type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"} <ArrowRight className="h-4 w-4" />
           </Button>
-          <details className="mt-6 text-xs text-[#5C6E82]">
-            <summary className="cursor-pointer font-medium">Demonstration access</summary>
-            <p className="mt-2">Use the clinic demonstration account already configured for this workstation.</p>
-          </details>
-          <p className="mt-6 text-[11px] text-[#5C6E82]">Research decision-support prototype. Clinician confirmation required.</p>
         </form>
       </section>
     </div>
