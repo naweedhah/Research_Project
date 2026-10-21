@@ -1,4 +1,14 @@
-﻿# Component 2: counterfactual intervention engine
+# Component 2: counterfactual intervention engine
+
+**For a code walkthrough:** start with [PANEL_CODE_GUIDE.md](PANEL_CODE_GUIDE.md). It maps the current screen, API, schemas, four algorithms, tests and earlier research paths without moving import-dependent modules.
+
+## Current v2 dietary scenario workflow
+
+The primary dashboard route `/analysis` now obtains **one original genuine C1 assessment** and passes its immutable summary to `POST /interventions/diet-scenarios-v2`. C2 compares confirmed or explicitly unverified current feeding with bounded food alternatives, checks age scope, allergies, provenance, local availability, budget reference and missing nutrition/suitability evidence, then ranks only fully verified feasible alternatives. **No candidate is sent to C1.** Source-priced Colombo household shopping examples and seven-day pairings remain educational; current evidence leaves all four alternatives unresolved. See [architecture](C2_ARCHITECTURE.md), [API contract](C2_API_CONTRACT.md), [ranking](C2_RANKING_METHODOLOGY.md), [sources](C2_GUIDELINE_EVIDENCE.md), [validation](C2_VALIDATION_REPORT.md) and [limitations](C2_LIMITATIONS.md).
+
+The former per-candidate C1 comparison, PHM audit, DiCE/FACE research code and test-predictor paths remain as **legacy research evidence**. The independent software test is at `/research-test`; the old manual C1 sensitivity screen is at `/legacy-c1-comparison`. The historical 3/2837 PHM comparison is not a v2 meal-plan result.
+
+To run the integrated workflow locally, start C1 on port 8001 with its genuine artifacts, start C2 with `C1_INFERENCE_URL=http://127.0.0.1:8001` on port 8000, and start the dashboard on 5173. The exact commands are in [SUPERVISOR_DEMO_GUIDE.md](SUPERVISOR_DEMO_GUIDE.md). No real patient input, clinical approval or guaranteed outcome is implied.
 
 This research prototype compares bounded search, official DiCE, and a FACE-inspired graph method using synthetic inputs and test-only predictors. No output is clinically validated. Predicted category changes do not establish treatment effects.
 

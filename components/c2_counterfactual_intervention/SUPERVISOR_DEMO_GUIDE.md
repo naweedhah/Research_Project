@@ -1,6 +1,8 @@
 # Component 2 live supervisor demonstration
 
-**Primary standalone C2 demonstration:** follow [STANDALONE_DEMO.md](STANDALONE_DEMO.md). It starts only the C2 API and dashboard, runs all three synthetic research-test methods automatically, and shows the research-test eligible card with budget-aware food options and an illustrative seven-day schedule. C1 is not required. The steps below remain the separate, optional genuine C1 validation workflow.
+**Primary v2 dietary scenario demonstration:** start C1, C2 and the dashboard with the commands below, then open `/analysis`. Enter an invented profile. C1 provides the original risk assessment once; C2 compares alternative foods with the labelled current feeding pattern, checks evidence and shows unresolved alternatives or verified ranks. No scenario is re-scored by C1. The old model-comparison routes remain legacy research evidence. The independent three-method software test remains at `/research-test` and is documented in [STANDALONE_DEMO.md](STANDALONE_DEMO.md).
+
+**Four-method supervisor example:** On `/analysis`, keep the invented 24-month profile, set weekly budget to LKR 1,500, choose **compare all**, and generate. The explicit research algorithm demonstration runs bounded enumeration, DiCE on a labelled engineering fixture, FACE-inspired path search, and bounded Wachter-style optimization. It produces three **research-test** ranks among four unique food examples; the Essentials example is first under the test-only smaller-shopping-list and reference-cost tie-break rule. Change the budget to LKR 100 and regenerate: no option meets even that engineering target. These are software behavior demonstrations, not proof that a child's growth or nutrition improves. Genuine `ranked_cards` stay empty until the missing individual suitability and local evidence is resolved. The legacy research routes remain accessible by direct URL but are removed from the primary navigation.
 
 Run from three PowerShell windows. Keep C1 and C2 on separate ports. These commands use the already installed C1 Python 3.12 environment for C1 and the existing C2 Python environment for C2.
 
@@ -9,6 +11,7 @@ Run from three PowerShell windows. Keep C1 and C2 on separate ports. These comma
 ```powershell
 cd D:\Research_Project_C1
 $env:GA_RGCA_DIR = 'D:\Research_Project_C1\ml\artifacts\ga_rgca_v3'
+$env:MODEL_MODE = 'ga-rgca'
 .\.venv312\Scripts\python.exe -m uvicorn app.main:app --app-dir services/inference --host 127.0.0.1 --port 8001
 ```
 
@@ -18,21 +21,24 @@ Open `http://127.0.0.1:8001/health` and `/model-info`. Both must say `ga_rgca_lo
 
 ```powershell
 cd D:\Research_Project
-$env:PYTHONPATH = '.;backend'
+$env:PYTHONPATH = 'D:\Research_Project;D:\Research_Project\backend'
 $env:C1_INFERENCE_URL = 'http://127.0.0.1:8001'
-py -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
+py -m uvicorn app.main:app --app-dir D:\Research_Project\backend --host 127.0.0.1 --port 8000
 ```
 
-C2's C1 validation route is `GET http://127.0.0.1:8000/interventions/c1-validation`. It sends a fixed **synthetic** historical-baseline fixture to C1 with `allow_demo=false`, then three adjacent feeding variants. It displays actual GA-RGCA-v3 labels, probabilities, uncertainty and changes. All variants are **unresolved for intervention** and it returns **zero intervention cards**. This route cannot take user or patient input.
+For the primary v2 workflow, the dashboard calls `POST /interventions/baseline-c1-v2` once for the original invented input, then `POST /interventions/diet-scenarios-v2` for food comparisons. The second route makes no C1 calls. The older `GET /interventions/c1-validation` route is retained only as historical model-sensitivity research: it sends a fixed invented fixture and three feeding variants to C1. Its results do not authorize intervention cards or feed the v2 ranking.
 
 ## 3. Start dashboard
 
+Open `http://127.0.0.1:5173/analysis` after starting all three services. Enter only an invented profile, review the original C1 context, select any reported food groups, enter an illustrative food budget, and select **Generate dietary scenarios**. The feeding baseline remains unverified in this demonstration. The first endpoint obtains one genuine C1 risk assessment; the second generates food-based comparisons without a C1 call. The screen shows the original risk, comparison foods, indicative DCS Colombo costs and research-test ordering. Detailed evidence checks remain in the API response; no card is verified feasible with the current evidence. The separate research-test workflow remains at `/research-test`.
+
 ```powershell
 cd D:\Research_Project\components\c2_counterfactual_intervention\dashboard
+Remove-Item Env:C2_API_TARGET -ErrorAction SilentlyContinue
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The primary **Intervention Analysis** screen automatically loads a genuine C1 baseline for the fully synthetic 24- or 59-month case; the 5-month safety case is deliberately not sent to C1 because required meal categories are age-inapplicable. Enter only a family food budget in LKR and its daily, weekly, or monthly period, or leave the amount unknown. Click **Generate Intervention Analysis**. Bounded search scores permitted feeding variants with genuine C1; DiCE and FACE-inspired graph run separately with `SIMULATED_TEST_ONLY` predictors. Their outputs are never mixed into C1 rankings. The 5-month case returns no complementary-feeding candidates. The 24- and 59-month cases display actual C1 comparisons and fail-closed evidence status, with zero approved intervention cards.
+The primary `/analysis` workflow uses C1 only for original context. The older automatic per-candidate C1 comparison and DiCE/FACE research-test methods remain available as archived sensitivity research; they do not feed v2 rankings. Under-six-month complementary-food scenarios are excluded by the v2 API.
 
 Then show **C1 Model Validation** for the separate fixed sensitivity check, **Algorithm Comparison** or **Advanced Testing** for research-test methods and no-solution scenarios, and **Food Price References** for 13 checked DCS Colombo retail records. The automatic workflow now shows four independently ranked **illustrative household shopping baskets**. Each uses checked DCS Colombo reference prices, explicit purchase quantities and a period-matched cost. Try weekly budgets of LKR 500, 1,500 and 3,000: basket fit and ordering change while all C1 predictions and intervention approvals remain unchanged. These quantities are pricing scenarios, never child servings or complete dietary plans. Individual suitability, local availability and approved treatment affordability remain unresolved. The dashboard never activates real recommendations.
 
