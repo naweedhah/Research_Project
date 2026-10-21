@@ -35,7 +35,6 @@ import {
   architectureLabel,
   ageMonthsAtVisit,
   alertTone,
-  emptyAssessmentMessage,
   formatPp,
   openAlert,
   probabilitySeries,
@@ -45,8 +44,10 @@ import {
   conditionProbability,
   defaultTrendCondition,
   formatHighestConditionRisk,
-  primaryTypeProbability,
+  highestConditionRisk,
+  predictedTypeChipProbability,
   primaryTypeProbabilityLabel,
+  runtimeModeLabel,
   sameConditionDelta,
   TREND_CONDITIONS,
   visitProbabilityDeltaPp,
@@ -345,23 +346,23 @@ export function ChildProfileView({
               <button
                 type="button"
                 onClick={() => onTab("overview")}
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-sm font-medium text-[#0f2744] hover:bg-[#f8fafc]"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-[#e7eef6] bg-[#f8fafc] px-3.5 text-sm font-medium text-[#0A2748] hover:bg-white"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 Go back
               </button>
             ) : null}
-            <h2 className="text-2xl font-semibold text-[#0f2744]">Progress Tracking</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-[#0A2748] sm:text-2xl">Progress Tracking</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/children/${profile.id}/report`}>
-              <Button variant="secondary" className="h-10 rounded-xl">
-                <FileText className="h-4 w-4" /> Export Summary
+              <Button variant="secondary" className="h-10 rounded-full px-4 text-sm">
+                <FileText className="h-4 w-4" /> Export Report
               </Button>
             </Link>
             <Link href={`/children/${profile.id}/visits/new`}>
-              <Button className="h-11 rounded-xl px-5 text-base">
-                <ClipboardList className="h-5 w-5" /> {hasBaseline ? "Record Visit" : "Start Baseline Assessment"}
+              <Button className="h-10 rounded-full px-5 text-sm">
+                <ClipboardList className="h-4 w-4" /> {hasBaseline ? "Record Visit" : "Record first visit"}
               </Button>
             </Link>
           </div>
@@ -489,14 +490,18 @@ function Overview({
   const hasConditionProbabilities = visits.some((visit) => visit.prediction?.ga_rgca?.stunting_probability != null);
   const conditionSeries = useMemo(() => probabilitySeries(profile, trendCondition), [profile, trendCondition]);
   const predictedType = displayedMalnutritionType(pred);
-  // Sparkline behind the HUD probability chip follows the same quantity as the chip (the predicted type's probability).
+  const isNormalType = predictedType === "Normal";
+  const hudSeriesCondition = isNormalType ? defaultTrendCondition(pred) : predictedType;
+  // Sparkline behind the HUD chip follows the number shown: condition probability, or highest condition risk when type is Normal.
   const typeSeries = useMemo(
-    () => (hasConditionProbabilities && predictedType ? probabilitySeries(profile, predictedType) : null),
-    [profile, hasConditionProbabilities, predictedType],
+    () => (hasConditionProbabilities && hudSeriesCondition ? probabilitySeries(profile, hudSeriesCondition) : null),
+    [profile, hasConditionProbabilities, hudSeriesCondition],
   );
   const change = comparable
     ? pred?.ga_rgca
-      ? sameConditionDelta(pred, prevPred)
+      ? isNormalType
+        ? visitProbabilityDeltaPp(highestConditionRisk(pred).probability, highestConditionRisk(prevPred).probability)
+        : sameConditionDelta(pred, prevPred)
       : isLatest
         ? profile.risk_change_pp
         : visitProbabilityDeltaPp(pred?.risk ?? null, prevPred?.risk ?? null)
@@ -515,11 +520,11 @@ function Overview({
 
   if (!hasBaseline) {
     return (
-      <Section title="Baseline assessment">
-        <p className="font-semibold text-[#0f2744]">{emptyAssessmentMessage(false)}</p>
-        <p className="mt-1 text-sm text-[#64748b]">Complete the first nutritional assessment to establish the baseline profile.</p>
+      <Section title="First visit">
+        <p className="font-semibold text-[#0f2744]">No nutritional assessment has been recorded yet.</p>
+        <p className="mt-1 text-sm text-[#64748b]">Record the first visit to start this child's clinical record.</p>
         <Link href={`/children/${profile.id}/visits/new`} className="mt-4 inline-block">
-          <Button>Start Baseline Assessment</Button>
+          <Button>Record first visit</Button>
         </Link>
       </Section>
     );
@@ -599,17 +604,31 @@ function Overview({
             status={formatNutritionalStatus(displayedMalnutritionType(pred), pred?.severity)}
             statusLabel="Status"
             severity={displayPredictedSeverity(displayedMalnutritionType(pred), pred?.severity) ?? undefined}
-            probability={formatPercent(primaryTypeProbability(pred))}
+            probability={
+              isNormalType
+                ? formatPercent(highestConditionRisk(pred).probability)
+                : formatPercent(predictedTypeChipProbability(pred))
+            }
             previousProbability={
-              comparable ? formatPercent(conditionProbability(prevPred, displayedMalnutritionType(pred))) : null
+              comparable
+                ? formatPercent(
+                    isNormalType
+                      ? highestConditionRisk(prevPred).probability
+                      : conditionProbability(prevPred, predictedType),
+                  )
+                : null
             }
             probabilityChange={comparable ? change : null}
             progress={progressLabel(visitProgress, comparable)}
             riskVelocity={visitVelocity.value}
-            scoreLabel={pred?.ga_rgca ? primaryTypeProbabilityLabel(pred) : semantics.score_label}
+            scoreLabel={
+              isNormalType ? "Highest predicted condition risk" : pred?.ga_rgca ? primaryTypeProbabilityLabel(pred) : semantics.score_label
+            }
             scoreTip={
               pred?.ga_rgca
-                ? `Probability of the predicted type shown beside it. Normal is 1 minus the highest condition risk. ${semantics.score_label}: ${formatHighestConditionRisk(pred)}.`
+                ? isNormalType
+                  ? `Predicted type is Normal. The number shown is the highest of Underweight, Stunting, MAM and SAM, not a Normal-class probability. ${semantics.score_label}: ${formatHighestConditionRisk(pred)}.`
+                  : `Probability of the predicted type shown beside it. ${semantics.score_label}: ${formatHighestConditionRisk(pred)}.`
                 : semantics.score_description
             }
             velocityLabel={semantics.velocity_label}
@@ -750,12 +769,14 @@ function Overview({
             {reviewLabel(isLatest ? profile.clinician_review?.status : selected?.review_status)}
           </p>
           <p className="mt-2 text-sm text-[#475569]">
-            Predicted type: <span className="font-medium text-[#0f2744]">{formatNutritionalStatus(predictedType, pred?.severity)}</span>{" "}
-            {formatPercent(primaryTypeProbability(pred))}
+            Predicted type: <span className="font-medium text-[#0f2744]">{formatNutritionalStatus(predictedType, pred?.severity)}</span>
+            {predictedTypeChipProbability(pred) != null ? (
+              <span className="tabular-nums"> {formatPercent(predictedTypeChipProbability(pred))}</span>
+            ) : null}
           </p>
           {pred?.ga_rgca ? (
             <p className="mt-0.5 text-xs text-[#64748b]">
-              {semantics.score_label}: {formatHighestConditionRisk(pred)}
+              Highest predicted condition risk: {formatHighestConditionRisk(pred)}
             </p>
           ) : null}
           {isLatest &&
@@ -790,81 +811,92 @@ function Overview({
         >
           <FollowUpBody profile={profile} />
         </Section>
-        <Section
-          id="assessment-history"
-          title="Assessment history"
-          subtitle="Chronological visits. Nutritional status is separate from review state."
-          actions={
-            <button type="button" className="text-sm font-medium text-[#2563eb]" onClick={() => onTab("visits")}>
-              Full visit record →
+        <section id="assessment-history" className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <header className="flex items-center justify-between gap-3 border-b border-[#0E3A67] px-5 py-3">
+            <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#0E3A67]">Assessment history</h2>
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[#0E3A67] hover:underline"
+              onClick={() => onTab("visits")}
+            >
+              Full visit record
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </button>
-          }
-          bodyClassName="px-0 py-0"
-          className="h-full"
-        >
-          <div className="max-h-56 overflow-auto">
-            <table className="w-full min-w-[480px] text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-[#f8fafc]">
-                <tr className="border-b border-line bg-[#f8fafc] text-[#64748b]">
-                  <th className="px-5 py-2.5 font-medium">Visit</th>
-                  <th className="px-5 py-2.5 font-medium">Predicted type</th>
-                  <th className="px-5 py-2.5 font-medium">Type probability</th>
-                  <th className="px-5 py-2.5 font-medium">Review</th>
-                  <th className="px-5 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
+          </header>
+          <div className={profile.visits.length > 6 ? "max-h-64 overflow-auto" : undefined}>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#e8eef5] bg-[#f7f9fc] text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">
+                  <th className="whitespace-nowrap px-5 py-2.5">Visit</th>
+                  <th className="whitespace-nowrap px-4 py-2.5">Date</th>
+                  <th className="whitespace-nowrap px-4 py-2.5">Predicted type</th>
+                  <th className="whitespace-nowrap px-4 py-2.5">Probability</th>
+                  <th className="whitespace-nowrap px-4 py-2.5">Review</th>
+                  <th className="px-3 py-2.5"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                {[...profile.visits].reverse().map((v) => (
-                  <tr
-                    key={v.id}
-                    className={cn(
-                      "border-b border-line/70 last:border-0",
-                      v.id === selected?.id ? "bg-navy-50" : "hover:bg-[#f8fafc]",
-                    )}
-                  >
-                    <td className="px-5 py-2.5">
-                      <button type="button" className="font-medium text-[#0f2744] hover:text-[#2563eb]" onClick={() => setSelectedVisitId(v.id)}>
-                        V{v.visit_number} · {formatClinicalDate(v.visit_date)}
-                      </button>
-                    </td>
-                    <td className="px-5 py-2.5 text-[#475569]">
-                      {formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity)}
-                    </td>
-                    <td className="px-5 py-2.5 tabular-nums">{formatPercent(primaryTypeProbability(v.prediction))}</td>
-                    <td className="px-5 py-2.5 text-xs text-[#64748b]">
-                      {v.review_status === "AWAITING_REVIEW" ? (
-                        <button
-                          type="button"
-                          className="rounded-lg bg-[#0E3A67] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#0A2748]"
-                          onClick={() => {
-                            setSelectedVisitId(v.id);
-                            window.requestAnimationFrame(() => {
-                              document.getElementById("clinician-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                            });
-                          }}
-                        >
-                          Awaiting review
-                        </button>
-                      ) : (
-                        reviewLabel(v.review_status)
+                {[...profile.visits].reverse().map((v) => {
+                  const predictedType = formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity);
+                  const selectedRow = v.id === selected?.id;
+                  const isLatest = v.id === latestVisitId;
+                  return (
+                    <tr
+                      key={v.id}
+                      className={cn(
+                        "border-b border-[#eef2f7] last:border-0",
+                        selectedRow ? "bg-[#f4f8fb]" : "hover:bg-[#f8fafc]",
                       )}
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      {canWrite && v.id === latestVisitId && onEditVisit && onDeleteVisit ? (
-                        <RecordActions
-                          onEdit={() => onEditVisit(v)}
-                          onDelete={() => onDeleteVisit(v)}
-                          editLabel={`Edit visit ${v.visit_number}`}
-                          deleteLabel={`Remove visit ${v.visit_number}`}
-                        />
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                    >
+                      <td className="whitespace-nowrap px-5 py-3 font-semibold tabular-nums text-[#0A2748]">
+                        <button type="button" onClick={() => setSelectedVisitId(v.id)}>
+                          V{v.visit_number}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#334155]">
+                        <button type="button" onClick={() => setSelectedVisitId(v.id)}>
+                          {formatClinicalDate(v.visit_date)}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#0A2748]">{predictedType}</td>
+                      <td className="whitespace-nowrap px-4 py-3 tabular-nums text-[#0A2748]">
+                        {formatPercent(predictedTypeChipProbability(v.prediction))}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {v.review_status === "AWAITING_REVIEW" ? (
+                          <button
+                            type="button"
+                            className="rounded-md bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100"
+                            onClick={() => {
+                              setSelectedVisitId(v.id);
+                              window.requestAnimationFrame(() => {
+                                document.getElementById("clinician-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              });
+                            }}
+                          >
+                            Awaiting review
+                          </button>
+                        ) : (
+                          <span className="text-[#334155]">{reviewLabel(v.review_status)}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        {canWrite && isLatest && onEditVisit && onDeleteVisit ? (
+                          <RecordActions
+                            onEdit={() => onEditVisit(v)}
+                            onDelete={() => onDeleteVisit(v)}
+                            editLabel={`Edit visit ${v.visit_number}`}
+                            deleteLabel={`Remove visit ${v.visit_number}`}
+                          />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </Section>
+        </section>
         </div>
       </div>
 
@@ -1118,6 +1150,37 @@ function FollowUpBody({ profile }: { profile: ChildProfile }) {
   );
 }
 
+function recordChipClass(kind: "type" | "severity" | "review", value: string) {
+  if (value === "—") return "text-[#94a3b8]";
+  if (kind === "type") {
+    if (value.includes("SAM")) return "bg-red-50 text-red-800 ring-1 ring-red-100";
+    if (value.includes("MAM")) return "bg-orange-50 text-orange-900 ring-1 ring-orange-100";
+    if (value.includes("Stunting")) return "bg-violet-50 text-violet-900 ring-1 ring-violet-100";
+    if (value.includes("Underweight")) return "bg-amber-50 text-amber-900 ring-1 ring-amber-100";
+    if (value === "Normal") return "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-100";
+    return "bg-slate-100 text-slate-800 ring-1 ring-slate-200";
+  }
+  if (kind === "severity") {
+    if (value.toLowerCase().includes("severe")) return "bg-red-50 text-red-800 ring-1 ring-red-100";
+    if (value.toLowerCase().includes("moderate")) return "bg-orange-50 text-orange-900 ring-1 ring-orange-100";
+    if (value.toLowerCase().includes("mild")) return "bg-amber-50 text-amber-900 ring-1 ring-amber-100";
+    return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";
+  }
+  if (value === "Reviewed") return "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-100";
+  if (value === "Awaiting review" || value === "In review") return "bg-amber-50 text-amber-900 ring-1 ring-amber-100";
+  if (value === "Disagreed") return "bg-red-50 text-red-800 ring-1 ring-red-100";
+  return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";
+}
+
+function RecordChip({ kind, value }: { kind: "type" | "severity" | "review"; value: string }) {
+  if (value === "—") return <span className="text-[#94a3b8]">—</span>;
+  return (
+    <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold", recordChipClass(kind, value))}>
+      {value}
+    </span>
+  );
+}
+
 function VisitsTab({
   profile,
   canWrite,
@@ -1130,52 +1193,114 @@ function VisitsTab({
   onDeleteVisit?: (visit: ProfileVisit) => void;
 }) {
   const latestVisitId = profile.current?.id ?? profile.visits.at(-1)?.id;
+  const visitCount = profile.visits.length;
   return (
-    <Section title="Visit record" subtitle="Full history with recorded measurements. Does not repeat the current AI assessment card." bodyClassName="px-0 py-0">
+    <section className="overflow-hidden rounded-[24px] border border-[#d7e4f2] bg-white shadow-[0_12px_32px_-24px_rgba(10,39,72,0.5)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eef5] bg-[linear-gradient(180deg,#f7fbfd_0%,#ffffff_100%)] px-5 py-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EAF7F6] text-[#0f766e]">
+            <ClipboardList className="h-5 w-5" aria-hidden />
+          </span>
+          <h2 className="text-lg font-semibold tracking-tight text-[#0A2748]">Visit record</h2>
+        </div>
+        <span className="rounded-full bg-[#eef4fa] px-3 py-1 text-xs font-semibold tabular-nums text-[#0E3A67] ring-1 ring-[#d7e4f2]">
+          {visitCount} {visitCount === 1 ? "visit" : "visits"}
+        </span>
+      </header>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead>
-            <tr className="border-b border-line bg-[#f8fafc] text-[#64748b]">
-              <th className="px-5 py-2.5 font-medium">Visit</th>
-              <th className="px-5 py-2.5 font-medium">Date</th>
-              <th className="px-5 py-2.5 font-medium">Weight</th>
-              <th className="px-5 py-2.5 font-medium">Height</th>
-              <th className="px-5 py-2.5 font-medium">Predicted type</th>
-              <th className="px-5 py-2.5 font-medium">Severity</th>
-              <th className="px-5 py-2.5 font-medium">Type probability</th>
-              <th className="px-5 py-2.5 font-medium">Highest condition risk</th>
-              <th className="px-5 py-2.5 font-medium">Review</th>
-              <th className="px-5 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
+            <tr className="border-b border-[#e8eef5] bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">
+              <th className="px-5 py-3">Visit</th>
+              <th className="px-5 py-3">Date</th>
+              <th className="px-5 py-3">Weight</th>
+              <th className="px-5 py-3">Height</th>
+              <th className="px-5 py-3">Predicted type</th>
+              <th className="px-5 py-3">Severity</th>
+              <th className="px-5 py-3">Type probability</th>
+              <th className="px-5 py-3">Highest condition risk</th>
+              <th className="px-5 py-3">Review</th>
+              <th className="px-5 py-3"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
-            {profile.visits.map((v) => (
-              <tr key={v.id} className="border-b border-line/70 last:border-0 hover:bg-[#f8fafc]">
-                <td className="px-5 py-2.5 font-medium">V{v.visit_number}</td>
-                <td className="px-5 py-2.5">{formatClinicalDate(v.visit_date)}</td>
-                <td className="px-5 py-2.5 tabular-nums">{v.measurements?.weight_kg != null ? `${v.measurements.weight_kg} kg` : "—"}</td>
-                <td className="px-5 py-2.5 tabular-nums">{v.measurements?.height_cm != null ? `${v.measurements.height_cm} cm` : "—"}</td>
-                <td className="px-5 py-2.5">{formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity)}</td>
-                <td className="px-5 py-2.5">{displayPredictedSeverity(displayedMalnutritionType(v.prediction), v.prediction?.severity) ?? "—"}</td>
-                <td className="px-5 py-2.5 tabular-nums">{formatPercent(primaryTypeProbability(v.prediction))}</td>
-                <td className="px-5 py-2.5 tabular-nums">{v.prediction ? formatHighestConditionRisk(v.prediction) : "—"}</td>
-                <td className="px-5 py-2.5">{reviewLabel(v.review_status)}</td>
-                <td className="px-3 py-2.5 text-right">
-                  {canWrite && v.id === latestVisitId && onEditVisit && onDeleteVisit ? (
-                    <RecordActions
-                      onEdit={() => onEditVisit(v)}
-                      onDelete={() => onDeleteVisit(v)}
-                      editLabel={`Edit visit ${v.visit_number}`}
-                      deleteLabel={`Remove visit ${v.visit_number}`}
-                    />
-                  ) : null}
-                </td>
-              </tr>
-            ))}
+            {profile.visits.map((v) => {
+              const predictedType = formatNutritionalStatus(displayedMalnutritionType(v.prediction), v.prediction?.severity);
+              const severity = displayPredictedSeverity(displayedMalnutritionType(v.prediction), v.prediction?.severity) ?? "—";
+              const review = reviewLabel(v.review_status);
+              const isLatest = v.id === latestVisitId;
+              return (
+                <tr
+                  key={v.id}
+                  className={cn(
+                    "border-b border-[#eef2f7] last:border-0",
+                    isLatest ? "bg-[#f5f9fc]" : "bg-white hover:bg-[#f8fafc]",
+                  )}
+                >
+                  <td className="px-5 py-3.5">
+                    <span className="inline-flex min-w-[2.5rem] items-center justify-center rounded-full bg-[#0E3A67] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-white">
+                      V{v.visit_number}
+                    </span>
+                    {isLatest ? (
+                      <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3E75B8]">Latest</span>
+                    ) : null}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className="inline-flex items-center gap-1.5 text-[#0A2748]">
+                      <Calendar className="h-3.5 w-3.5 text-[#94a3b8]" aria-hidden />
+                      {formatClinicalDate(v.visit_date)}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 tabular-nums text-[#0A2748]">
+                    {v.measurements?.weight_kg != null ? (
+                      <>
+                        {v.measurements.weight_kg} <span className="text-xs text-[#94a3b8]">kg</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5 tabular-nums text-[#0A2748]">
+                    {v.measurements?.height_cm != null ? (
+                      <>
+                        {v.measurements.height_cm} <span className="text-xs text-[#94a3b8]">cm</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <RecordChip kind="type" value={predictedType} />
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <RecordChip kind="severity" value={severity} />
+                  </td>
+                  <td className="px-5 py-3.5 font-semibold tabular-nums text-[#0A2748]">
+                    {formatPercent(predictedTypeChipProbability(v.prediction))}
+                  </td>
+                  <td className="px-5 py-3.5 tabular-nums text-[#334155]">
+                    {v.prediction ? formatHighestConditionRisk(v.prediction) : "—"}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <RecordChip kind="review" value={review} />
+                  </td>
+                  <td className="px-3 py-3.5 text-right">
+                    {canWrite && isLatest && onEditVisit && onDeleteVisit ? (
+                      <RecordActions
+                        onEdit={() => onEditVisit(v)}
+                        onDelete={() => onDeleteVisit(v)}
+                        editLabel={`Edit visit ${v.visit_number}`}
+                        deleteLabel={`Remove visit ${v.visit_number}`}
+                      />
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-    </Section>
+    </section>
   );
 }
 
@@ -1475,7 +1600,7 @@ function AiDetailsTab({
           <Meta label="Prediction task" value={semantics.prediction_task_label} />
           <Meta label="Embedding dimension" value={m?.embedding_dimension != null ? String(m.embedding_dimension) : "—"} />
           <Meta label="Calibration" value={m?.calibration_version ?? profile.current?.prediction?.calibration_version ?? "—"} />
-          <Meta label="Model assessment mode" value={clinicalPhrase(profile.current?.prediction?.mode, "Clinical review required")} />
+          <Meta label="Model assessment mode" value={runtimeModeLabel(profile.current?.prediction?.mode)} />
           <Meta label="Feature schema" value={m?.feature_schema_version ?? "—"} />
           <Meta label="Embedding space" value={m?.embedding_space_id ?? "—"} />
           <Meta label={semantics.projection_label} value={profile.current?.projection_version ?? semantics.projection_version ?? "—"} mono />
