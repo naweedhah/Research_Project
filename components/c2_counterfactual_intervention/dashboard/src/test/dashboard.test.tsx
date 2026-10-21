@@ -134,8 +134,8 @@ describe('dashboard research contract', () => {
     app()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Counterfactual research')
     expect((await screen.findAllByText('Connected')).length).toBeGreaterThan(0)
-    expect(screen.getByText('No authorized predictor registered')).toBeInTheDocument()
-    expect(screen.getByText('Authorization pending')).toBeInTheDocument()
+    expect(screen.getByText('Counterfactual scenario service')).toBeInTheDocument()
+    expect(screen.queryByText('Authorization pending')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/interventions/status', expect.anything())
   })
 
