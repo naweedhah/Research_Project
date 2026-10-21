@@ -18,10 +18,10 @@ export default function ClinicBoardPage() {
   if (children.length === 0) {
     return (
       <div className="space-y-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-[#102A4C]">Clinic Board</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-[#102A4C]">Who needs you today</h1>
         <EmptyState
           title="No child records yet."
-          body="Register a child and record a visit. This board compares the latest measurements with the 12-month prediction."
+          body="Register a child and record a visit. This board builds today's clinic round from WHO measurements versus the 12-month prediction."
         />
       </div>
     );
