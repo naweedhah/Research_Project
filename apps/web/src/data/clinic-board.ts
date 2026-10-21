@@ -33,6 +33,7 @@ export type ClinicChildInput = {
   predicted_malnutrition_type?: string | null;
   severity?: string | null;
   predicted_type_probability?: number | null;
+  highest_risk_probability?: number | null;
   measurements?: {
     weight_kg?: number | null;
     height_cm?: number | null;
@@ -116,9 +117,13 @@ function toRow(
     reason,
     weightDeltaKg,
     predictedTypeProbability:
-      typeof child.predicted_type_probability === "number" && Number.isFinite(child.predicted_type_probability)
-        ? child.predicted_type_probability
-        : null,
+      predicted === "Normal"
+        ? typeof child.highest_risk_probability === "number" && Number.isFinite(child.highest_risk_probability)
+          ? child.highest_risk_probability
+          : null
+        : typeof child.predicted_type_probability === "number" && Number.isFinite(child.predicted_type_probability)
+          ? child.predicted_type_probability
+          : null,
     weightKg: typeof child.measurements?.weight_kg === "number" ? child.measurements.weight_kg : null,
     previousWeightKg: typeof child.measurements?.previous_weight_kg === "number" ? child.measurements.previous_weight_kg : null,
   };
