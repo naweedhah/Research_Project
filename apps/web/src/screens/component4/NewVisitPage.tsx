@@ -436,7 +436,6 @@ function ChildContextPanel({
           </>
         )}
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-[#5C6E82]">Previous values are shown for comparison only. Today&apos;s measurements produce a new current WHO assessment and a new 12-month prediction.</p>
     </aside>
   );
 }
@@ -699,9 +698,6 @@ export default function NewVisitPage() {
 
           <div className="flex flex-wrap gap-2 px-6 pb-6">
             <Button onClick={() => router.push(`/children/${childId}`)}>Open child profile</Button>
-            <Button variant="secondary" onClick={() => router.push(`/children/${childId}?tab=ai`)}>
-              View AI details
-            </Button>
             <Button variant="secondary" onClick={() => router.push(`/children/${childId}/report`)}>
               Report
             </Button>
@@ -718,7 +714,7 @@ export default function NewVisitPage() {
       <div className="border-b border-[#e4ecf4] bg-[#f7f9fc] px-6 py-5 pr-14">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3E75B8]">New visit</p>
         <h1 id="visit-form-title" className="mt-1 text-2xl font-bold text-[#0f2744]">
-          {isBaseline ? "Record baseline assessment" : "Record follow-up visit"}
+          {isBaseline ? "Record assessment" : "Record follow-up visit"}
         </h1>
         <p className="mt-1 text-sm text-[#64748b]">
           Enter today&apos;s measurements and feeding context. Visit {child.visit_label ?? (isBaseline ? "V1" : `V${(child.visit_count ?? 0) + 1}`)}.
