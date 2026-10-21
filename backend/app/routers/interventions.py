@@ -21,10 +21,69 @@ from components.c2_counterfactual_intervention.real_model_validation import run_
 from components.c2_counterfactual_intervention.automatic_analysis import AutomaticRequest, load_automatic_baseline, run_automatic_analysis
 from components.c2_counterfactual_intervention.standalone_demo import StandaloneRequest, run_standalone
 from components.c2_counterfactual_intervention.phm_local_validation import LocalValidationRequest, local_profiles, review_local_case
+from components.c2_counterfactual_intervention.manual_c1_validation import ManualC1Request, run_manual_c1
+from components.c2_counterfactual_intervention.manual_c1_validation import manual_snapshot
+from components.c2_counterfactual_intervention.c1_predictors import RealC1HttpPredictor
+from components.c2_counterfactual_intervention.real_model_validation import _prediction
+from components.c2_counterfactual_intervention.nutrition_scenarios_v2 import ScenarioRequest, generate_scenarios
+from components.c2_counterfactual_intervention.live_case_library_v2 import live_case_library
+from components.c2_counterfactual_intervention.live_case_validation_v2 import run_live_cases
 from components.c2_counterfactual_intervention.official_prices import bundled_history, price_state
 from datetime import date
 
 router = APIRouter(prefix="/interventions", tags=["Intervention recommendations"])
+
+
+@router.get("/live-case-library-v2")
+def list_live_cases_v2(http_request: Request) -> dict:
+    """Invented inputs only; no precomputed or claimed C1 outcomes."""
+    _require_local_review(http_request)
+    return live_case_library()
+
+
+@router.get("/live-case-validation-v2")
+def verify_live_cases_v2(http_request: Request) -> dict:
+    """Re-score the bounded invented catalogue with genuine C1; no saved outputs."""
+    _require_local_review(http_request)
+    try:
+        return run_live_cases()
+    except C1PredictionUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/baseline-c1-v2")
+def baseline_c1_v2(request: ManualC1Request, http_request: Request) -> dict:
+    """One genuine C1 call for an invented local assessment; never a candidate call."""
+    import hashlib
+    import json
+    _require_local_review(http_request)
+    snapshot = manual_snapshot(request)
+    payload = snapshot.predict_payload()
+    try:
+        prediction = RealC1HttpPredictor().predict(snapshot)
+        display = _prediction(prediction)
+    except C1PredictionUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True,
+                                             separators=(",", ":")).encode()).hexdigest()
+    return {"assessment": {"model_version": prediction.model_version,
+                           "prediction_source": prediction.prediction_source,
+                           "predicted_malnutrition_type": prediction.predicted_malnutrition_type,
+                           "severity": prediction.severity,
+                           "uncertainty_flag": prediction.uncertainty_flag,
+                           "clinical_use": False, "input_fingerprint": fingerprint,
+                           "provenance": "live_c1_baseline"},
+            "prediction": display, "c1_calls": 1,
+            "feeding_provenance": "unverified",
+            "limitations": ["Manually entered invented inputs are not observed child records.",
+                            "This prediction is model context, not a diagnosis or treatment outcome."]}
+
+
+@router.post("/diet-scenarios-v2")
+def diet_scenarios_v2(request: ScenarioRequest, http_request: Request) -> dict:
+    """Generate food counterfactuals without importing or contacting C1."""
+    _require_local_review(http_request)
+    return generate_scenarios(request)
 
 
 @router.post("/standalone-analysis")
@@ -47,6 +106,16 @@ def standalone_validation(case_id: str = "synthetic_24m") -> dict:
 def _require_local_review(request: Request) -> None:
     if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
         raise HTTPException(status_code=403, detail="private research validation is local-only")
+
+
+@router.post("/manual-c1-validation")
+def manual_c1_validation(request: ManualC1Request, http_request: Request) -> dict:
+    """Score manually entered invented inputs with genuine C1; issue no cards."""
+    _require_local_review(http_request)
+    try:
+        return run_manual_c1(request)
+    except C1PredictionUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/local-validation-profiles")
