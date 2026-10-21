@@ -82,11 +82,17 @@ function FlowLane({
 }
 
 export function IntegrationFlowPanel({ className }: { className?: string }) {
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api<{ permissions?: string[] }>("/auth/me"),
+  });
+  const canReadIntegrations = (me.data?.permissions ?? []).some((p) => p === "research:read" || p === "admin:system");
   const { data } = useQuery({
     queryKey: ["integrations-status"],
     queryFn: () => api<IntegrationStatus>("/integrations/status"),
+    enabled: canReadIntegrations,
     staleTime: 8_000,
-    refetchInterval: 12_000,
+    refetchInterval: canReadIntegrations ? 12_000 : false,
     retry: 1,
   });
   const [reducedMotion, setReducedMotion] = useState(false);

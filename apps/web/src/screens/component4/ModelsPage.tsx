@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/component4/httpClient";
+import { architectureLabel } from "@/data/child-profile";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/cards/card";
 import { EmptyState, Skeleton } from "@/components/common/states";
 
@@ -44,12 +45,18 @@ const LIMITATIONS = [
 ];
 
 export default function ModelsPage() {
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api<{ permissions?: string[] }>("/auth/me"),
+  });
+  const canReadResearch = me.data?.permissions?.includes("research:read") ?? false;
   const comparison = useQuery({
     queryKey: ["model-comparison"],
     queryFn: () =>
       api<{ message?: string; models?: Record<string, { f1_macro?: number; recall_macro?: number; balanced_accuracy?: number; latency_ms?: number; brier?: number }>; context?: string }>(
         "/research/model-comparison",
       ),
+    enabled: canReadResearch,
   });
   const models = useQuery({
     queryKey: ["models"],
@@ -174,7 +181,7 @@ export default function ModelsPage() {
                   .map((m) => (
                     <tr key={m.model_key + m.version} className="border-t border-line">
                       <td className="py-2">{m.model_key}-{m.version}</td>
-                      <td>{m.architecture}</td>
+                      <td>{architectureLabel(m.architecture)}</td>
                       <td>
                         {m.status}
                         {m.status === "CANDIDATE" ? <span className="ml-2 text-xs text-[#b45309]">C4 proposal — activation required</span> : null}
@@ -196,8 +203,14 @@ export default function ModelsPage() {
           <CardTitle>Historical research comparison</CardTitle>
         </CardHeader>
         <CardBody>
-          <p className="mb-3 text-sm text-muted">{data?.context ?? "Model performance metrics for registered inference versions."}</p>
-          {rows.length === 0 ? (
+          <p className="mb-3 text-sm text-muted">
+            {canReadResearch
+              ? (data?.context ?? "Model performance metrics for registered inference versions.")
+              : "Historical research comparison is limited to research-role accounts. Authorization is unchanged; this page does not request that endpoint during a doctor session."}
+          </p>
+          {!canReadResearch ? (
+            <EmptyState title="Research comparison not requested" body="The active production model above is GA-RGCA v4 Rolling SuperLearner. Experimental comparison tables require research:read." />
+          ) : rows.length === 0 ? (
             <EmptyState title="No experimental result available" body="Run python -m ml.training.train_baselines to generate metrics. Numbers are never fabricated." />
           ) : (
             <table className="w-full text-left text-sm">

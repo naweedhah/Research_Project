@@ -27,7 +27,7 @@ import { api } from "@/services/component4/httpClient";
 import { StatusBadge } from "@/components/cards/status-badge";
 import { Button } from "@/components/common/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/states";
-import { displayedMalnutritionType, formatHighestConditionRisk, primaryTypeProbability } from "@/data/child-profile";
+import { displayedMalnutritionType, formatHighestConditionRisk, predictedTypeChipProbability } from "@/data/child-profile";
 import { ageLabel, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
@@ -490,7 +490,7 @@ function PriorityPatientRow({ row }: { row: PriorityPatient }) {
   const delta = row.probability_delta_pp;
   const isConditionModel = row.score_kind === "highest_condition_probability";
   const probabilitySource = { ...row, current_risk: row.current_probability };
-  const typeProbability = primaryTypeProbability(probabilitySource);
+  const typeProbability = predictedTypeChipProbability(probabilitySource);
   const DeltaIcon = delta == null ? Minus : delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : Minus;
   const deltaTone =
     delta == null ? "text-[#64748b]" : delta > 0 ? "text-[#dc2626]" : delta < 0 ? "text-[#059669]" : "text-[#64748b]";

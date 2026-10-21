@@ -7,8 +7,21 @@ import { EmptyState } from "@/components/common/states";
 import { IntegrationFlowPanel } from "@/components/component1/integration-flow-panel";
 
 export default function ResearchPage() {
-  const profile = useQuery({ queryKey: ["dataset"], queryFn: () => api<Record<string, unknown>>("/research/dataset-profile") });
-  const ablation = useQuery({ queryKey: ["ablation"], queryFn: () => api<{ message?: string; comparisons?: string[] }>("/research/ablation") });
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api<{ permissions?: string[] }>("/auth/me"),
+  });
+  const canReadResearch = me.data?.permissions?.includes("research:read") ?? false;
+  const profile = useQuery({
+    queryKey: ["dataset"],
+    queryFn: () => api<Record<string, unknown>>("/research/dataset-profile"),
+    enabled: canReadResearch,
+  });
+  const ablation = useQuery({
+    queryKey: ["ablation"],
+    queryFn: () => api<{ message?: string; comparisons?: string[] }>("/research/ablation"),
+    enabled: canReadResearch,
+  });
   return (
     <div className="space-y-4">
       <div>
