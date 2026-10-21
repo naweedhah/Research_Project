@@ -500,6 +500,9 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
   const districts = options.data?.districts ?? [];
   const districtOptions = s.district && !districts.includes(s.district) ? [s.district, ...districts] : districts;
   const mohOptions = s.moh && !mohAreas.includes(s.moh) ? [s.moh, ...mohAreas] : mohAreas;
+  const phmAreas = mohAreas.map((area) => area.replaceAll("MOH", "PHM"));
+  const midwifeOptions = s.midwife && !phmAreas.includes(s.midwife) ? [s.midwife, ...phmAreas] : phmAreas;
+  const phmOptions = s.phm && !phmAreas.includes(s.phm) ? [s.phm, ...phmAreas] : phmAreas;
   const lastStep = step === STEPS.length - 1;
 
   return (
@@ -652,17 +655,15 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
                   <div className="space-y-3">
                     <p className="text-xs text-[#64748b]">Optional. Defaults to you as the assigned doctor and this facility.</p>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Panel label="Assigned doctor">
-                        <Select id="reg-doctor" value={s.doctor} onChange={(e) => set("doctor", e.target.value)} className={fieldClass}>
-                          {(options.data?.doctors ?? []).map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.full_name}
+                      <Panel label="Midwife area">
+                        <Select id="reg-midwife" value={s.midwife} onChange={(e) => set("midwife", e.target.value)} className={fieldClass}>
+                          <option value="">Select…</option>
+                          {midwifeOptions.map((team) => (
+                            <option key={team} value={team}>
+                              {team}
                             </option>
                           ))}
                         </Select>
-                      </Panel>
-                      <Panel label="Assigned midwife">
-                        <Input id="reg-midwife" value={s.midwife} onChange={(e) => set("midwife", e.target.value)} className={fieldClass} />
                       </Panel>
                       <Panel label="Caregiver name">
                         <Input id="reg-caregiver" value={s.caregiver} onChange={(e) => set("caregiver", e.target.value)} className={fieldClass} />
@@ -685,28 +686,15 @@ export function RegisterChildModal({ open, onClose, editChildId = null }: Regist
                           Allow follow-up reminders
                         </label>
                       </Panel>
-                      <Panel label="District">
-                        <Select id="reg-district" value={s.district} onChange={(e) => set("district", e.target.value)} className={fieldClass}>
+                      <Panel label="PHM area">
+                        <Select id="reg-phm" value={s.phm} onChange={(e) => set("phm", e.target.value)} className={fieldClass}>
                           <option value="">Select…</option>
-                          {districtOptions.map((d) => (
-                            <option key={d} value={d}>
-                              {d}
+                          {phmOptions.map((area) => (
+                            <option key={area} value={area}>
+                              {area}
                             </option>
                           ))}
                         </Select>
-                      </Panel>
-                      <Panel label="MOH area">
-                        <Select id="reg-moh" value={s.moh} onChange={(e) => set("moh", e.target.value)} className={fieldClass}>
-                          <option value="">Select…</option>
-                          {mohOptions.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </Select>
-                      </Panel>
-                      <Panel label="PHM area" className="md:col-span-2">
-                        <Input id="reg-phm" value={s.phm} onChange={(e) => set("phm", e.target.value)} className={fieldClass} />
                       </Panel>
                     </div>
                   </div>
