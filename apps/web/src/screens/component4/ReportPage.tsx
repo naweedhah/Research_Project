@@ -3,24 +3,22 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { api, PRODUCT } from "@/services/component4/httpClient";
+import type { ReactNode } from "react";
+import { api } from "@/services/component4/httpClient";
 import { Button } from "@/components/common/button";
-import { StatusBadge } from "@/components/cards/status-badge";
 import { ErrorState, Skeleton } from "@/components/common/states";
-import { clinicalPhrase, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus, malnutritionSeverityApplies } from "@/utils/utils";
+import { ageLabel, displayPredictedSeverity, formatClinicalDate, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 import {
+  ageMonthsAtVisit,
   formatHighestConditionRisk,
-  formatPp,
-  formatRv,
-  primaryTypeProbability,
+  measurementDelta,
+  predictedTypeChipProbability,
   primaryTypeProbabilityLabel,
-  progressLabel as profileProgressLabel,
   reviewLabel,
   type ChildProfile,
-  ageMonthsAtVisit,
+  type ProfileVisit,
 } from "@/data/child-profile";
-import { assessWhoUndernutrition, NO_UNDERNUTRITION_LABEL } from "@/data/who-growth-standards";
-import { applicabilityState, uncertaintyState } from "@/data/clinical-selectors";
+import { assessWhoUndernutrition, formatZ, NO_UNDERNUTRITION_LABEL, SAM_Z_CUTOFF, UNDERNUTRITION_Z_CUTOFF } from "@/data/who-growth-standards";
 
 type Report = {
   pseudonymous_id: string;
@@ -80,10 +78,46 @@ type Report = {
   } | null;
 };
 
-function progressLabel(state?: string) {
-  if (!state || state === "unknown") return "Insufficient visits";
-  if (state === "stagnating") return "Limited progress";
-  return formatStatus(state);
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">{label}</p>
+      <p className="mt-0.5 text-[13px] font-semibold leading-snug text-[#0A2748]">{children ?? "—"}</p>
+    </div>
+  );
+}
+
+function SectionHead({ n, children }: { n: string; children: ReactNode }) {
+  return (
+    <h2 className="flex items-baseline gap-2 border-b border-[#0E3A67] pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0E3A67]">
+      <span className="tabular-nums text-[#3E75B8]">{n}</span>
+      {children}
+    </h2>
+  );
+}
+
+function zInterpretation(z?: number | null) {
+  if (z == null || !Number.isFinite(z)) return "Not assessed";
+  if (z < SAM_Z_CUTOFF) return "Below −3 SD";
+  if (z < UNDERNUTRITION_Z_CUTOFF) return "Below −2 SD";
+  return "Within reference range";
+}
+
+function deltaText(current?: number | null, previous?: number | null, unit = "") {
+  const delta = measurementDelta(current, previous);
+  if (delta == null) return "—";
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta}${unit}`;
+}
+
+function whoLabelForVisit(profile: ChildProfile, visit: ProfileVisit) {
+  const age = ageMonthsAtVisit(profile.date_of_birth, visit.visit_date, profile.age_months);
+  const weight = visit.measurements?.weight_kg;
+  const height = visit.measurements?.height_cm;
+  if (age == null || weight == null || height == null) return "—";
+  const who = assessWhoUndernutrition({ ageMonths: age, sex: profile.sex, weightKg: weight, heightCm: height });
+  if (!who) return "—";
+  return who.label === NO_UNDERNUTRITION_LABEL ? "Normal" : who.label;
 }
 
 export default function ReportPage() {
@@ -104,9 +138,6 @@ export default function ReportPage() {
 
   const latest = data.risk_history.at(-1);
   const previous = data.risk_history.length > 1 ? data.risk_history.at(-2) : undefined;
-  const first = data.risk_history[0];
-  const scoreLabel = clinicalPhrase(data.score_label ?? data.ai_assessment?.score_label, "12-month GA-RGCA prediction");
-  const velocityLabel = clinicalPhrase(data.velocity_label, "Risk Velocity");
   const meas = data.measurements ?? {
     weight_kg: latest?.weight_kg,
     height_cm: latest?.height_cm,
@@ -120,6 +151,7 @@ export default function ReportPage() {
   };
   const aiStatus = data.ai_assessment?.status ?? latest?.status;
   const aiSeverity = data.ai_assessment?.severity ?? latest?.severity;
+  const severityLabel = displayPredictedSeverity(aiStatus, aiSeverity);
   const aiRisk = data.ai_assessment?.risk ?? data.ai_assessment?.score ?? latest?.risk ?? data.progress.current_risk;
   const latestPrediction = profile.data?.current?.prediction ?? profile.data?.visits.at(-1)?.prediction ?? null;
   // Pair the predicted type with its own probability; the report score stays the highest condition risk.
@@ -132,8 +164,7 @@ export default function ReportPage() {
     ga_rgca: latestPrediction?.ga_rgca ?? null,
   };
   const isConditionModel = Boolean(aiSource.ga_rgca || aiSource.highest_risk_condition);
-  const aiTypeProbability = primaryTypeProbability(aiSource);
-  const comparable = profile.data?.longitudinal_comparable !== false;
+  const aiTypeProbability = predictedTypeChipProbability(aiSource);
   const currentVisit = profile.data?.current ?? null;
   const ageAtLatest = profile.data ? ageMonthsAtVisit(profile.data.date_of_birth, currentVisit?.visit_date, profile.data.age_months) : null;
   const who =
@@ -142,283 +173,198 @@ export default function ReportPage() {
       : null;
   const whoLabel = who ? (who.label === NO_UNDERNUTRITION_LABEL ? "Normal" : who.label) : "Not assessed";
   const ga = latestPrediction?.ga_rgca ?? null;
-  const uncertainty = uncertaintyState(latestPrediction);
-  const applicability = applicabilityState(latestPrediction);
-  const inputs = profile.data?.latest_inputs ?? null;
-  const contextRows: [string, unknown][] = [];
-  if (inputs) {
-    const dietary = inputs.dietary ?? {};
-    const socio = inputs.socioeconomic ?? {};
-    const mch = inputs.maternal_child_health ?? {};
-    contextRows.push(
-      ["Breastfeeding", dietary.breastfeeding_status],
-      ["Complementary feeding", dietary.complementary_feeding],
-      ["Meal frequency", dietary.meal_frequency],
-      ["Micronutrient supplementation", dietary.micronutrient_supplementation],
-      ["Household size", socio.household_size],
-      ["Maternal education", socio.maternal_education],
-      ["Immunisation up to date", mch.immunization_uptodate],
-      ["Vitamin A", mch.vitamin_a],
-    );
-  }
-  const fmtContext = (v: unknown) => (v === true ? "Yes" : v === false ? "No" : v == null || v === "" ? "Not recorded" : formatStatus(String(v)));
+  const predictedType = formatNutritionalStatus(aiStatus, aiSeverity);
+  const patientName = profile.data?.full_name?.trim() || data.pseudonymous_id;
+  const generatedOn = formatClinicalDate(new Date().toISOString());
+  const facilityName = profile.data?.facility?.name ?? "Nutrition clinic";
+  const attending = profile.data?.assigned_doctor?.full_name ?? review?.reviewer_name ?? "—";
+  const hasAlerts = alerts.length > 0;
+
+  let section = 1;
+  const n = () => String(section++).padStart(2, "0");
 
   return (
-    <article className="print-plain mx-auto max-w-3xl space-y-6 rounded-[28px] border border-white/80 bg-white p-8 shadow-card">
-      <header className="border-b border-line pb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#3E75B8]">Child nutrition report</p>
-        <h1 className="mt-1 text-2xl font-semibold text-[#102A4C]">{profile.data?.full_name?.trim() || data.pseudonymous_id}</h1>
-        <p className="text-sm text-muted">
-          {data.pseudonymous_id}
-          {profile.data ? ` · ${formatStatus(profile.data.sex)} · ${ageAtLatest ?? profile.data.age_months} months at latest visit` : ""}
-          {currentVisit ? ` · Visit ${currentVisit.visit_number} on ${formatClinicalDate(currentVisit.visit_date)}` : ""}
-          {profile.data?.facility?.name ? ` · ${profile.data.facility.name}` : ""}
-        </p>
-        <p className="mt-2 text-sm font-medium text-[#0A2748]" data-testid="report-disclaimer">
-          {clinicalPhrase(data.disclaimer, "AI-assisted assessment. Clinical review required.")}
-        </p>
-        <p className="mt-1 text-xs text-muted">{PRODUCT.disclaimer}</p>
-      </header>
-
-      <section>
-        <h2 className="text-lg font-semibold">Current WHO assessment</h2>
-        <p className="text-xs text-muted">Based on latest recorded anthropometric measurements. WHO growth standards, 0–60 months.</p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_2fr]">
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Status</p>
-            <p className="mt-1 text-xl font-semibold">{whoLabel}</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 rounded-xl bg-canvas p-4 text-center">
-            {[
-              ["Weight-for-age", who?.zScores.waz],
-              ["Height-for-age", who?.zScores.haz],
-              ["Weight-for-height", who?.zScores.whz],
-            ].map(([label, z]) => (
-              <div key={String(label)}>
-                <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
-                <p className="mt-1 font-semibold tabular-nums">{typeof z === "number" && Number.isFinite(z) ? `${z >= 0 ? "+" : ""}${z.toFixed(2)} z` : "—"}</p>
-              </div>
-            ))}
-          </div>
+    <div className="space-y-4">
+      <div className="no-print mx-auto flex w-[210mm] max-w-full flex-wrap items-center justify-end gap-3 print:hidden">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => window.print()}>Print report</Button>
+          <Link href={`/children/${childId}`}>
+            <Button variant="secondary">Back to profile</Button>
+          </Link>
         </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Current clinical measurements</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Weight</p>
-            <p className="mt-1 text-xl font-semibold">{meas.weight_kg != null ? `${meas.weight_kg} kg` : "—"}</p>
-            {previous?.weight_kg != null ? <p className="text-xs text-muted">Previous {previous.weight_kg} kg</p> : null}
-          </div>
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Height</p>
-            <p className="mt-1 text-xl font-semibold">{meas.height_cm != null ? `${meas.height_cm} cm` : "—"}</p>
-            {previous?.height_cm != null ? <p className="text-xs text-muted">Previous {previous.height_cm} cm</p> : null}
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">12-month GA-RGCA prediction</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Latest predicted type</p>
-            <p className="mt-1 text-xl font-semibold">{formatNutritionalStatus(aiStatus, aiSeverity)}</p>
-            {malnutritionSeverityApplies(aiStatus) ? <StatusBadge value={aiSeverity} /> : null}
-            {isConditionModel && aiTypeProbability != null ? (
-              <p className="mt-1 text-xs text-muted">
-                {primaryTypeProbabilityLabel(aiSource)}: <strong className="text-[#0f2744]">{formatPercent(aiTypeProbability)}</strong>
-              </p>
-            ) : null}
-          </div>
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">{scoreLabel}</p>
-            <p className="mt-1 text-xl font-semibold">{formatPercent(aiRisk)}</p>
-            {isConditionModel ? (
-              <p className="text-xs text-muted">Leading condition: {formatHighestConditionRisk(aiSource)}</p>
-            ) : null}
-            <p className="text-xs text-muted">AI-assisted assessment. Clinical review required.</p>
-          </div>
-        </div>
-        {ga ? (
-          <div className="mt-3 grid gap-2 rounded-xl bg-canvas p-4 text-sm sm:grid-cols-4">
-            {[
-              ["Underweight", ga.underweight_probability],
-              ["Stunting", ga.stunting_probability],
-              ["MAM", ga.mam_probability],
-              ["SAM", ga.sam_probability],
-            ].map(([label, value]) => (
-              <div key={String(label)}>
-                <p className="text-xs text-muted">{label}</p>
-                <p className="font-semibold tabular-nums">{formatPercent(value as number | undefined)}</p>
-              </div>
-            ))}
-            <p className="text-xs text-muted sm:col-span-4">Prediction of nutritional status over the next {ga.prediction_horizon_months ?? 12} months from this visit. Not the current WHO assessment.</p>
-          </div>
-        ) : null}
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-canvas p-4 text-sm">
-            <p className="text-xs text-muted">Severity and review</p>
-            <p className="mt-1 font-medium">{aiSeverity ?? "—"}{ga?.triage ? ` · ${ga.triage}` : ""}</p>
-            <p className="mt-1 text-xs text-muted">Model uncertainty: {uncertainty.label}</p>
-          </div>
-          <div className="rounded-xl bg-canvas p-4 text-sm">
-            <p className="text-xs text-muted">Similarity to training population</p>
-            <p className="mt-1 font-medium">{applicability.label}</p>
-            <p className="mt-1 text-xs text-muted">Internal applicability signal; not externally validated.</p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Longitudinal progress</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">Progress state</p>
-            <p className="mt-1 font-medium">
-              {profile.data
-                ? profileProgressLabel(profile.data.progress_display, comparable)
-                : progressLabel(data.progress.progress_state)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-canvas p-4">
-            <p className="text-xs text-muted">{velocityLabel}</p>
-            <p className="mt-1 font-medium">
-              {profile.data?.risk_velocity_pp_month != null
-                ? formatRv(profile.data.risk_velocity_pp_month, comparable)
-                : data.progress.risk_velocity != null
-                  ? formatRv(Math.round(data.progress.risk_velocity * 1000) / 10, true)
-                  : "Not available"}
-            </p>
-          </div>
-          <div className="rounded-xl bg-canvas p-4 sm:col-span-2">
-            <p className="text-xs text-muted">{scoreLabel} sequence</p>
-            <p className="mt-1 font-medium">
-              {first && latest
-                ? data.risk_history.map((r) => formatPercent(r.risk)).join(" → ")
-                : "—"}
-            </p>
-            {profile.data?.risk_change_pp != null ? (
-              <p className="mt-1 text-xs text-muted">Change since previous: {formatPp(profile.data.risk_change_pp)}</p>
-            ) : null}
-          </div>
-        </div>
-        {data.progress.warning ? <p className="mt-3 text-sm text-clinical-warning">{data.progress.warning}</p> : null}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Clinical attention</h2>
-        {alerts.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No open or in-review alerts.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {alerts.map((a, i) => (
-              <li key={`${a.type}-${i}`} className="rounded-xl bg-canvas p-4 text-sm">
-                <p className="font-medium">{a.headline ?? formatStatus(a.type)}</p>
-                <p className="mt-1 text-muted">{a.message}</p>
-                <p className="mt-1 text-xs text-muted">Status: {formatStatus(a.status)}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Clinician review</h2>
-        <div className="mt-3 rounded-xl bg-canvas p-4 text-sm">
-          <p>
-            Status: <strong>{reviewLabel(review?.status)}</strong>
-          </p>
-          {review?.assessment ? <p className="mt-1">Assessment: {review.assessment}</p> : null}
-          {review?.workflow ? <p className="mt-1">Workflow: {review.workflow}</p> : null}
-          {review?.reviewer_name ? <p className="mt-1">Reviewed by {review.reviewer_name}</p> : null}
-          {review?.note_excerpt ? <p className="mt-1 text-muted">{review.note_excerpt}</p> : null}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Follow-up</h2>
-        <div className="mt-3 rounded-xl bg-canvas p-4 text-sm">
-          <p>
-            {followUp?.expected_date ? formatClinicalDate(followUp.expected_date) : "Not scheduled"}
-          </p>
-          <p className="mt-1 text-muted">
-            {followUp?.status === "SUGGESTED" ? "Suggested" : followUp?.status ? formatStatus(followUp.status) : "—"}
-          </p>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Visit history</h2>
-        <table className="mt-3 w-full text-left text-sm">
-          <thead className="text-muted">
-            <tr>
-              <th className="py-2 pr-3">Visit</th>
-              <th className="py-2 pr-3">Date</th>
-              <th className="py-2 pr-3">Weight</th>
-              <th className="py-2 pr-3">Height</th>
-              <th className="py-2 pr-3">Predicted type</th>
-              {isConditionModel ? <th className="py-2 pr-3">Type probability</th> : null}
-              <th className="py-2">{isConditionModel ? "Highest condition risk" : scoreLabel}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.risk_history.map((row) => (
-              <tr key={row.visit_number} className="border-t border-line">
-                <td className="py-2.5 pr-3 font-medium">V{row.visit_number}</td>
-                <td className="py-2.5 pr-3">{new Date(row.date).toLocaleDateString()}</td>
-                <td className="py-2.5 pr-3">{row.weight_kg ?? "—"}</td>
-                <td className="py-2.5 pr-3">{row.height_cm ?? "—"}</td>
-                <td className="py-2.5 pr-3">{formatNutritionalStatus(row.status, row.severity)}</td>
-                {isConditionModel ? <td className="py-2.5 pr-3">{formatPercent(primaryTypeProbability(row))}</td> : null}
-                <td className="py-2.5">{isConditionModel ? formatHighestConditionRisk(row) : formatPercent(row.risk)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Clinical context</h2>
-        {contextRows.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No feeding or household context stored for the latest visit.</p>
-        ) : (
-          <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            {contextRows.map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-3 rounded-xl bg-canvas px-4 py-2.5">
-                <dt className="text-muted">{label}</dt>
-                <dd className="font-medium">{fmtContext(value)}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Model information</h2>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Model</dt><dd className="font-medium">{ga?.model_version ?? profile.data?.model?.label ?? "GA-RGCA-v4-Rolling-RSL"}</dd></div>
-          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Prediction horizon</dt><dd className="font-medium">{ga?.prediction_horizon_months ?? 12} months</dd></div>
-          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Prediction generated</dt><dd className="font-medium">{currentVisit ? formatClinicalDate(currentVisit.visit_date) : "—"}</dd></div>
-          <div className="rounded-xl bg-canvas px-4 py-2.5"><dt className="text-xs text-muted">Status</dt><dd className="font-medium">Research decision-support prototype</dd></div>
-        </dl>
-      </section>
-
-      <section className="rounded-xl border border-line bg-canvas p-4 text-xs text-muted">
-        <p className="font-semibold text-[#102A4C]">Research disclaimer</p>
-        <p className="mt-1" data-testid="report-footer-disclaimer">{data.disclaimer}</p>
-        <p className="mt-2">Clinician confirmation required. One historical 12-month origin validated; repeated rolling-origin and external prospective validation are still required. Incident SAM is underpowered. The applicability signal is not externally validated.</p>
-        <p className="mt-2">Latent embedding vectors and raw model internals are excluded from this clinician report by design.</p>
-        <p className="mt-2">Clinical review and WHO growth standards interpretation remain the responsibility of the attending clinician.</p>
-      </section>
-
-      <div className="no-print flex flex-wrap gap-3 print:hidden">
-        <Button onClick={() => window.print()}>Print report</Button>
-        <Link href={`/children/${childId}`}>
-          <Button variant="secondary">Back to profile</Button>
-        </Link>
       </div>
-    </article>
+
+      <article className="print-plain mx-auto w-[210mm] max-w-full border border-[#c5d4e4] bg-white shadow-[0_16px_40px_-28px_rgba(10,39,72,0.55)]">
+        <header className="bg-[#0E3A67] px-6 py-3.5 text-white">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+                {facilityName}
+                {profile.data?.facility?.district ? ` · ${profile.data.facility.district}` : ""}
+              </p>
+              <h1 className="mt-0.5 text-xl font-semibold tracking-tight">Paediatric Nutrition Report</h1>
+            </div>
+            <div className="text-right text-[11px] text-white/80">
+              <p className="font-semibold uppercase tracking-[0.14em]">Confidential</p>
+              <p className="mt-0.5 tabular-nums">Generated {generatedOn}</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="space-y-4 px-6 py-4">
+          <section>
+            <SectionHead n={n()}>Patient</SectionHead>
+            <div className="mt-2.5 grid grid-cols-4 gap-x-5 gap-y-2.5">
+              <Field label="Patient">{patientName}</Field>
+              <Field label="Record ID">{data.pseudonymous_id}</Field>
+              <Field label="Sex">{profile.data ? formatStatus(profile.data.sex) : "—"}</Field>
+              <Field label="Age">{ageLabel(ageAtLatest ?? profile.data?.age_months)}</Field>
+              <Field label="Date of birth">{profile.data?.date_of_birth ? formatClinicalDate(profile.data.date_of_birth) : "—"}</Field>
+              <Field label="Visit">{currentVisit ? `V${currentVisit.visit_number} · ${formatClinicalDate(currentVisit.visit_date)}` : "—"}</Field>
+              <Field label="Facility">{facilityName}</Field>
+              <Field label="Attending">{attending}</Field>
+            </div>
+          </section>
+
+          <section>
+            <SectionHead n={n()}>Clinical summary</SectionHead>
+            <div className="mt-2.5 grid grid-cols-4 gap-x-5 border border-[#d7e4f2] bg-[#f7f9fc] px-3 py-2.5">
+              <Field label="Today · WHO">{whoLabel}</Field>
+              <Field label="12-month type">{predictedType}{severityLabel ? ` · ${severityLabel}` : ""}</Field>
+              <Field label="Review">{reviewLabel(review?.status)}</Field>
+              <Field label="Next review">{followUp?.expected_date ? formatClinicalDate(followUp.expected_date) : "Not scheduled"}</Field>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 gap-5">
+            <div>
+              <SectionHead n={n()}>Anthropometry</SectionHead>
+              <table className="mt-2 w-full text-left text-[12px]">
+                <thead>
+                  <tr className="border-b border-[#d7e4f2] text-[9px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">
+                    <th className="py-1.5 pr-3">Parameter</th>
+                    <th className="py-1.5 pr-3">This visit</th>
+                    <th className="py-1.5 pr-3">Previous</th>
+                    <th className="py-1.5">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[#eef2f7]">
+                    <td className="py-1.5 pr-3 text-[#475569]">Weight</td>
+                    <td className="py-1.5 pr-3 font-semibold tabular-nums">{meas.weight_kg != null ? `${meas.weight_kg} kg` : "—"}</td>
+                    <td className="py-1.5 pr-3 tabular-nums text-[#64748b]">{previous?.weight_kg != null ? `${previous.weight_kg} kg` : "—"}</td>
+                    <td className="py-1.5 font-medium tabular-nums">{deltaText(meas.weight_kg, previous?.weight_kg, " kg")}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 pr-3 text-[#475569]">Height</td>
+                    <td className="py-1.5 pr-3 font-semibold tabular-nums">{meas.height_cm != null ? `${meas.height_cm} cm` : "—"}</td>
+                    <td className="py-1.5 pr-3 tabular-nums text-[#64748b]">{previous?.height_cm != null ? `${previous.height_cm} cm` : "—"}</td>
+                    <td className="py-1.5 font-medium tabular-nums">{deltaText(meas.height_cm, previous?.height_cm, " cm")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <SectionHead n={n()}>Current WHO</SectionHead>
+              <table className="mt-2 w-full text-left text-[12px]">
+                <thead>
+                  <tr className="border-b border-[#d7e4f2] text-[9px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">
+                    <th className="py-1.5 pr-3">Index</th>
+                    <th className="py-1.5 pr-3 text-right">z-score</th>
+                    <th className="py-1.5">Interpretation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["WAZ", who?.zScores.waz],
+                    ["HAZ", who?.zScores.haz],
+                    ["WHZ", who?.zScores.whz],
+                  ].map(([label, z]) => (
+                    <tr key={String(label)} className="border-b border-[#eef2f7] last:border-0">
+                      <td className="py-1.5 pr-3 text-[#475569]">{label}</td>
+                      <td className="py-1.5 pr-3 text-right font-semibold tabular-nums">{formatZ(typeof z === "number" ? z : null)}</td>
+                      <td className="py-1.5 text-[#334155]">{zInterpretation(typeof z === "number" ? z : null)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section>
+            <SectionHead n={n()}>12-month nutritional risk</SectionHead>
+            <div className="mt-2.5 grid grid-cols-4 gap-x-5">
+              <Field label="Predicted type">{predictedType}</Field>
+              <Field label="Severity">{severityLabel ?? "—"}</Field>
+              <Field label={isConditionModel ? primaryTypeProbabilityLabel(aiSource) : "Predicted risk"}>
+                {isConditionModel ? formatPercent(aiTypeProbability) : formatPercent(aiRisk)}
+              </Field>
+              <Field label="Highest condition risk">{isConditionModel ? formatHighestConditionRisk(aiSource) : "—"}</Field>
+            </div>
+            {ga ? (
+              <div className="mt-2.5 grid grid-cols-4 gap-3 text-[12px]">
+                {[
+                  ["Underweight", ga.underweight_probability],
+                  ["Stunting", ga.stunting_probability],
+                  ["MAM", ga.mam_probability],
+                  ["SAM", ga.sam_probability],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="border-b border-[#eef2f7] pb-1.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">{label}</p>
+                    <p className="mt-0.5 font-semibold tabular-nums text-[#0A2748]">{formatPercent(value as number | undefined)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+
+          {hasAlerts ? (
+            <section>
+              <SectionHead n={n()}>Clinical attention</SectionHead>
+              <ul className="mt-2 space-y-1.5 text-[12px]">
+                {alerts.map((a, i) => (
+                  <li key={`${a.type}-${i}`} className="text-[#334155]">
+                    <span className="font-semibold text-[#0A2748]">{a.headline ?? formatStatus(a.type)}.</span> {a.message}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section>
+            <SectionHead n={n()}>Visit record</SectionHead>
+            <table className="mt-2 w-full text-left text-[12px]">
+              <thead>
+                <tr className="border-b border-[#0E3A67] text-[9px] font-semibold uppercase tracking-[0.12em] text-[#0E3A67]">
+                  <th className="py-1.5 pr-2">Visit</th>
+                  <th className="py-1.5 pr-2">Date</th>
+                  <th className="py-1.5 pr-2">Weight</th>
+                  <th className="py-1.5 pr-2">Height</th>
+                  <th className="py-1.5 pr-2">WHO today</th>
+                  <th className="py-1.5 pr-2">12-month type</th>
+                  {isConditionModel ? <th className="py-1.5">Type probability</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {data.risk_history.map((row) => {
+                  const visit = profile.data?.visits.find((v) => v.visit_number === row.visit_number);
+                  return (
+                    <tr key={row.visit_number} className="border-b border-[#eef2f7] last:border-0">
+                      <td className="py-1.5 pr-2 font-semibold tabular-nums">V{row.visit_number}</td>
+                      <td className="py-1.5 pr-2">{formatClinicalDate(row.date)}</td>
+                      <td className="py-1.5 pr-2 tabular-nums">{row.weight_kg != null ? `${row.weight_kg} kg` : "—"}</td>
+                      <td className="py-1.5 pr-2 tabular-nums">{row.height_cm != null ? `${row.height_cm} cm` : "—"}</td>
+                      <td className="py-1.5 pr-2">{profile.data && visit ? whoLabelForVisit(profile.data, visit) : "—"}</td>
+                      <td className="py-1.5 pr-2">{formatNutritionalStatus(row.status, row.severity)}</td>
+                      {isConditionModel ? <td className="py-1.5 tabular-nums">{formatPercent(predictedTypeChipProbability(row))}</td> : null}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </article>
+    </div>
   );
 }

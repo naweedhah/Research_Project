@@ -235,12 +235,21 @@ body {
   .no-print {
     display: none !important;
   }
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
   body {
     background: white !important;
   }
   .print-plain {
     box-shadow: none !important;
     background: white !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border: none !important;
   }
 }
 
