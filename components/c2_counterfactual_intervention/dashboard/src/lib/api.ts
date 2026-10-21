@@ -1,4 +1,4 @@
-import { automaticBaselineSchema, automaticResultSchema, localProfilesSchema, localValidationSchema, pricesSchema, resultSchema, standaloneResultSchema, standaloneValidationSchema, statusSchema, validationSchema, type AutomaticCaseId, type ResearchRequest } from './contracts'
+import { automaticBaselineSchema, automaticResultSchema, c1BaselineV2Schema, dietScenariosV2Schema, liveCaseLibraryV2Schema, liveCaseValidationV2Schema, localProfilesSchema, localValidationSchema, manualC1ResultSchema, pricesSchema, resultSchema, standaloneResultSchema, standaloneValidationSchema, statusSchema, validationSchema, type AutomaticCaseId, type ManualC1Input, type ResearchRequest } from './contracts'
 
 const base = (import.meta.env.VITE_API_BASE_PATH ?? '').replace(/\/$/, '')
 const timeoutMs = 12000
@@ -80,6 +80,42 @@ export async function getStandaloneAnalysis(input: { case_id: AutomaticCaseId; b
 export async function getStandaloneValidation(caseId: AutomaticCaseId) {
   const parsed = standaloneValidationSchema.safeParse(await call(`/interventions/standalone-validation?case_id=${encodeURIComponent(caseId)}`, undefined, 60000))
   if (!parsed.success) throw new ApiError('invalid', `Genuine validation response did not match its contract at ${parsed.error.issues[0]?.path.join('.') || 'root'}.`)
+  return parsed.data
+}
+
+export async function getManualC1Validation(input: ManualC1Input) {
+  const parsed = manualC1ResultSchema.safeParse(await call('/interventions/manual-c1-validation', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  }, 90000))
+  if (!parsed.success) throw new ApiError('invalid', `Manual C1 result did not match its contract at ${parsed.error.issues[0]?.path.join('.') || 'root'}.`)
+  return parsed.data
+}
+
+export async function getC1BaselineV2(input: ManualC1Input) {
+  const parsed = c1BaselineV2Schema.safeParse(await call('/interventions/baseline-c1-v2', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  }, 30000))
+  if (!parsed.success) throw new ApiError('invalid', 'Original C1 assessment did not match its versioned contract.')
+  return parsed.data
+}
+
+export async function getLiveCaseLibraryV2() {
+  const parsed = liveCaseLibraryV2Schema.safeParse(await call('/interventions/live-case-library-v2'))
+  if (!parsed.success) throw new ApiError('invalid', 'Live case library did not match its contract.')
+  return parsed.data
+}
+
+export async function getLiveCaseValidationV2() {
+  const parsed = liveCaseValidationV2Schema.safeParse(await call('/interventions/live-case-validation-v2', undefined, 90000))
+  if (!parsed.success) throw new ApiError('invalid', 'Live C1 case results did not match their contract.')
+  return parsed.data
+}
+
+export async function getDietScenariosV2(input: object) {
+  const parsed = dietScenariosV2Schema.safeParse(await call('/interventions/diet-scenarios-v2', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  }, 30000))
+  if (!parsed.success) throw new ApiError('invalid', `Dietary scenario response mismatch at ${parsed.error.issues[0]?.path.join('.') || 'root'}.`)
   return parsed.data
 }
 

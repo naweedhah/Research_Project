@@ -191,6 +191,125 @@ export const standaloneValidationSchema = z.object({
 })
 export type StandaloneValidation = z.infer<typeof standaloneValidationSchema>
 
+export const manualC1InputSchema = z.object({
+  test_id: z.string().regex(/^TEST-[0-9]{4}$/, 'Use a four-digit invented test ID such as TEST-0014.'),
+  age_months: z.number().int().min(6).max(59),
+  sex: z.enum(['Female', 'Male']),
+  height_cm: z.number().finite().positive(), weight_kg: z.number().finite().positive(),
+  birth_weight_kg: z.number().finite().positive(), household_size: z.number().int().positive(),
+  maternal_age_years: z.number().int().positive(),
+  maternal_education: z.enum(['No formal education', 'Below O/ Level', 'O/L passed', 'A/ Level passes', 'Degree/ diploma']),
+  household_income_range: z.enum(['Less than Rs. 20,000', 'Rs.20,000 to Rs. 50,000', 'Rs. 50,000 to Rs. 100,000', 'More than Rs. 100,000']),
+  father_occupation: z.enum(['Abroad', 'Government worker', 'Manual worker', 'No job', 'Private sector worker', 'Self-employed']),
+  mother_occupation: z.enum(['Government worker', 'Housewife', 'Private sector worker', 'Self-employed']),
+  exclusive_breastfeeding: z.enum(['Yes', 'No']),
+  breastfeeding_duration: z.enum(['Less than 6 months', 'More than 6 months']),
+  complementary_feeding_timing: z.enum(['Before 6 months', 'After 6 months']),
+  meal_frequency: z.enum(meals), dietary_diversity: z.enum(diversity),
+  triposha_supplementation: z.enum(['No', 'Yes - irregular use', 'Yes - regular use']),
+  vitamin_supplementation: z.enum(['Yes', 'No']),
+  historical_mam: z.boolean().nullable().optional(),
+  historical_sam: z.boolean().nullable().optional(),
+  historical_underweight: z.enum(['Normal', 'Moderate', 'Severe']).nullable().optional(),
+  historical_stunting: z.enum(['Normal', 'Moderate', 'Severe']).nullable().optional(),
+  budget_lkr: z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().default(null),
+  budget_period: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
+})
+export type ManualC1Input = z.infer<typeof manualC1InputSchema>
+
+export const liveCaseLibraryV2Schema = z.object({
+  contract_version: z.literal('c2-live-case-library-v2'),
+  provenance: z.string(),
+  cases: z.array(z.object({ case_id: z.string(), name: z.string(),
+    input: manualC1InputSchema, food_groups: z.array(z.string()) })),
+})
+export type LiveCaseV2 = z.infer<typeof liveCaseLibraryV2Schema>['cases'][number]
+
+export const liveCaseValidationV2Schema = z.object({
+  mode: z.literal('live_c1_invented_case_validation'), c1_calls: z.number(),
+  allow_demo: z.literal(false), clinical_use: z.literal(false),
+  observed_categories: z.array(z.string()), unobserved_categories: z.array(z.string()),
+  cases: z.array(z.object({ case_id: z.string(), input_name: z.string(),
+    model_version: z.literal('GA-RGCA-v3'), prediction_source: z.literal('GA-RGCA-v3'),
+    c1_predicted_category: z.enum(['Normal','Underweight','Stunting','MAM','SAM']),
+    c1_severity: z.enum(['Normal','Moderate','Severe']), c1_uncertainty_flag: z.boolean(),
+    assessment_review_needed: z.boolean(), c2_candidate_count: z.number(),
+    c2_research_test_rank_count: z.number(), c2_verified_feasible_count: z.number(),
+    c2_status: z.string(),
+  })),
+})
+export type LiveCaseValidationV2 = z.infer<typeof liveCaseValidationV2Schema>
+
+const manualC1Candidate = z.object({
+  changes: z.record(z.string(), z.object({ from: z.string(), to: z.string() })),
+  prediction: realPrediction.nullable(),
+  probability_delta: z.object({ underweight: z.number(), stunting: z.number(),
+    acute: z.object({ Normal: z.number(), MAM: z.number(), SAM: z.number() }) }).nullable(),
+  model_policy_result: z.enum(['rejected', 'unresolved']),
+  rejected_reasons: z.array(z.string()), unresolved_reasons: z.array(z.string()),
+  only_feeding_fields_changed: z.literal(true), rank: z.number().nullable(),
+})
+export const manualC1ResultSchema = z.object({
+  mode: z.literal('manual_genuine_c1_model_comparison'),
+  submitted_input: manualC1InputSchema,
+  input_fingerprint: z.string(), prediction_source: z.literal('GA-RGCA-v3'),
+  model_version: z.literal('GA-RGCA-v3'), prediction_task: z.literal('twelve_month_nutritional_risk'),
+  baseline: realPrediction,
+  candidates: z.array(manualC1Candidate),
+  ranked_model_comparisons: z.array(manualC1Candidate),
+  food_plans: z.array(standalonePlan),
+  budget: z.object({ amount_lkr: z.string().nullable(), period: z.enum(['daily', 'weekly', 'monthly']), affordability: z.literal('unresolved') }),
+  approved_intervention_cards: z.array(z.never()), clinical_use: z.literal(false),
+  limitations: z.array(z.string()),
+})
+export type ManualC1Result = z.infer<typeof manualC1ResultSchema>
+
+export const c1BaselineV2Schema = z.object({
+  assessment: z.object({ model_version: z.string(), prediction_source: z.literal('GA-RGCA-v3'),
+    predicted_malnutrition_type: z.enum(['Normal','Underweight','Stunting','MAM','SAM']),
+    severity: z.enum(['Normal','Moderate','Severe']), uncertainty_flag: z.boolean(),
+    clinical_use: z.literal(false), input_fingerprint: z.string(),
+    provenance: z.literal('live_c1_baseline') }),
+  prediction: realPrediction, c1_calls: z.literal(1), feeding_provenance: z.literal('unverified'),
+  limitations: z.array(z.string()),
+})
+export type C1BaselineV2 = z.infer<typeof c1BaselineV2Schema>
+
+const scenarioCheck = z.object({ criterion: z.string(), state: z.enum(['pass','fail','unknown']),
+  reason: z.string(), evidence_source: z.string().nullable() })
+const scenarioCandidate = z.object({ candidate_id: z.string(), title: z.string(),
+  generator_methods: z.array(z.string()).optional(),
+  status: z.enum(['verified_feasible','evidence_incomplete','rejected']),
+  current_food_groups: z.array(z.string()), proposed_food_groups: z.array(z.string()),
+  additional_groups: z.array(z.string()), reference_cost_lkr: z.string().nullable(),
+  cost_period: z.string(), reference_budget_fit: z.string(),
+  items: z.array(z.object({ food_id: z.string(), name: z.string(), food_group: z.string(),
+    quantity: z.string(), unit: z.string(), indicative_cost_lkr: z.string(),
+    source_url: z.string(), observation_end: z.string(), market_coverage: z.string() }).passthrough()),
+  schedule: z.array(z.object({ day: z.string(), slots: z.array(z.object({ label: z.string(),
+    foods: z.array(z.object({ name: z.string() }).passthrough()) })) }).passthrough()),
+  checks: z.array(scenarioCheck), rank: z.number().nullable(), limitations: z.array(z.string()),
+}).passthrough()
+export const dietScenariosV2Schema = z.object({
+  contract_version: z.literal('c2-diet-scenarios-v2'), original_c1: c1BaselineV2Schema.shape.assessment,
+  original_c1_unchanged: z.literal(true), c1_candidate_calls: z.literal(0),
+  feeding_baseline: z.object({ meal_frequency: z.string(), dietary_diversity: z.string(),
+    food_groups: z.array(z.string()), provenance: z.string() }),
+  age_months: z.number(), candidate_count: z.number(), ranked_cards: z.array(scenarioCandidate),
+  unresolved_or_rejected: z.array(scenarioCandidate), referral_notice: z.string().nullable(),
+  ranking_trace: z.object({ status: z.string(), order: z.array(z.string()), note: z.string() }),
+  method: z.enum(['dice','face_graph','wachter','bounded_search','compare_all']).optional(),
+  method_results: z.record(z.string(), z.object({ status: z.string(), generated_count: z.number(),
+    independently_validated_count: z.number(), verified_ranked_count: z.number(),
+    rejected_or_unresolved_count: z.number(), runtime_ms: z.number(),
+    diagnostics: z.record(z.string(), z.unknown()) })).optional(),
+  software_test_ranked: z.array(z.object({ candidate_id: z.string(), rank: z.number(),
+    title: z.string(), generator_methods: z.array(z.string()), reference_cost_lkr: z.string().nullable(),
+    scope: z.string() })).optional(),
+  clinical_use: z.literal(false), limitations: z.array(z.string()),
+}).passthrough()
+export type DietScenariosV2 = z.infer<typeof dietScenariosV2Schema>
+
 export const localProfilesSchema = z.object({ available: z.literal(true), source_sha256: z.string(),
   scanned_profiles: z.number(), profiles: z.array(z.object({ case_id: z.string(), age_months: z.number(),
     model_status: z.string(), source_label: z.string(), feeding_provenance: z.string() })),
