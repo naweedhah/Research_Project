@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Ruler, Stethoscope, TrendingUp, Utensils } from "lucide-react";
-import { displayedMalnutritionType, formatHighestConditionRisk, normalCategoryProbability } from "@/data/child-profile";
+import { displayedMalnutritionType } from "@/data/child-profile";
 import { assessWhoUndernutrition, formatZ } from "@/data/who-growth-standards";
 import { displayPredictedSeverity, formatNutritionalStatus, formatPercent, formatStatus } from "@/utils/utils";
 
@@ -253,7 +253,7 @@ export function PredictionCard({ prediction, className = "", id }: { prediction:
         </span>
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">Prediction</p>
-          <p className="text-sm font-semibold">Predicted nutritional risk</p>
+          <p className="text-sm font-semibold">Prediction Growth</p>
         </div>
       </div>
 
@@ -268,15 +268,10 @@ export function PredictionCard({ prediction, className = "", id }: { prediction:
 
         {ga ? (
           <div className="mt-4 space-y-3">
-            <RiskBar label="Normal" value={normalCategoryProbability(ga) ?? undefined} flagged={predictedType === "Normal"} />
             <RiskBar label="Underweight" value={ga.underweight_probability} flagged={flagged("Underweight")} />
             <RiskBar label="Stunting" value={ga.stunting_probability} flagged={flagged("Stunting")} />
             <RiskBar label="MAM" value={ga.mam_probability} flagged={flagged("MAM")} />
             <RiskBar label="SAM" value={ga.sam_probability} flagged={flagged("SAM")} />
-            <p className="border-t border-[#e8eef5] pt-2.5 text-xs text-[#64748b]">
-              Highest predicted condition risk: <span className="font-semibold text-[#0f2744]">{formatHighestConditionRisk(prediction)}</span>.
-              Normal is 1 minus that value. Alerts and trends track the highest condition risk.
-            </p>
           </div>
         ) : (
           <p className="mt-3 text-sm text-[#475569]">
