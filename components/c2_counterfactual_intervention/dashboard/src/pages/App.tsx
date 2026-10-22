@@ -49,7 +49,6 @@ export function App() {
     <aside className="sidebar fixed inset-y-0 left-0 z-30 hidden w-68 flex-col border-r border-[var(--line)] px-5 py-7 lg:flex">
       <Link to="/" className="mb-11 flex items-center gap-3"><div className="flex size-11 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950"><FlaskConical size={23}/></div><div><strong className="block text-lg tracking-tight">FedNutri<span className="text-cyan-400">-XAI</span></strong><span className="text-xs uppercase tracking-[.2em] text-[var(--muted)]">Component 02</span></div></Link>
       <span className="mb-4 px-3 text-[11px] font-semibold uppercase tracking-[.23em] text-[var(--muted)]">Research workspace</span><NavItems close={() => {}} />
-      <div className="mt-auto rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4"><strong className="text-sm text-[var(--accent)]">Research test mode</strong><p className="mt-2 text-sm text-[var(--muted)]">Professional review required.</p></div>
     </aside>
     <div className="lg:pl-68">
       <header className="sticky top-0 z-20 flex h-18 items-center justify-between border-b border-[var(--line)] bg-[var(--header)] px-5 backdrop-blur-xl md:px-9">

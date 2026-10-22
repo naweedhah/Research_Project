@@ -147,11 +147,10 @@ function NumberInput({label,value,onChange}: {label:string;value:number;onChange
 function Select({label,value,options,onChange}: {label:string;value:string;options:readonly string[];onChange:(value:string)=>void}) { return <label><span className="field-label">{label}</span><select className="field" aria-label={label} value={value} onChange={event => onChange(event.target.value)}>{options.map(item => <option key={item} value={item}>{item.replaceAll('_',' ')}</option>)}</select></label> }
 
 function ScenarioResults({result}: {result:DietScenariosV2}) {
-  return <section aria-label="Dietary scenario results" className="space-y-5"><Card className="p-6 md:p-8"><span className="eyebrow">Original C1 assessment · read only</span><h2 className="mt-2 text-2xl font-bold">{result.original_c1.predicted_malnutrition_type} · {result.original_c1.severity}</h2><p className="mt-2">Model: {result.original_c1.model_version} · Source: {result.original_c1.prediction_source} · Uncertainty {result.original_c1.uncertainty_flag ? 'flagged' : 'not flagged'}</p>{(result.original_c1.predicted_malnutrition_type !== 'Normal' || result.original_c1.severity === 'Severe' || result.original_c1.uncertainty_flag) && <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 font-semibold text-amber-950">Assessment review needed before using food examples; they are not a complete care plan.</p>}</Card>
+  return <section aria-label="Dietary scenario results" className="space-y-5"><Card className="p-6 md:p-8"><span className="eyebrow">Original C1 assessment · read only</span><h2 className="mt-2 text-2xl font-bold">{result.original_c1.predicted_malnutrition_type} · {result.original_c1.severity}</h2><p className="mt-2">Model: {result.original_c1.model_version} · Source: {result.original_c1.prediction_source} · Uncertainty {result.original_c1.uncertainty_flag ? 'flagged' : 'not flagged'}</p></Card>
     <div><span className="eyebrow">Food alternatives</span><h2 className="mt-2 text-3xl font-bold">Foods and meal pairing ideas</h2>{result.candidate_count === 0 && <p className="mt-2 text-base">The selected method found no compatible food option for this test input.</p>}</div>
     {result.software_test_ranked && result.software_test_ranked.length > 0 && <p className="rounded-xl border border-cyan-300 bg-cyan-50 px-5 py-3 font-semibold text-cyan-950">{result.software_test_ranked.length} research-test options ordered by the smallest compatible shopping list, then reference cost. These ranks are not predicted health improvements or verified feeding recommendations.</p>}
     <div className="grid gap-5 lg:grid-cols-2">{[...result.ranked_cards, ...result.unresolved_or_rejected].sort((a, b) => (result.software_test_ranked?.find(row => row.candidate_id === a.candidate_id)?.rank ?? 999) - (result.software_test_ranked?.find(row => row.candidate_id === b.candidate_id)?.rank ?? 999)).map((card, index) => <ScenarioCard key={card.candidate_id} card={card} position={index} testRank={result.software_test_ranked?.find(row => row.candidate_id === card.candidate_id)?.rank}/>)}</div>
-    {result.method_results && <Card className="p-5 md:p-7"><h3 className="text-xl font-bold">Counterfactual algorithm comparison</h3><div className="mt-4 grid gap-3 md:grid-cols-2">{Object.entries(result.method_results).map(([name, summary]) => <div key={name} className="rounded-xl border border-[var(--line)] p-4"><h4 className="font-bold">{methodName(name)}</h4><p className="mt-1 text-sm">{summary.generated_count} generated · {selectedByMethod(result, name)} selected for test ranking</p><p className="text-xs text-[var(--muted)]">{summary.status.startsWith('unavailable') ? 'No supported target for this input' : 'Research software test'} · {summary.runtime_ms.toFixed(2)} ms</p>{typeof summary.diagnostics.reason === 'string' && <p className="mt-2 text-sm">{String(summary.diagnostics.reason)}</p>}{name === 'face_graph' && <FaceRoutes paths={summary.diagnostics.paths} cards={[...result.ranked_cards, ...result.unresolved_or_rejected]}/>}</div>)}</div></Card>}
   </section>
 }
 
@@ -182,7 +181,7 @@ function ScenarioCard({card,position,testRank}: {card:DietScenariosV2['unresolve
         <div className="rounded-xl bg-[var(--field)] p-4"><span className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Estimated shopping cost</span><strong className="mt-1 block text-lg">{card.reference_cost_lkr ? `LKR ${card.reference_cost_lkr}` : 'Unknown'}</strong><span className="text-xs">per {card.cost_period}</span></div>
         <div className={`rounded-xl border p-4 ${budgetStyle}`}><span className="block text-xs font-semibold uppercase tracking-wide">Budget comparison</span><strong className="mt-1 block text-lg">{card.reference_budget_fit === 'within_budget' ? 'Within budget' : card.reference_budget_fit === 'above_budget' ? 'Above budget' : 'Budget unknown'}</strong><span className="text-xs">Indicative reference cost</span></div>
       </div>
-      <div><h4 className="font-bold">Foods in this option</h4><div className="mt-3 grid gap-2 sm:grid-cols-2">{card.items.map(item => <div key={item.food_id} className="rounded-xl border border-[var(--line)] p-3"><strong className="block">{item.name}</strong><span className="text-sm text-[var(--muted)]">{item.quantity} {item.unit} to purchase · LKR {item.indicative_cost_lkr}</span></div>)}</div></div>
+      <div><h4 className="font-bold">Foods in this option</h4><div className="mt-3 grid gap-2 sm:grid-cols-2">{card.items.map(item => <div key={item.food_id} className="rounded-xl border border-[var(--line)] p-3"><strong className="block">{item.name}</strong><span className="text-sm text-[var(--muted)]">{formatQuantity(item.quantity, item.unit)} to purchase · LKR {item.indicative_cost_lkr}</span></div>)}</div></div>
       {pairings.length > 0 && <details className="border-t border-[var(--line)] pt-4"><summary className="cursor-pointer font-semibold">See food pairing ideas</summary><div className="mt-3 space-y-2">{pairings.map(pairing => <p key={pairing} className="text-sm">{pairing}</p>)}</div><p className="mt-3 text-xs text-[var(--muted)]">Illustrative combinations, not a complete seven-day meal plan or child serving guide.</p></details>}
     </div>
   </Card>
@@ -190,28 +189,14 @@ function ScenarioCard({card,position,testRank}: {card:DietScenariosV2['unresolve
 
 function methodName(name: string) { return ({ bounded_search: 'Bounded Search', dice: 'DiCE', face_graph: 'FACE Graph', wachter: 'Wachter' } as Record<string,string>)[name] ?? name.replaceAll('_', ' ') }
 
-function selectedByMethod(result: DietScenariosV2, name: string) {
-  return result.software_test_ranked?.filter(card => card.generator_methods.includes(name)).length ?? 0
+function formatQuantity(quantity: string, unit: string) {
+  const amount = Number(quantity)
+  if (!Number.isFinite(amount)) return `${quantity} ${unit}`
+  if (unit === 'kg' && amount > 0 && amount < 1) return `${Number((amount * 1000).toFixed(3))} g`
+  return `${amount} ${unit}`
 }
+
 
 function uniquePairings(schedule: DietScenariosV2['unresolved_or_rejected'][number]['schedule']) {
   return [...new Set(schedule.flatMap(day => day.slots.map(slot => `${slot.label}: ${slot.foods.map(food => food.name).join(', ')}`)))]
-}
-
-function FaceRoutes({paths,cards}: {paths:unknown;cards:DietScenariosV2['unresolved_or_rejected']}) {
-  if (!paths || typeof paths !== 'object' || Array.isArray(paths)) return null
-  const routes = Object.entries(paths).flatMap(([id, value]) => {
-    if (!value || typeof value !== 'object' || !('path' in value) || !Array.isArray(value.path)) return []
-    const card = cards.find(item => item.candidate_id === id)
-    if (!card) return []
-    const routePath = value.path as unknown[]
-    const steps = routePath.flatMap((state:unknown, index:number, all:unknown[]) => {
-      if (!Array.isArray(state) || index === 0) return []
-      const previous = Array.isArray(all[index - 1]) ? all[index - 1] as string[] : []
-      return state.filter((food:unknown) => typeof food === 'string' && !previous.includes(food)).map((food:string) => card.items.find(item => item.food_id === food)?.name ?? food.replaceAll('_',' '))
-    })
-    return [{id, title:card.title, steps}]
-  })
-  if (!routes.length) return null
-  return <details className="mt-3 text-sm"><summary className="cursor-pointer font-semibold">How FACE built each option</summary><p className="mt-2 text-[var(--muted)]">The graph adds available example foods one step at a time. These routes are software paths, not an observed diet or treatment schedule.</p><ul className="mt-2 space-y-2">{routes.map(route => <li key={route.id}><strong>{route.title}:</strong> {route.steps.length ? route.steps.map((food:string) => `Add ${food}`).join(' → ') : 'No food additions recorded'}</li>)}</ul></details>
 }
